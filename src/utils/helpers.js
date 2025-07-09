@@ -56,6 +56,24 @@ export const formatCurrencyShort = (amount, showSymbol = true) => {
 }
 
 /**
+ * Format number with thousand separators
+ * @param {number} number - Number to format
+ * @param {number} decimals - Number of decimal places
+ * @returns {string} Formatted number string
+ */
+export const formatNumber = (number, decimals = 0) => {
+  if (!number && number !== 0) return '0'
+  
+  const numValue = parseFloat(number)
+  if (isNaN(numValue)) return '0'
+  
+  return numValue.toLocaleString('en-IN', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  })
+}
+
+/**
  * Format percentage
  * @param {number} value - Value to format as percentage
  * @param {number} decimals - Number of decimal places
@@ -490,6 +508,7 @@ export const getFileExtension = (filename) => {
 export default {
   formatCurrency,
   formatCurrencyShort,
+  formatNumber,
   formatPercentage,
   formatDate,
   formatDateTime,
