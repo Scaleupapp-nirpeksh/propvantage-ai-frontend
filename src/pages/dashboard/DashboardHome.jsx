@@ -30,21 +30,21 @@ import {
   Tooltip
 } from 'antd'
 import {
-  ArrowUpOutlined,
-  ArrowDownOutlined,
-  PlusOutlined,
-  EyeOutlined,
-  UserAddOutlined,
-  DollarOutlined,
-  HomeOutlined,
-  ProjectOutlined,
-  TeamOutlined,
-  TrophyOutlined,
-  CalendarOutlined,
-  PhoneOutlined,
-  MailOutlined,
-  MoreOutlined
-} from '@ant-design/icons'
+    ArrowUpOutlined,
+    ArrowDownOutlined,
+    PlusOutlined,
+    EyeOutlined,
+    UserAddOutlined,
+    DollarOutlined,
+    HomeOutlined,
+    ProjectOutlined,
+    TeamOutlined,
+    TrophyOutlined,
+    CalendarOutlined,
+    PhoneOutlined,
+    MailOutlined,
+    MoreOutlined
+  } from '@ant-design/icons'
 import {
   TrendingUp,
   TrendingDown,

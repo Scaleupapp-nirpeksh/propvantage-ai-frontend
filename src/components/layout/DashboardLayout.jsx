@@ -36,9 +36,9 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   HomeOutlined,
-  BuildingOutlined,
+  BankOutlined,
   ContactsOutlined,
-  PaymentOutlined,
+  CreditCardOutlined,    // CHANGED: PaymentOutlined → CreditCardOutlined
   FileTextOutlined,
   ToolOutlined,
   RocketOutlined
@@ -150,13 +150,13 @@ const DashboardLayout = ({ children }) => {
           {
             key: `/projects/${currentProject._id}`,
             label: currentProject.name,
-            icon: <BuildingOutlined />
+            icon: <BankOutlined />       // CHANGED: BuildingOutlined → BankOutlined
           }
         ] : []
       },
       {
         key: '/towers',
-        icon: <BuildingOutlined />,
+        icon: <BankOutlined />,        // CHANGED: BuildingOutlined → BankOutlined
         label: 'Towers',
         permission: 'project_management'
       },
@@ -174,7 +174,7 @@ const DashboardLayout = ({ children }) => {
       },
       {
         key: '/payments',
-        icon: <PaymentOutlined />,
+        icon: <CreditCardOutlined />,    // CHANGED: PaymentOutlined → CreditCardOutlined
         label: 'Payments',
         permission: 'financial_management',
         children: [
@@ -231,7 +231,7 @@ const DashboardLayout = ({ children }) => {
           {
             key: '/settings/organization',
             label: 'Organization',
-            icon: <BuildingOutlined />
+            icon: <BankOutlined />        // CHANGED: BuildingOutlined → BankOutlined
           },
           {
             key: '/settings/users',
@@ -270,7 +270,7 @@ const DashboardLayout = ({ children }) => {
     },
     {
       key: 'organization',
-      icon: <BuildingOutlined />,
+      icon: <BankOutlined />,         // CHANGED: BuildingOutlined → BankOutlined
       label: 'Organization',
       onClick: () => navigate('/settings/organization')
     },

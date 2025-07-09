@@ -30,7 +30,7 @@ import {
   LockOutlined, 
   MailOutlined,
   PhoneOutlined,
-  BuildingOutlined,
+  BankOutlined,        // CHANGED: BuildingOutlined → BankOutlined
   EnvironmentOutlined,
   TeamOutlined,
   CheckCircleOutlined,
@@ -97,7 +97,7 @@ const RegisterPage = () => {
   const steps = [
     {
       title: 'Organization',
-      icon: <BuildingOutlined />,
+      icon: <BankOutlined />,        // CHANGED: BuildingOutlined → BankOutlined
       description: 'Company details'
     },
     {
@@ -252,7 +252,7 @@ const RegisterPage = () => {
             ]}
           >
             <Input
-              prefix={<BuildingOutlined className="text-gray-400" />}
+              prefix={<BankOutlined className="text-gray-400" />}     // CHANGED: BuildingOutlined → BankOutlined
               placeholder="Enter your organization name"
               size="large"
             />

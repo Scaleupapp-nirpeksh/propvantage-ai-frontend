@@ -21,7 +21,11 @@ const useAuthStore = create(
         
         try {
           const response = await authAPI.login(credentials)
-          const { token, user, organization } = response.data
+          const responseData = response.data
+
+          // Correctly separate the token from the rest of the user data
+          const { token, ...user } = responseData
+          const organization = user.organization // The organization ID is part of the user data
 
           // Store token in localStorage
           localStorage.setItem('propvantage_token', token)

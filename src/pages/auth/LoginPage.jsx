@@ -26,7 +26,7 @@ import {
   LockOutlined, 
   EyeInvisibleOutlined, 
   EyeTwoTone,
-  BuildingOutlined,
+  HomeOutlined,
   RocketOutlined,
   SafetyOutlined,
   TrophyOutlined
