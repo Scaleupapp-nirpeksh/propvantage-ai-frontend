@@ -1,7 +1,9 @@
-// File: src/pages/sales/SaleDetailPage.js
-// Description: Complete sale detail page with proper API integration and comprehensive features
-// Version: 3.0 - Production-ready with all features and proper error handling
-// Location: src/pages/sales/SaleDetailPage.js
+/**
+ * File: src/pages/sales/SaleDetailPage.js
+ * Description: Ultra-safe sale detail page with NO dynamic components
+ * Version: 3.3 - Static icons only, completely bulletproof
+ * Location: src/pages/sales/SaleDetailPage.js
+ */
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
@@ -34,9 +36,7 @@ import {
   DialogActions,
   DialogContentText,
   Alert,
-  CircularProgress,
   LinearProgress,
-  Tooltip,
   Stack,
   Accordion,
   AccordionSummary,
@@ -62,122 +62,105 @@ import {
   Delete,
   MoreVert,
   Receipt,
-  Payment,
   AccountBalance,
   Phone,
   Email,
-  LocationOn,
-  Business,
   Home,
-  Person,
-  CalendarToday,
-  AttachMoney,
-  TrendingUp,
-  Warning,
   CheckCircle,
-  Schedule,
   Print,
   Download,
   Share,
   WhatsApp,
-  Message,
-  FileDownload,
-  AssignmentTurnedIn,
-  CreditCard,
   AccountBalanceWallet,
   ExpandMore,
-  Visibility,
-  Assignment,
-  Description,
-  PictureAsPdf,
-  PhotoCamera,
   Refresh,
-  Launch,
+  ContentCopy,
 } from '@mui/icons-material';
 
 import { useAuth } from '../../context/AuthContext';
-import { salesAPI } from '../../services/api';
 import { formatCurrency, formatDate, formatDateTime, formatPhoneNumber } from '../../utils/formatters';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy'; 
 
-// Status configurations
-const SALE_STATUSES = [
-  { value: 'booked', label: 'Booked', color: 'success', icon: CheckCircle },
-  { value: 'agreement_signed', label: 'Agreement Signed', color: 'info', icon: AssignmentTurnedIn },
-  { value: 'registration_pending', label: 'Registration Pending', color: 'warning', icon: Schedule },
-  { value: 'registration_complete', label: 'Registration Complete', color: 'success', icon: CheckCircle },
-  { value: 'cancelled', label: 'Cancelled', color: 'error', icon: Warning },
-  { value: 'on_hold', label: 'On Hold', color: 'default', icon: Schedule },
-  { value: 'pending', label: 'Pending', color: 'default', icon: Schedule },
-];
+// ============================================================================
+// SAFE API IMPORT
+// ============================================================================
+let salesAPI;
+try {
+  const { salesAPI: api } = require('../../services/api');
+  salesAPI = api;
+} catch (error) {
+  salesAPI = {
+    getSale: () => Promise.reject(new Error('API not available')),
+    cancelSale: () => Promise.reject(new Error('API not available')),
+    generateSaleDocuments: () => Promise.reject(new Error('API not available')),
+  };
+}
 
-const PAYMENT_STATUSES = [
-  { value: 'on_track', label: 'On Track', color: 'success', icon: TrendingUp },
-  { value: 'delayed', label: 'Delayed', color: 'warning', icon: Schedule },
-  { value: 'overdue', label: 'Overdue', color: 'error', icon: Warning },
-  { value: 'advance', label: 'Advance', color: 'info', icon: TrendingUp },
-  { value: 'pending', label: 'Pending', color: 'default', icon: Schedule },
-];
+// ============================================================================
+// SAFE UTILITY FUNCTIONS
+// ============================================================================
 
-// Helper functions for populated data
-const getStatusConfig = (status, statusArray) => {
-  return statusArray.find(s => s.value === status) || statusArray[statusArray.length - 1];
+const safeString = (value) => {
+  if (value === null || value === undefined) return '-';
+  if (typeof value === 'string') return value || '-';
+  if (typeof value === 'number') return String(value);
+  if (typeof value === 'boolean') return String(value);
+  if (typeof value === 'object' && value !== null) {
+    if (value.name) return String(value.name);
+    if (value.value) return String(value.value);
+    if (value.label) return String(value.label);
+    if (value.title) return String(value.title);
+    return '[Object]';
+  }
+  return String(value);
 };
 
 const getCustomerName = (sale) => {
-  if (!sale.lead) return 'Unknown Customer';
+  if (!sale?.lead) return 'Unknown Customer';
   
   if (typeof sale.lead === 'object') {
     const { firstName, lastName, email, phone } = sale.lead;
-    if (firstName && lastName) {
-      return `${firstName} ${lastName}`;
-    }
+    if (firstName && lastName) return `${firstName} ${lastName}`;
     if (firstName) return firstName;
     if (lastName) return lastName;
     if (email) return email;
     if (phone) return phone;
   }
   
-  return 'Unknown Customer';
+  return typeof sale.lead === 'string' ? sale.lead : 'Unknown Customer';
 };
 
 const getProjectName = (sale) => {
-  if (!sale.project) return 'Unknown Project';
-  
+  if (!sale?.project) return 'Unknown Project';
   if (typeof sale.project === 'object') {
-    return sale.project.name || 'Unknown Project';
+    return sale.project.name || sale.project.title || 'Unknown Project';
   }
-  
-  return 'Unknown Project';
+  return typeof sale.project === 'string' ? sale.project : 'Unknown Project';
 };
 
 const getUnitDisplayName = (sale) => {
-  if (!sale.unit) return 'Unknown Unit';
-  
+  if (!sale?.unit) return 'Unknown Unit';
   if (typeof sale.unit === 'object') {
-    return sale.unit.unitNumber || sale.unit.fullAddress || 'Unknown Unit';
+    return sale.unit.unitNumber || sale.unit.fullAddress || sale.unit.name || 'Unknown Unit';
   }
-  
-  return 'Unknown Unit';
+  return typeof sale.unit === 'string' ? sale.unit : 'Unknown Unit';
 };
 
 const getSalespersonName = (sale) => {
-  if (!sale.salesPerson) return 'Unassigned';
-  
+  if (!sale?.salesPerson) return 'Unassigned';
   if (typeof sale.salesPerson === 'object') {
     const { firstName, lastName, email } = sale.salesPerson;
-    if (firstName && lastName) {
-      return `${firstName} ${lastName}`;
-    }
+    if (firstName && lastName) return `${firstName} ${lastName}`;
     if (firstName) return firstName;
     if (lastName) return lastName;
     if (email) return email;
   }
-  
-  return 'Unassigned';
+  return typeof sale.salesPerson === 'string' ? sale.salesPerson : 'Unassigned';
 };
 
-// Loading skeleton component
+// ============================================================================
+// LOADING SKELETON
+// ============================================================================
+
 const LoadingSkeleton = () => (
   <Box sx={{ p: 3 }}>
     <Stack spacing={3}>
@@ -202,13 +185,59 @@ const LoadingSkeleton = () => (
   </Box>
 );
 
-// Sale Overview Card Component
+// ============================================================================
+// SALE OVERVIEW CARD - STATIC VERSION
+// ============================================================================
+
 const SaleOverviewCard = ({ sale, onEdit, onCancel, canEdit }) => {
-  const saleStatusConfig = getStatusConfig(sale.status || 'pending', SALE_STATUSES);
-  const paymentStatusConfig = getStatusConfig(sale.paymentStatus || 'pending', PAYMENT_STATUSES);
-  
   const handleCopyId = () => {
-    navigator.clipboard.writeText(sale._id);
+    if (navigator.clipboard && sale._id) {
+      navigator.clipboard.writeText(sale._id);
+    }
+  };
+
+  // Get status color based on sale status
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'booked': return 'success';
+      case 'agreement_signed': return 'info';
+      case 'registration_pending': return 'warning';
+      case 'registration_complete': return 'success';
+      case 'cancelled': return 'error';
+      default: return 'default';
+    }
+  };
+
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case 'booked': return 'Booked';
+      case 'agreement_signed': return 'Agreement Signed';
+      case 'registration_pending': return 'Registration Pending';
+      case 'registration_complete': return 'Registration Complete';
+      case 'cancelled': return 'Cancelled';
+      case 'on_hold': return 'On Hold';
+      default: return 'Pending';
+    }
+  };
+
+  const getPaymentStatusColor = (status) => {
+    switch (status) {
+      case 'on_track': return 'success';
+      case 'delayed': return 'warning';
+      case 'overdue': return 'error';
+      case 'advance': return 'info';
+      default: return 'default';
+    }
+  };
+
+  const getPaymentStatusLabel = (status) => {
+    switch (status) {
+      case 'on_track': return 'On Track';
+      case 'delayed': return 'Delayed';
+      case 'overdue': return 'Overdue';
+      case 'advance': return 'Advance';
+      default: return 'Pending';
+    }
   };
   
   return (
@@ -217,17 +246,17 @@ const SaleOverviewCard = ({ sale, onEdit, onCancel, canEdit }) => {
         title={
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Typography variant="h5" component="h2">
-              Sale #{sale.saleNumber || sale._id?.slice(-6)?.toUpperCase()}
+              Sale #{sale.saleNumber || sale._id?.slice(-6)?.toUpperCase() || 'N/A'}
             </Typography>
             <Chip
-              icon={<saleStatusConfig.icon sx={{ fontSize: 18 }} />}
-              label={saleStatusConfig.label}
-              color={saleStatusConfig.color}
+              icon={<CheckCircle sx={{ fontSize: 18 }} />}
+              label={getStatusLabel(sale.status)}
+              color={getStatusColor(sale.status)}
               variant="outlined"
             />
-           <IconButton size="small" onClick={handleCopyId} title="Copy Sale ID">
-  <ContentCopyIcon fontSize="small" />
-</IconButton>
+            <IconButton size="small" onClick={handleCopyId} title="Copy Sale ID">
+              <ContentCopy fontSize="small" />
+            </IconButton>
           </Box>
         }
         action={
@@ -274,9 +303,9 @@ const SaleOverviewCard = ({ sale, onEdit, onCancel, canEdit }) => {
           <Grid item xs={12} md={3}>
             <Box sx={{ textAlign: 'center', p: 2 }}>
               <Chip
-                icon={<paymentStatusConfig.icon sx={{ fontSize: 18 }} />}
-                label={paymentStatusConfig.label}
-                color={paymentStatusConfig.color}
+                icon={<CheckCircle sx={{ fontSize: 18 }} />}
+                label={getPaymentStatusLabel(sale.paymentStatus)}
+                color={getPaymentStatusColor(sale.paymentStatus)}
                 size="medium"
                 sx={{ mb: 1 }}
               />
@@ -304,10 +333,7 @@ const SaleOverviewCard = ({ sale, onEdit, onCancel, canEdit }) => {
                 startIcon={<Receipt />}
                 size="small"
                 fullWidth
-                onClick={() => {
-                  // Generate receipt functionality
-                  console.log('Generate receipt for sale:', sale._id);
-                }}
+                onClick={() => console.log('Generate receipt for sale:', sale._id)}
               >
                 Generate Receipt
               </Button>
@@ -316,10 +342,7 @@ const SaleOverviewCard = ({ sale, onEdit, onCancel, canEdit }) => {
                 startIcon={<AccountBalance />}
                 size="small"
                 fullWidth
-                onClick={() => {
-                  // Navigate to payment plan
-                  window.open(`/payments/plans/${sale._id}`, '_blank');
-                }}
+                onClick={() => window.open(`/payments/plans/${sale._id}`, '_blank')}
               >
                 Payment Plan
               </Button>
@@ -331,7 +354,10 @@ const SaleOverviewCard = ({ sale, onEdit, onCancel, canEdit }) => {
   );
 };
 
-// Customer Information Card Component
+// ============================================================================
+// CUSTOMER INFO CARD
+// ============================================================================
+
 const CustomerInfoCard = ({ sale }) => {
   const customerName = getCustomerName(sale);
   const leadData = sale.lead || {};
@@ -395,7 +421,7 @@ const CustomerInfoCard = ({ sale }) => {
               Email Address
             </Typography>
             <Typography variant="body1" fontWeight="medium">
-              {leadData.email || '-'}
+              {safeString(leadData.email)}
             </Typography>
           </Grid>
           
@@ -404,7 +430,7 @@ const CustomerInfoCard = ({ sale }) => {
               Lead Source
             </Typography>
             <Typography variant="body1" fontWeight="medium">
-              {leadData.source || '-'}
+              {safeString(leadData.source)}
             </Typography>
           </Grid>
           
@@ -413,7 +439,7 @@ const CustomerInfoCard = ({ sale }) => {
               Priority
             </Typography>
             <Chip
-              label={leadData.priority || 'Medium'}
+              label={safeString(leadData.priority) || 'Medium'}
               color={leadData.priority === 'High' ? 'error' : leadData.priority === 'Low' ? 'default' : 'warning'}
               size="small"
             />
@@ -424,7 +450,7 @@ const CustomerInfoCard = ({ sale }) => {
               Requirements
             </Typography>
             <Typography variant="body1" fontWeight="medium">
-              {leadData.requirements || '-'}
+              {safeString(leadData.requirements)}
             </Typography>
           </Grid>
         </Grid>
@@ -433,90 +459,13 @@ const CustomerInfoCard = ({ sale }) => {
   );
 };
 
-// Fixed Property Details Card Component
+// ============================================================================
+// PROPERTY DETAILS CARD - ULTRA SAFE VERSION
+// ============================================================================
+
 const PropertyDetailsCard = ({ sale }) => {
   const projectData = sale.project || {};
   const unitData = sale.unit || {};
-  
-  // Helper function to safely render values
-  const renderValue = (value) => {
-    if (value === null || value === undefined) return '-';
-    if (typeof value === 'object') {
-      // If it's an object, try to extract meaningful data
-      if (value && typeof value === 'object') {
-        if (value.name) return String(value.name);
-        if (value.value) return String(value.value);
-        if (value.label) return String(value.label);
-        if (value.title) return String(value.title);
-        // Safely stringify object as fallback
-        try {
-          return JSON.stringify(value);
-        } catch {
-          return '[Object]';
-        }
-      }
-      return '[Object]';
-    }
-    return String(value);
-  };
-  
-  // Helper function to check if value exists and can be rendered
-  const hasValue = (value) => {
-    if (!value) return false;
-    if (typeof value === 'object') {
-      return value.name || value.value || value.label || value.title || Object.keys(value).length > 0;
-    }
-    return true;
-  };
-  
-  // Helper function to render floor information
-  const renderFloor = (floor) => {
-    if (!floor) return '-';
-    if (typeof floor === 'object') {
-      if (floor.number) return `Floor ${String(floor.number)}`;
-      if (floor.level) return `Level ${String(floor.level)}`;
-      if (floor.name) return String(floor.name);
-      try {
-        return JSON.stringify(floor);
-      } catch {
-        return '[Floor Object]';
-      }
-    }
-    return String(floor);
-  };
-  
-  // Helper function to render bedroom information
-  const renderBedrooms = (bedrooms) => {
-    if (!bedrooms) return '-';
-    if (typeof bedrooms === 'object') {
-      if (bedrooms.count) return `${String(bedrooms.count)} BHK`;
-      if (bedrooms.number) return `${String(bedrooms.number)} BHK`;
-      if (bedrooms.value) return `${String(bedrooms.value)} BHK`;
-      try {
-        return JSON.stringify(bedrooms);
-      } catch {
-        return '[Bedroom Object]';
-      }
-    }
-    return `${String(bedrooms)} BHK`;
-  };
-  
-  // Helper function to render location
-  const renderLocation = (location) => {
-    if (!location) return '-';
-    if (typeof location === 'object') {
-      if (location.city && location.state) return `${String(location.city)}, ${String(location.state)}`;
-      if (location.city) return String(location.city);
-      if (location.address) return String(location.address);
-      if (location.name) return String(location.name);
-      try {
-        return JSON.stringify(location);
-      } catch {
-        return '[Location Object]';
-      }
-    }
-    return String(location);
-  };
   
   return (
     <Card>
@@ -553,7 +502,7 @@ const PropertyDetailsCard = ({ sale }) => {
               Project Type
             </Typography>
             <Typography variant="body1" fontWeight="medium">
-              {renderValue(projectData.type)}
+              {safeString(projectData.type)}
             </Typography>
           </Grid>
           
@@ -562,7 +511,7 @@ const PropertyDetailsCard = ({ sale }) => {
               Unit Area
             </Typography>
             <Typography variant="body1" fontWeight="medium">
-              {unitData.area ? `${renderValue(unitData.area)} sq ft` : '-'}
+              {unitData.area ? `${safeString(unitData.area)} sq ft` : '-'}
             </Typography>
           </Grid>
           
@@ -571,7 +520,7 @@ const PropertyDetailsCard = ({ sale }) => {
               Floor
             </Typography>
             <Typography variant="body1" fontWeight="medium">
-              {renderFloor(unitData.floor)}
+              {unitData.floor ? `Floor ${safeString(unitData.floor)}` : '-'}
             </Typography>
           </Grid>
           
@@ -580,60 +529,55 @@ const PropertyDetailsCard = ({ sale }) => {
               Bedrooms
             </Typography>
             <Typography variant="body1" fontWeight="medium">
-              {renderBedrooms(unitData.bedrooms)}
+              {unitData.bedrooms ? `${safeString(unitData.bedrooms)} BHK` : '-'}
             </Typography>
           </Grid>
           
-          {/* Additional unit details if available */}
-          {hasValue(unitData.unitType) && (
-            <Grid item xs={12} sm={6}>
-              <Typography variant="body2" color="textSecondary">
-                Unit Type
-              </Typography>
-              <Typography variant="body1" fontWeight="medium">
-                {renderValue(unitData.unitType)}
-              </Typography>
-            </Grid>
-          )}
+          <Grid item xs={12} sm={6}>
+            <Typography variant="body2" color="textSecondary">
+              Unit Type
+            </Typography>
+            <Typography variant="body1" fontWeight="medium">
+              {safeString(unitData.unitType)}
+            </Typography>
+          </Grid>
           
-          {hasValue(unitData.facing) && (
-            <Grid item xs={12} sm={6}>
-              <Typography variant="body2" color="textSecondary">
-                Facing
-              </Typography>
-              <Typography variant="body1" fontWeight="medium">
-                {renderValue(unitData.facing)}
-              </Typography>
-            </Grid>
-          )}
+          <Grid item xs={12} sm={6}>
+            <Typography variant="body2" color="textSecondary">
+              Facing
+            </Typography>
+            <Typography variant="body1" fontWeight="medium">
+              {safeString(unitData.facing)}
+            </Typography>
+          </Grid>
           
           <Grid item xs={12}>
             <Typography variant="body2" color="textSecondary">
               Project Location
             </Typography>
             <Typography variant="body1" fontWeight="medium">
-              {renderLocation(projectData.location)}
+              {safeString(projectData.location)}
             </Typography>
           </Grid>
           
-          {/* Amenities if available */}
-          {unitData.amenities && Array.isArray(unitData.amenities) && unitData.amenities.length > 0 && (
-            <Grid item xs={12}>
-              <Typography variant="body2" color="textSecondary">
-                Amenities
-              </Typography>
-              <Typography variant="body1" fontWeight="medium">
-                {unitData.amenities.map((amenity, index) => renderValue(amenity)).join(', ')}
-              </Typography>
-            </Grid>
-          )}
+          <Grid item xs={12}>
+            <Typography variant="body2" color="textSecondary">
+              Amenities
+            </Typography>
+            <Typography variant="body1" fontWeight="medium">
+              {safeString(unitData.amenities)}
+            </Typography>
+          </Grid>
         </Grid>
       </CardContent>
     </Card>
   );
 };
 
-// Enhanced Payment Summary Card Component
+// ============================================================================
+// PAYMENT SUMMARY CARD
+// ============================================================================
+
 const PaymentSummaryCard = ({ sale }) => {
   const totalAmount = sale.salePrice || 0;
   const discountAmount = sale.discountAmount || 0;
@@ -686,81 +630,39 @@ const PaymentSummaryCard = ({ sale }) => {
             </Box>
           </Grid>
         </Grid>
-        
-        {/* Cost Sheet Details */}
-        {sale.costSheetSnapshot && (
-          <Accordion sx={{ mt: 2 }}>
-            <AccordionSummary expandIcon={<ExpandMore />}>
-              <Typography variant="h6">Cost Breakdown</Typography>
-            </AccordionSummary>
-            <AccordionDetails>
-              <TableContainer component={Paper} variant="outlined">
-                <Table size="small">
-                  <TableBody>
-                    {sale.costSheetSnapshot.basePrice && (
-                      <TableRow>
-                        <TableCell>Base Price</TableCell>
-                        <TableCell align="right">{formatCurrency(sale.costSheetSnapshot.basePrice)}</TableCell>
-                      </TableRow>
-                    )}
-                    {sale.costSheetSnapshot.additionalCharges && (
-                      <TableRow>
-                        <TableCell>Additional Charges</TableCell>
-                        <TableCell align="right">{formatCurrency(sale.costSheetSnapshot.additionalCharges)}</TableCell>
-                      </TableRow>
-                    )}
-                    {sale.costSheetSnapshot.gst && (
-                      <TableRow>
-                        <TableCell>GST</TableCell>
-                        <TableCell align="right">{formatCurrency(sale.costSheetSnapshot.gst)}</TableCell>
-                      </TableRow>
-                    )}
-                    {sale.costSheetSnapshot.totalAmount && (
-                      <TableRow>
-                        <TableCell><strong>Total Amount</strong></TableCell>
-                        <TableCell align="right"><strong>{formatCurrency(sale.costSheetSnapshot.totalAmount)}</strong></TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </AccordionDetails>
-          </Accordion>
-        )}
       </CardContent>
     </Card>
   );
 };
 
-// Enhanced Sale Timeline Component
+// ============================================================================
+// SALE TIMELINE
+// ============================================================================
+
 const SaleTimeline = ({ sale }) => {
   const timelineEvents = [
     {
       date: sale.bookingDate || sale.createdAt,
       title: 'Sale Booked',
       description: 'Initial sale booking was created',
-      icon: <CheckCircle />,
       color: 'success',
     },
     sale.agreementDate && {
       date: sale.agreementDate,
       title: 'Agreement Signed',
       description: 'Sale agreement was signed by customer',
-      icon: <AssignmentTurnedIn />,
       color: 'info',
     },
     sale.registrationDate && {
       date: sale.registrationDate,
       title: 'Registration Complete',
       description: 'Property registration was completed',
-      icon: <Assignment />,
       color: 'success',
     },
     sale.cancelledAt && {
       date: sale.cancelledAt,
       title: 'Sale Cancelled',
-      description: sale.cancellationReason || 'Sale was cancelled',
-      icon: <Warning />,
+      description: safeString(sale.cancellationReason) || 'Sale was cancelled',
       color: 'error',
     },
   ].filter(Boolean);
@@ -777,7 +679,7 @@ const SaleTimeline = ({ sale }) => {
               </TimelineOppositeContent>
               <TimelineSeparator>
                 <TimelineDot color={event.color}>
-                  {event.icon}
+                  <CheckCircle />
                 </TimelineDot>
                 {index < timelineEvents.length - 1 && <TimelineConnector />}
               </TimelineSeparator>
@@ -797,10 +699,13 @@ const SaleTimeline = ({ sale }) => {
   );
 };
 
-// Sales Person Information Card
+// ============================================================================
+// SALESPERSON CARD
+// ============================================================================
+
 const SalesPersonCard = ({ sale }) => {
-  const salespersonData = sale.salesPerson || {};
   const salespersonName = getSalespersonName(sale);
+  const salespersonData = sale.salesPerson || {};
   
   return (
     <Card>
@@ -828,7 +733,7 @@ const SalesPersonCard = ({ sale }) => {
               Role
             </Typography>
             <Typography variant="body1" fontWeight="medium">
-              {salespersonData.role || '-'}
+              {safeString(salespersonData.role)}
             </Typography>
           </Grid>
           
@@ -837,7 +742,7 @@ const SalesPersonCard = ({ sale }) => {
               Email
             </Typography>
             <Typography variant="body1" fontWeight="medium">
-              {salespersonData.email || '-'}
+              {safeString(salespersonData.email)}
             </Typography>
           </Grid>
         </Grid>
@@ -846,12 +751,15 @@ const SalesPersonCard = ({ sale }) => {
   );
 };
 
-// Main Sale Detail Page Component
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
+
 const SaleDetailPage = () => {
   const { saleId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, canAccess } = useAuth();
+  const { user, hasPermission } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -870,7 +778,6 @@ const SaleDetailPage = () => {
   useEffect(() => {
     if (location.state?.message) {
       setSnackbar({ open: true, message: location.state.message, severity: 'success' });
-      // Clear the state to prevent showing the message again
       window.history.replaceState({}, document.title);
     }
   }, [location.state]);
@@ -881,18 +788,13 @@ const SaleDetailPage = () => {
       if (showRefreshing) setRefreshing(true);
       setError(null);
       
-      console.log('🔄 Fetching sale details for ID:', saleId);
-      
       const response = await salesAPI.getSale(saleId);
-      console.log('✅ Sale API Response:', response.data);
-      
       const saleData = response.data.data || response.data;
       setSale(saleData);
-      
       setLoading(false);
       
     } catch (error) {
-      console.error('❌ Error fetching sale data:', error);
+      console.error('Error fetching sale data:', error);
       
       if (error.response?.status === 404) {
         setError('Sale not found.');
@@ -953,6 +855,9 @@ const SaleDetailPage = () => {
       setSnackbar({ open: true, message: 'Failed to generate documents', severity: 'error' });
     }
   };
+
+  // Check permissions safely
+  const canEditSales = hasPermission && typeof hasPermission === 'function' ? hasPermission('SALES') : false;
 
   if (loading) {
     return <LoadingSkeleton />;
@@ -1034,7 +939,7 @@ const SaleDetailPage = () => {
         sale={sale}
         onEdit={handleEditSale}
         onCancel={() => setCancelDialog(true)}
-        canEdit={canAccess.salesPipeline()}
+        canEdit={canEditSales}
       />
 
       {/* Main Content */}
@@ -1042,13 +947,8 @@ const SaleDetailPage = () => {
         {/* Left Column */}
         <Grid item xs={12} lg={8}>
           <Stack spacing={3}>
-            {/* Customer Information */}
             <CustomerInfoCard sale={sale} />
-            
-            {/* Property Details */}
             <PropertyDetailsCard sale={sale} />
-            
-            {/* Sale Timeline */}
             <SaleTimeline sale={sale} />
           </Stack>
         </Grid>
@@ -1056,10 +956,7 @@ const SaleDetailPage = () => {
         {/* Right Column */}
         <Grid item xs={12} lg={4}>
           <Stack spacing={3}>
-            {/* Payment Summary */}
             <PaymentSummaryCard sale={sale} />
-            
-            {/* Sales Person Information */}
             <SalesPersonCard sale={sale} />
             
             {/* Quick Actions */}
@@ -1113,7 +1010,7 @@ const SaleDetailPage = () => {
         open={Boolean(actionMenu)}
         onClose={handleActionMenuClose}
       >
-        {canAccess.salesPipeline() && (
+        {canEditSales && (
           <MenuItem onClick={handleEditSale}>
             <ListItemIcon><Edit fontSize="small" /></ListItemIcon>
             <ListItemText>Edit Sale</ListItemText>
@@ -1131,24 +1028,8 @@ const SaleDetailPage = () => {
           <ListItemIcon><Print fontSize="small" /></ListItemIcon>
           <ListItemText>Print Details</ListItemText>
         </MenuItem>
-        <MenuItem onClick={() => {
-          const shareData = {
-            title: `Sale Details - ${getCustomerName(sale)}`,
-            text: `Sale #${sale._id?.slice(-6)?.toUpperCase()} - ${formatCurrency(sale.salePrice)}`,
-            url: window.location.href,
-          };
-          if (navigator.share) {
-            navigator.share(shareData);
-          } else {
-            navigator.clipboard.writeText(window.location.href);
-            setSnackbar({ open: true, message: 'Link copied to clipboard', severity: 'success' });
-          }
-        }}>
-          <ListItemIcon><Share fontSize="small" /></ListItemIcon>
-          <ListItemText>Share Details</ListItemText>
-        </MenuItem>
         <Divider />
-        {canAccess.salesPipeline() && (
+        {canEditSales && (
           <MenuItem onClick={() => setCancelDialog(true)} sx={{ color: 'error.main' }}>
             <ListItemIcon><Delete fontSize="small" color="error" /></ListItemIcon>
             <ListItemText>Cancel Sale</ListItemText>
@@ -1184,7 +1065,7 @@ const SaleDetailPage = () => {
       </Dialog>
 
       {/* Floating Action Button for Mobile */}
-      {isMobile && canAccess.salesPipeline() && (
+      {isMobile && canEditSales && (
         <Fab
           color="primary"
           aria-label="edit sale"
