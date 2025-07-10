@@ -1,10 +1,10 @@
 // File: src/context/AuthContext.js
-// Description: Authentication Context Provider for PropVantage AI - Global auth state management
-// Version: 1.0 - Complete authentication context with role-based access control
+// Description: Fixed Authentication Context with proper login redirect and state management
+// Version: 2.0 - Enhanced with proper login flow and role-based routing
 // Location: src/context/AuthContext.js
 
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import { authAPI, handleAPIError } from '../services/api';
+import apiClient, { authAPI } from '../services/api';
 
 // Initial authentication state
 const initialState = {
@@ -39,6 +39,10 @@ const AuthActionTypes = {
   LOGIN_SUCCESS: 'LOGIN_SUCCESS',
   LOGIN_FAILURE: 'LOGIN_FAILURE',
   
+  REGISTER_START: 'REGISTER_START',
+  REGISTER_SUCCESS: 'REGISTER_SUCCESS',
+  REGISTER_FAILURE: 'REGISTER_FAILURE',
+  
   LOGOUT: 'LOGOUT',
   
   UPDATE_USER: 'UPDATE_USER',
@@ -70,6 +74,7 @@ const authReducer = (state, action) => {
         user: action.payload.user,
         organization: action.payload.organization,
         token: action.payload.token,
+        refreshToken: action.payload.refreshToken,
         error: null,
       };
 
@@ -82,6 +87,7 @@ const authReducer = (state, action) => {
         user: null,
         organization: null,
         token: null,
+        refreshToken: null,
         error: action.payload,
       };
 
@@ -108,6 +114,37 @@ const authReducer = (state, action) => {
       };
 
     case AuthActionTypes.LOGIN_FAILURE:
+      return {
+        ...state,
+        isLoading: false,
+        isAuthenticated: false,
+        user: null,
+        organization: null,
+        token: null,
+        refreshToken: null,
+        error: action.payload,
+      };
+
+    case AuthActionTypes.REGISTER_START:
+      return {
+        ...state,
+        isLoading: true,
+        error: null,
+      };
+
+    case AuthActionTypes.REGISTER_SUCCESS:
+      return {
+        ...state,
+        isLoading: false,
+        isAuthenticated: true,
+        user: action.payload.user,
+        organization: action.payload.organization,
+        token: action.payload.token,
+        refreshToken: action.payload.refreshToken,
+        error: null,
+      };
+
+    case AuthActionTypes.REGISTER_FAILURE:
       return {
         ...state,
         isLoading: false,
@@ -203,7 +240,8 @@ const PERMISSION_GROUPS = {
   // Sales team access
   SALES: [
     'Business Head', 'Project Director', 'Sales Head', 'Marketing Head',
-    'Sales Manager', 'Sales Executive', 'Channel Partner Manager'
+    'Sales Manager', 'Sales Executive', 'Channel Partner Manager', 
+    'Channel Partner Admin', 'Channel Partner Agent'
   ],
   
   // Finance team access
@@ -252,42 +290,47 @@ export const AuthProvider = ({ children }) => {
       const storedToken = localStorage.getItem('token');
       const storedUser = localStorage.getItem('user');
       const storedOrganization = localStorage.getItem('organization');
+      const storedRefreshToken = localStorage.getItem('refreshToken');
 
       if (storedToken && storedUser) {
         const user = JSON.parse(storedUser);
         const organization = storedOrganization ? JSON.parse(storedOrganization) : null;
 
-        // Verify token is still valid by making a test API call
-        try {
-          await authAPI.refresh();
-          
-          dispatch({
-            type: AuthActionTypes.INITIALIZE_SUCCESS,
-            payload: {
-              user,
-              organization,
-              token: storedToken,
-            },
-          });
-        } catch (error) {
-          // Token is invalid, clear stored data
-          clearStoredAuth();
-          dispatch({
-            type: AuthActionTypes.INITIALIZE_FAILURE,
-            payload: 'Session expired. Please login again.',
-          });
-        }
+        // Ensure user object has the right structure
+        const normalizedUser = {
+          _id: user._id || user.id,
+          id: user._id || user.id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          role: user.role,
+          organization: user.organization,
+          ...user, // Keep any other properties
+        };
+
+        // For initial load, trust the stored token
+        // Token validation will happen on first API call via interceptors
+        dispatch({
+          type: AuthActionTypes.INITIALIZE_SUCCESS,
+          payload: {
+            user: normalizedUser,
+            organization,
+            token: storedToken,
+            refreshToken: storedRefreshToken,
+          },
+        });
       } else {
-        // No stored auth data
         dispatch({
           type: AuthActionTypes.INITIALIZE_FAILURE,
           payload: null,
         });
       }
     } catch (error) {
+      console.error('Auth initialization error:', error);
+      clearStoredAuth();
       dispatch({
         type: AuthActionTypes.INITIALIZE_FAILURE,
-        payload: 'Failed to initialize authentication',
+        payload: 'Authentication initialization failed.',
       });
     }
   };
@@ -298,68 +341,152 @@ export const AuthProvider = ({ children }) => {
 
     try {
       const response = await authAPI.login(credentials);
-      const { data } = response.data;
-
-      // Store authentication data
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
+      const responseData = response.data;
       
-      if (data.organization) {
-        localStorage.setItem('organization', JSON.stringify(data.organization));
+      // Handle different response structures
+      let user, organization, token, refreshToken;
+      
+      if (responseData.user) {
+        // Nested structure: { user: {...}, organization: {...}, token: "..." }
+        user = responseData.user;
+        organization = responseData.organization;
+        token = responseData.token;
+        refreshToken = responseData.refreshToken;
+      } else {
+        // Direct structure: { _id, firstName, lastName, role, organization, token }
+        user = {
+          _id: responseData._id,
+          id: responseData._id,
+          firstName: responseData.firstName,
+          lastName: responseData.lastName,
+          email: responseData.email,
+          role: responseData.role,
+          organization: responseData.organization,
+        };
+        
+        // Organization might be an ID or object
+        organization = typeof responseData.organization === 'string' 
+          ? { _id: responseData.organization }
+          : responseData.organization;
+          
+        token = responseData.token;
+        refreshToken = responseData.refreshToken;
+      }
+
+      // Store auth data in localStorage (already done in authAPI.login)
+      // But let's ensure it's stored properly
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+      if (organization) {
+        localStorage.setItem('organization', JSON.stringify(organization));
+      }
+      if (refreshToken) {
+        localStorage.setItem('refreshToken', refreshToken);
       }
 
       dispatch({
         type: AuthActionTypes.LOGIN_SUCCESS,
         payload: {
-          user: data.user,
-          organization: data.organization,
-          token: data.token,
-          refreshToken: data.refreshToken,
+          user,
+          organization,
+          token,
+          refreshToken,
         },
       });
 
-      return { success: true, user: data.user };
+      return {
+        success: true,
+        user,
+        organization,
+        redirectTo: getDashboardRoute(user.role),
+      };
     } catch (error) {
-      const errorData = handleAPIError(error);
+      const errorMessage = error.message || 'Login failed. Please try again.';
       dispatch({
         type: AuthActionTypes.LOGIN_FAILURE,
-        payload: errorData.message,
+        payload: errorMessage,
       });
-      return { success: false, error: errorData.message };
+
+      return {
+        success: false,
+        error: errorMessage,
+      };
     }
   };
 
   // Register function
-  const register = async (organizationData) => {
-    dispatch({ type: AuthActionTypes.LOGIN_START });
+  const register = async (registrationData) => {
+    dispatch({ type: AuthActionTypes.REGISTER_START });
 
     try {
-      const response = await authAPI.register(organizationData);
-      const { data } = response.data;
+      const response = await authAPI.register(registrationData);
+      const responseData = response.data;
+      
+      // Handle different response structures
+      let user, organization, token, refreshToken;
+      
+      if (responseData.user) {
+        // Nested structure: { user: {...}, organization: {...}, token: "..." }
+        user = responseData.user;
+        organization = responseData.organization;
+        token = responseData.token;
+        refreshToken = responseData.refreshToken;
+      } else {
+        // Direct structure: { _id, firstName, lastName, role, organization, token }
+        user = {
+          _id: responseData._id,
+          id: responseData._id,
+          firstName: responseData.firstName,
+          lastName: responseData.lastName,
+          email: responseData.email,
+          role: responseData.role,
+          organization: responseData.organization,
+        };
+        
+        // Organization might be an ID or object
+        organization = typeof responseData.organization === 'string' 
+          ? { _id: responseData.organization }
+          : responseData.organization;
+          
+        token = responseData.token;
+        refreshToken = responseData.refreshToken;
+      }
 
-      // Store authentication data
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      localStorage.setItem('organization', JSON.stringify(data.organization));
+      // Store auth data in localStorage (already done in authAPI.register)
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+      localStorage.setItem('organization', JSON.stringify(organization));
+      if (refreshToken) {
+        localStorage.setItem('refreshToken', refreshToken);
+      }
 
       dispatch({
-        type: AuthActionTypes.LOGIN_SUCCESS,
+        type: AuthActionTypes.REGISTER_SUCCESS,
         payload: {
-          user: data.user,
-          organization: data.organization,
-          token: data.token,
-          refreshToken: data.refreshToken,
+          user,
+          organization,
+          token,
+          refreshToken,
         },
       });
 
-      return { success: true, user: data.user, organization: data.organization };
+      return {
+        success: true,
+        user,
+        organization,
+        redirectTo: getDashboardRoute(user.role),
+      };
     } catch (error) {
-      const errorData = handleAPIError(error);
+      const errorMessage = error.message || 'Registration failed. Please try again.';
       dispatch({
-        type: AuthActionTypes.LOGIN_FAILURE,
-        payload: errorData.message,
+        type: AuthActionTypes.REGISTER_FAILURE,
+        payload: errorMessage,
       });
-      return { success: false, error: errorData.message };
+
+      return {
+        success: false,
+        error: errorMessage,
+      };
     }
   };
 
@@ -368,14 +495,14 @@ export const AuthProvider = ({ children }) => {
     try {
       await authAPI.logout();
     } catch (error) {
-      console.warn('Logout API call failed:', error);
+      console.error('Logout error:', error);
     } finally {
       clearStoredAuth();
       dispatch({ type: AuthActionTypes.LOGOUT });
     }
   };
 
-  // Update user profile
+  // Update user data
   const updateUser = (userData) => {
     const updatedUser = { ...state.user, ...userData };
     localStorage.setItem('user', JSON.stringify(updatedUser));
@@ -385,7 +512,7 @@ export const AuthProvider = ({ children }) => {
     });
   };
 
-  // Update organization
+  // Update organization data
   const updateOrganization = (organizationData) => {
     const updatedOrganization = { ...state.organization, ...organizationData };
     localStorage.setItem('organization', JSON.stringify(updatedOrganization));
@@ -403,20 +530,22 @@ export const AuthProvider = ({ children }) => {
   // Refresh token if needed
   const refreshTokenIfNeeded = async () => {
     try {
-      const response = await authAPI.refresh();
-      const { data } = response.data;
-
-      localStorage.setItem('token', data.token);
-      
-      dispatch({
-        type: AuthActionTypes.REFRESH_TOKEN_SUCCESS,
-        payload: {
-          token: data.token,
-          refreshToken: data.refreshToken,
-        },
-      });
+      if (state.refreshToken) {
+        const response = await authAPI.refresh();
+        const { token, refreshToken } = response.data;
+        
+        localStorage.setItem('token', token);
+        if (refreshToken) {
+          localStorage.setItem('refreshToken', refreshToken);
+        }
+        
+        dispatch({
+          type: AuthActionTypes.REFRESH_TOKEN_SUCCESS,
+          payload: { token, refreshToken },
+        });
+      }
     } catch (error) {
-      console.warn('Token refresh failed:', error);
+      console.error('Token refresh failed:', error);
       dispatch({
         type: AuthActionTypes.REFRESH_TOKEN_FAILURE,
         payload: 'Session expired. Please login again.',
@@ -427,8 +556,30 @@ export const AuthProvider = ({ children }) => {
   // Clear stored authentication data
   const clearStoredAuth = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
     localStorage.removeItem('organization');
+  };
+
+  // Get dashboard route based on user role
+  const getDashboardRoute = (userRole) => {
+    switch (userRole) {
+      case 'Business Head':
+        return '/dashboard';
+      case 'Project Director':
+        return '/dashboard';
+      case 'Sales Head':
+      case 'Sales Manager':
+        return '/dashboard';
+      case 'Finance Head':
+      case 'Finance Manager':
+        return '/dashboard';
+      case 'Sales Executive':
+      case 'Channel Partner Agent':
+        return '/dashboard';
+      default:
+        return '/dashboard';
+    }
   };
 
   // Role-based access control functions
@@ -512,6 +663,7 @@ export const AuthProvider = ({ children }) => {
     // Utility functions
     getUserDisplayName,
     getOrganizationDisplayName,
+    getDashboardRoute,
     
     // Access control
     hasRole,

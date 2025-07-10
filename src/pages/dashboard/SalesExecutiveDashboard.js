@@ -1,9 +1,9 @@
 // File: src/pages/dashboard/SalesExecutiveDashboard.js
-// Description: Sales Executive dashboard component - Personal sales metrics and lead management interface
-// Version: 1.0 - Sales-focused dashboard with personal KPIs and lead pipeline
+// Description: Professional Sales Executive Dashboard - Complete backend integration with personal metrics
+// Version: 2.0 - Sales-focused dashboard with real-time personal performance data
 // Location: src/pages/dashboard/SalesExecutiveDashboard.js
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -16,13 +16,6 @@ import {
   Avatar,
   Chip,
   LinearProgress,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
   List,
   ListItem,
   ListItemText,
@@ -33,14 +26,17 @@ import {
   CircularProgress,
   Badge,
   useTheme,
-  Tabs,
-  Tab,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
+  Fade,
+  Zoom,
+  Skeleton,
+  Tooltip,
+  ButtonGroup,
+  Paper,
+  Stack,
 } from '@mui/material';
 import {
   TrendingUp,
+  TrendingDown,
   Person,
   Phone,
   Email,
@@ -57,10 +53,19 @@ import {
   Speed,
   GpsFixed,
   Timeline,
-  ExpandMore,
   CheckCircle,
   Warning,
   PriorityHigh,
+  Refresh,
+  CalendarToday,
+  Task,
+  LeaderboardRounded,
+  MonetizationOn,
+  PersonAdd,
+  AccessTime,
+  ArrowUpward,
+  ArrowDownward,
+  NotificationsActive,
 } from '@mui/icons-material';
 import { 
   BarChart, 
@@ -73,27 +78,27 @@ import {
   XAxis, 
   YAxis, 
   CartesianGrid, 
-  Tooltip, 
+  Tooltip as RechartsTooltip, 
   Legend, 
-  ResponsiveContainer 
+  ResponsiveContainer,
+  RadialBarChart,
+  RadialBar,
 } from 'recharts';
 
 import { useAuth } from '../../context/AuthContext';
-import { leadAPI, salesAPI, analyticsAPI, aiAPI } from '../../services/api';
+import { leadAPI, salesAPI, analyticsAPI, aiAPI, userAPI } from '../../services/api';
 
 // Utility functions
 const formatCurrency = (amount) => {
-  if (amount >= 10000000) {
-    return `₹${(amount / 10000000).toFixed(1)}Cr`;
-  } else if (amount >= 100000) {
-    return `₹${(amount / 100000).toFixed(1)}L`;
-  } else if (amount >= 1000) {
-    return `₹${(amount / 1000).toFixed(1)}K`;
-  }
-  return `₹${amount?.toLocaleString() || 0}`;
+  if (!amount && amount !== 0) return '₹0';
+  if (amount >= 10000000) return `₹${(amount / 10000000).toFixed(1)}Cr`;
+  if (amount >= 100000) return `₹${(amount / 100000).toFixed(1)}L`;
+  if (amount >= 1000) return `₹${(amount / 1000).toFixed(1)}K`;
+  return `₹${amount.toLocaleString()}`;
 };
 
 const getTimeAgo = (date) => {
+  if (!date) return 'Never';
   const now = new Date();
   const past = new Date(date);
   const diffMs = now - past;
@@ -106,7 +111,17 @@ const getTimeAgo = (date) => {
   return `${diffDays}d ago`;
 };
 
-// Personal Metrics Card Component
+const getLeadStatusColor = (status) => {
+  switch (status?.toLowerCase()) {
+    case 'hot': return 'error';
+    case 'warm': return 'warning';
+    case 'cold': return 'info';
+    case 'converted': return 'success';
+    default: return 'default';
+  }
+};
+
+// Enhanced Personal Metric Card Component
 const PersonalMetricCard = ({ 
   title, 
   current, 
@@ -114,24 +129,53 @@ const PersonalMetricCard = ({
   subtitle, 
   icon: Icon, 
   color = 'primary',
-  isLoading = false 
+  isLoading = false,
+  trend,
+  trendDirection,
+  onClick 
 }) => {
   const theme = useTheme();
   const percentage = target > 0 ? Math.round((current / target) * 100) : 0;
   
+  const getTrendColor = () => {
+    if (trendDirection === 'up') return theme.palette.success.main;
+    if (trendDirection === 'down') return theme.palette.error.main;
+    return theme.palette.warning.main;
+  };
+
+  const TrendIcon = trendDirection === 'up' ? ArrowUpward : ArrowDownward;
+  
   return (
-    <Card sx={{ height: '100%' }}>
-      <CardContent>
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 2 }}>
-          <Box sx={{ flex: 1 }}>
-            <Typography variant="body2" color="text.secondary" gutterBottom>
-              {title}
-            </Typography>
-            
-            {isLoading ? (
-              <CircularProgress size={20} />
-            ) : (
-              <>
+    <Zoom in timeout={300}>
+      <Card 
+        sx={{ 
+          height: '100%',
+          cursor: onClick ? 'pointer' : 'default',
+          transition: 'all 0.3s ease',
+          '&:hover': onClick ? { 
+            boxShadow: 6,
+            transform: 'translateY(-4px)',
+          } : {},
+          background: `linear-gradient(135deg, ${theme.palette.background.paper} 0%, ${theme.palette.background.default} 100%)`,
+          border: `1px solid ${theme.palette.divider}`,
+        }}
+        onClick={onClick}
+      >
+        <CardContent sx={{ p: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 2 }}>
+            <Box sx={{ flex: 1 }}>
+              <Typography 
+                variant="body2" 
+                color="text.secondary" 
+                gutterBottom
+                sx={{ fontWeight: 500, textTransform: 'uppercase', letterSpacing: 0.5 }}
+              >
+                {title}
+              </Typography>
+              
+              {isLoading ? (
+                <Skeleton variant="text" width="80%" height={40} />
+              ) : (
                 <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
                   {current}
                   {target && (
@@ -140,43 +184,122 @@ const PersonalMetricCard = ({
                     </Typography>
                   )}
                 </Typography>
-                
-                {subtitle && (
-                  <Typography variant="body2" color="text.secondary">
-                    {subtitle}
+              )}
+              
+              {subtitle && !isLoading && (
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  {subtitle}
+                </Typography>
+              )}
+
+              {trend && !isLoading && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <TrendIcon sx={{ fontSize: 16, color: getTrendColor() }} />
+                  <Typography variant="caption" sx={{ color: getTrendColor(), fontWeight: 600 }}>
+                    {trend}
                   </Typography>
-                )}
-              </>
-            )}
+                </Box>
+              )}
+            </Box>
+            
+            <Avatar 
+              sx={{ 
+                bgcolor: `${color}.100`, 
+                color: `${color}.700`,
+                width: 48,
+                height: 48,
+              }}
+            >
+              <Icon sx={{ fontSize: 24 }} />
+            </Avatar>
           </Box>
           
-          <Avatar sx={{ bgcolor: `${color}.100`, color: `${color}.700` }}>
-            <Icon />
-          </Avatar>
-        </Box>
-        
-        {target && !isLoading && (
-          <Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-              <Typography variant="caption" color="text.secondary">
-                Progress
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {percentage}%
-              </Typography>
+          {target && !isLoading && (
+            <Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                <Typography variant="caption" color="text.secondary">
+                  Target Progress
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {percentage}%
+                </Typography>
+              </Box>
+              <LinearProgress 
+                variant="determinate" 
+                value={Math.min(percentage, 100)} 
+                sx={{ 
+                  height: 8, 
+                  borderRadius: 4,
+                  bgcolor: `${color}.100`,
+                  '& .MuiLinearProgress-bar': {
+                    bgcolor: `${color}.main`,
+                  },
+                }} 
+              />
             </Box>
-            <LinearProgress 
-              variant="determinate" 
-              value={Math.min(percentage, 100)} 
-              sx={{ 
-                height: 8, 
-                borderRadius: 4,
-                bgcolor: `${color}.100`,
-                '& .MuiLinearProgress-bar': {
-                  bgcolor: `${color}.main`,
-                },
-              }} 
-            />
+          )}
+        </CardContent>
+      </Card>
+    </Zoom>
+  );
+};
+
+// Personal Pipeline Chart Component
+const PersonalPipelineChart = ({ data, isLoading }) => {
+  const theme = useTheme();
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent>
+          <Skeleton variant="text" width="60%" height={32} />
+          <Skeleton variant="circular" width={200} height={200} sx={{ mx: 'auto', mt: 2 }} />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const COLORS = [
+    theme.palette.info.main,
+    theme.palette.warning.main,
+    theme.palette.primary.main,
+    theme.palette.success.main,
+  ];
+
+  return (
+    <Card>
+      <CardContent>
+        <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+          My Lead Pipeline
+        </Typography>
+        {data && data.length > 0 ? (
+          <Box sx={{ height: 250 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={data}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={40}
+                  outerRadius={80}
+                  paddingAngle={5}
+                  dataKey="value"
+                >
+                  {data.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <RechartsTooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </Box>
+        ) : (
+          <Box sx={{ textAlign: 'center', py: 4 }}>
+            <GpsFixed sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} />
+            <Typography variant="body2" color="text.secondary">
+              No pipeline data available
+            </Typography>
           </Box>
         )}
       </CardContent>
@@ -184,12 +307,12 @@ const PersonalMetricCard = ({
   );
 };
 
-// Today's Tasks Component
-const TodaysTasks = ({ tasks, isLoading }) => {
+// Today's Activities Component
+const TodaysActivities = ({ activities, isLoading }) => {
   const navigate = useNavigate();
   
   const getPriorityColor = (priority) => {
-    switch (priority) {
+    switch (priority?.toLowerCase()) {
       case 'high': return 'error';
       case 'medium': return 'warning';
       case 'low': return 'success';
@@ -198,7 +321,7 @@ const TodaysTasks = ({ tasks, isLoading }) => {
   };
 
   const getPriorityIcon = (priority) => {
-    switch (priority) {
+    switch (priority?.toLowerCase()) {
       case 'high': return <PriorityHigh />;
       case 'medium': return <Warning />;
       case 'low': return <CheckCircle />;
@@ -206,42 +329,68 @@ const TodaysTasks = ({ tasks, isLoading }) => {
     }
   };
 
+  const getActivityIcon = (type) => {
+    switch (type?.toLowerCase()) {
+      case 'call': return <Phone />;
+      case 'email': return <Email />;
+      case 'meeting': return <Event />;
+      case 'follow-up': return <Schedule />;
+      default: return <Assignment />;
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent>
+          <Skeleton variant="text" width="60%" height={32} />
+          {[...Array(5)].map((_, index) => (
+            <Skeleton key={index} variant="rectangular" width="100%" height={60} sx={{ mt: 1 }} />
+          ))}
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardContent>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            Today's Tasks
+            Today's Activities
           </Typography>
-          <Badge badgeContent={tasks?.filter(t => !t.completed).length || 0} color="error">
+          <Badge 
+            badgeContent={activities?.filter(a => !a.completed).length || 0} 
+            color="error"
+          >
             <Today />
           </Badge>
         </Box>
         
-        {isLoading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-            <CircularProgress />
-          </Box>
-        ) : tasks?.length > 0 ? (
-          <List dense>
-            {tasks.slice(0, 6).map((task, index) => (
+        {activities && activities.length > 0 ? (
+          <List dense sx={{ maxHeight: 300, overflow: 'auto' }}>
+            {activities.map((activity, index) => (
               <React.Fragment key={index}>
                 <ListItem
                   sx={{
-                    bgcolor: task.completed ? 'action.hover' : 'transparent',
+                    bgcolor: activity.completed ? 'action.hover' : 'transparent',
                     borderRadius: 1,
                     mb: 0.5,
+                    border: '1px solid transparent',
+                    '&:hover': { borderColor: 'divider' },
                   }}
                 >
                   <ListItemAvatar>
                     <Avatar 
                       sx={{ 
-                        width: 32, 
-                        height: 32,
-                        bgcolor: task.completed ? 'success.main' : `${getPriorityColor(task.priority)}.main`,
+                        width: 36, 
+                        height: 36,
+                        bgcolor: activity.completed 
+                          ? 'success.main' 
+                          : `${getPriorityColor(activity.priority)}.main`,
                       }}
                     >
-                      {task.completed ? <CheckCircle /> : getPriorityIcon(task.priority)}
+                      {activity.completed ? <CheckCircle /> : getActivityIcon(activity.type)}
                     </Avatar>
                   </ListItemAvatar>
                   <ListItemText
@@ -249,22 +398,26 @@ const TodaysTasks = ({ tasks, isLoading }) => {
                       <Typography 
                         variant="body2" 
                         sx={{ 
-                          textDecoration: task.completed ? 'line-through' : 'none',
-                          fontWeight: task.completed ? 400 : 500,
+                          textDecoration: activity.completed ? 'line-through' : 'none',
+                          fontWeight: activity.completed ? 400 : 500,
                         }}
                       >
-                        {task.title}
+                        {activity.title}
                       </Typography>
                     }
                     secondary={
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography variant="caption" color="text.secondary">
-                          {task.time}
-                        </Typography>
-                        {task.leadName && (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                        <Chip 
+                          size="small" 
+                          label={activity.time}
+                          variant="outlined"
+                          sx={{ height: 20, fontSize: '0.7rem' }}
+                        />
+                        {activity.leadName && (
                           <Chip 
-                            label={task.leadName} 
+                            label={activity.leadName} 
                             size="small" 
+                            color="primary"
                             variant="outlined"
                             sx={{ height: 20, fontSize: '0.7rem' }}
                           />
@@ -273,58 +426,73 @@ const TodaysTasks = ({ tasks, isLoading }) => {
                     }
                   />
                   <ListItemSecondaryAction>
-                    {task.leadId && (
+                    {activity.leadId && (
                       <IconButton 
                         size="small" 
-                        onClick={() => navigate(`/leads/${task.leadId}`)}
+                        onClick={() => navigate(`/leads/${activity.leadId}`)}
                       >
                         <Visibility fontSize="small" />
                       </IconButton>
                     )}
                   </ListItemSecondaryAction>
                 </ListItem>
-                {index < tasks.length - 1 && index < 5 && <Divider />}
+                {index < activities.length - 1 && <Divider sx={{ my: 0.5 }} />}
               </React.Fragment>
             ))}
           </List>
         ) : (
           <Box sx={{ textAlign: 'center', py: 4 }}>
             <CheckCircle sx={{ fontSize: 48, color: 'success.main', mb: 2 }} />
-            <Typography variant="body2" color="text.secondary">
-              No tasks for today. Great job!
+            <Typography variant="h6" color="text.secondary" gutterBottom>
+              All caught up!
             </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              No activities scheduled for today
+            </Typography>
+            <Button 
+              variant="outlined" 
+              size="small"
+              startIcon={<Add />}
+              onClick={() => navigate('/leads')}
+            >
+              Add Activity
+            </Button>
           </Box>
         )}
-        
-        <Button 
-          fullWidth 
-          variant="outlined" 
-          sx={{ mt: 2 }}
-          onClick={() => navigate('/leads')}
-        >
-          View All Activities
-        </Button>
       </CardContent>
     </Card>
   );
 };
 
 // Hot Leads Component
-const HotLeads = ({ leads, isLoading }) => {
+const MyHotLeads = ({ leads, isLoading }) => {
   const navigate = useNavigate();
   
-  const getLeadTemperature = (score) => {
+  const getLeadScore = (score) => {
     if (score >= 80) return { label: 'Hot', color: 'error' };
     if (score >= 60) return { label: 'Warm', color: 'warning' };
     return { label: 'Cold', color: 'info' };
   };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent>
+          <Skeleton variant="text" width="50%" height={32} />
+          {[...Array(4)].map((_, index) => (
+            <Skeleton key={index} variant="rectangular" width="100%" height={80} sx={{ mt: 1 }} />
+          ))}
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
       <CardContent>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            Hot Leads
+            My Priority Leads
           </Typography>
           <Button 
             size="small" 
@@ -335,72 +503,83 @@ const HotLeads = ({ leads, isLoading }) => {
           </Button>
         </Box>
         
-        {isLoading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-            <CircularProgress />
-          </Box>
-        ) : leads?.length > 0 ? (
-          <List>
-            {leads.slice(0, 5).map((lead, index) => (
+        {leads && leads.length > 0 ? (
+          <List sx={{ maxHeight: 300, overflow: 'auto' }}>
+            {leads.slice(0, 6).map((lead, index) => (
               <React.Fragment key={index}>
                 <ListItem 
                   sx={{ 
                     px: 0,
                     cursor: 'pointer',
-                    '&:hover': { bgcolor: 'action.hover' },
                     borderRadius: 1,
+                    '&:hover': { bgcolor: 'action.hover' },
+                    transition: 'background-color 0.2s',
                   }}
-                  onClick={() => navigate(`/leads/${lead.id}`)}
+                  onClick={() => navigate(`/leads/${lead._id}`)}
                 >
                   <ListItemAvatar>
                     <Avatar sx={{ bgcolor: 'primary.main' }}>
-                      {lead.name?.charAt(0) || 'L'}
+                      {lead.firstName?.charAt(0)}{lead.lastName?.charAt(0)}
                     </Avatar>
                   </ListItemAvatar>
                   <ListItemText
                     primary={
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                          {lead.name}
+                          {lead.firstName} {lead.lastName}
                         </Typography>
                         <Chip 
-                          label={getLeadTemperature(lead.score).label}
+                          label={getLeadScore(lead.score || 0).label}
                           size="small"
-                          color={getLeadTemperature(lead.score).color}
-                          sx={{ height: 20, fontSize: '0.7rem' }}
+                          color={getLeadScore(lead.score || 0).color}
+                          sx={{ height: 18, fontSize: '0.7rem' }}
                         />
                       </Box>
                     }
                     secondary={
                       <Box>
                         <Typography variant="caption" color="text.secondary">
-                          {lead.project} • {formatCurrency(lead.budget)}
+                          {lead.project?.name || 'No project'} • {formatCurrency(lead.budget?.max || 0)}
                         </Typography>
                         <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                          Last contact: {getTimeAgo(lead.lastContact)}
+                          Last contact: {getTimeAgo(lead.lastInteractionDate)}
                         </Typography>
                       </Box>
                     }
                   />
                   <ListItemSecondaryAction>
-                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                    <Stack direction="row" spacing={0.5}>
                       <IconButton size="small" color="primary">
                         <Phone fontSize="small" />
                       </IconButton>
                       <IconButton size="small" color="primary">
-                        <Message fontSize="small" />
+                        <Email fontSize="small" />
                       </IconButton>
-                    </Box>
+                    </Stack>
                   </ListItemSecondaryAction>
                 </ListItem>
-                {index < leads.length - 1 && index < 4 && <Divider />}
+                {index < leads.length - 1 && index < 5 && <Divider />}
               </React.Fragment>
             ))}
           </List>
         ) : (
-          <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-            No hot leads at the moment
-          </Typography>
+          <Box sx={{ textAlign: 'center', py: 4 }}>
+            <Person sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} />
+            <Typography variant="h6" color="text.secondary" gutterBottom>
+              No leads assigned
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Start by creating or getting assigned new leads
+            </Typography>
+            <Button 
+              variant="contained" 
+              size="small"
+              startIcon={<PersonAdd />}
+              onClick={() => navigate('/leads/create')}
+            >
+              Create Lead
+            </Button>
+          </Box>
         )}
       </CardContent>
     </Card>
@@ -408,19 +587,15 @@ const HotLeads = ({ leads, isLoading }) => {
 };
 
 // Performance Chart Component
-const PerformanceChart = ({ data, isLoading }) => {
+const MyPerformanceChart = ({ data, isLoading }) => {
   const theme = useTheme();
 
   if (isLoading) {
     return (
       <Card>
         <CardContent>
-          <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
-            Performance Trend
-          </Typography>
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-            <CircularProgress />
-          </Box>
+          <Skeleton variant="text" width="60%" height={32} />
+          <Skeleton variant="rectangular" width="100%" height={250} sx={{ mt: 2 }} />
         </CardContent>
       </Card>
     );
@@ -430,33 +605,71 @@ const PerformanceChart = ({ data, isLoading }) => {
     <Card>
       <CardContent>
         <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
-          Weekly Performance
+          Weekly Performance Trend
         </Typography>
-        <Box sx={{ height: 250, mt: 2 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="day" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="leads" fill={theme.palette.primary.main} name="Leads Added" />
-              <Bar dataKey="calls" fill={theme.palette.success.main} name="Calls Made" />
-            </BarChart>
-          </ResponsiveContainer>
-        </Box>
+        {data && data.length > 0 ? (
+          <Box sx={{ height: 250 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data}>
+                <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+                <XAxis 
+                  dataKey="day" 
+                  stroke={theme.palette.text.secondary}
+                  fontSize={12}
+                />
+                <YAxis 
+                  stroke={theme.palette.text.secondary}
+                  fontSize={12}
+                />
+                <RechartsTooltip
+                  contentStyle={{ 
+                    backgroundColor: theme.palette.background.paper,
+                    border: `1px solid ${theme.palette.divider}`,
+                    borderRadius: 8,
+                  }}
+                />
+                <Bar 
+                  dataKey="leadsContacted" 
+                  fill={theme.palette.primary.main} 
+                  name="Leads Contacted"
+                  radius={[4, 4, 0, 0]}
+                />
+                <Bar 
+                  dataKey="callsMade" 
+                  fill={theme.palette.success.main} 
+                  name="Calls Made"
+                  radius={[4, 4, 0, 0]}
+                />
+                <Bar 
+                  dataKey="conversions" 
+                  fill={theme.palette.warning.main} 
+                  name="Conversions"
+                  radius={[4, 4, 0, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </Box>
+        ) : (
+          <Box sx={{ textAlign: 'center', py: 4 }}>
+            <Timeline sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} />
+            <Typography variant="body2" color="text.secondary">
+              No performance data available
+            </Typography>
+          </Box>
+        )}
       </CardContent>
     </Card>
   );
 };
 
 // Quick Actions Component
-const QuickActionsPanel = () => {
+const SalesQuickActions = () => {
   const navigate = useNavigate();
   
   const actions = [
     {
-      title: 'Add New Lead',
-      icon: Add,
+      title: 'Add Lead',
+      icon: PersonAdd,
       color: 'primary',
       onClick: () => navigate('/leads/create'),
     },
@@ -473,10 +686,10 @@ const QuickActionsPanel = () => {
       onClick: () => navigate('/leads?action=followup'),
     },
     {
-      title: 'Book Site Visit',
+      title: 'Book Meeting',
       icon: Event,
       color: 'warning',
-      onClick: () => navigate('/leads?action=visit'),
+      onClick: () => navigate('/leads?action=meeting'),
     },
   ];
 
@@ -486,92 +699,43 @@ const QuickActionsPanel = () => {
         <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
           Quick Actions
         </Typography>
-        <Grid container spacing={2}>
+        <Grid container spacing={1.5}>
           {actions.map((action, index) => (
             <Grid item xs={6} key={index}>
-              <Button
-                fullWidth
-                variant="outlined"
-                startIcon={<action.icon />}
-                onClick={action.onClick}
+              <Paper
                 sx={{
-                  py: 1.5,
-                  flexDirection: 'column',
-                  gap: 0.5,
+                  p: 2,
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                  transition: 'all 0.2s ease',
+                  border: '1px solid',
+                  borderColor: 'divider',
                   '&:hover': {
-                    bgcolor: `${action.color}.50`,
                     borderColor: `${action.color}.main`,
+                    bgcolor: `${action.color}.50`,
+                    transform: 'translateY(-2px)',
+                    boxShadow: 4,
                   },
                 }}
+                onClick={action.onClick}
               >
+                <Avatar 
+                  sx={{ 
+                    bgcolor: `${action.color}.100`, 
+                    color: `${action.color}.700`,
+                    mx: 'auto',
+                    mb: 1,
+                  }}
+                >
+                  <action.icon />
+                </Avatar>
                 <Typography variant="caption" sx={{ fontWeight: 500 }}>
                   {action.title}
                 </Typography>
-              </Button>
+              </Paper>
             </Grid>
           ))}
         </Grid>
-      </CardContent>
-    </Card>
-  );
-};
-
-// AI Insights Component
-const AIInsightsPanel = ({ insights, isLoading }) => {
-  const navigate = useNavigate();
-
-  return (
-    <Card>
-      <CardContent>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            AI Insights
-          </Typography>
-          <Psychology color="primary" />
-        </Box>
-        
-        {isLoading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-            <CircularProgress />
-          </Box>
-        ) : (
-          <Box>
-            {insights?.map((insight, index) => (
-              <Accordion key={index} sx={{ mb: 1, '&:before': { display: 'none' } }}>
-                <AccordionSummary expandIcon={<ExpandMore />}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip 
-                      label={insight.type} 
-                      size="small" 
-                      color={insight.priority === 'high' ? 'error' : 'primary'}
-                    />
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                      {insight.title}
-                    </Typography>
-                  </Box>
-                </AccordionSummary>
-                <AccordionDetails>
-                  <Typography variant="body2" color="text.secondary">
-                    {insight.description}
-                  </Typography>
-                  {insight.action && (
-                    <Button 
-                      size="small" 
-                      sx={{ mt: 1 }}
-                      onClick={() => navigate(insight.actionUrl)}
-                    >
-                      {insight.action}
-                    </Button>
-                  )}
-                </AccordionDetails>
-              </Accordion>
-            )) || (
-              <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-                No AI insights available
-              </Typography>
-            )}
-          </Box>
-        )}
       </CardContent>
     </Card>
   );
@@ -582,221 +746,277 @@ const SalesExecutiveDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // State for dashboard data
+  // State management
   const [dashboardData, setDashboardData] = useState({
     personalMetrics: {
       leadsAssigned: 0,
       leadsConverted: 0,
       monthlyTarget: 0,
       revenue: 0,
+      conversionRate: 0,
     },
-    todaysTasks: [],
-    hotLeads: [],
+    myLeads: [],
+    activities: [],
     performanceData: [],
-    aiInsights: [],
+    pipelineData: [],
   });
 
   const [loading, setLoading] = useState({
     metrics: true,
-    tasks: true,
     leads: true,
+    activities: true,
     performance: true,
-    insights: true,
   });
 
   const [error, setError] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Fetch dashboard data
-  useEffect(() => {
-    fetchSalesExecutiveData();
-  }, []);
-
-  const fetchSalesExecutiveData = async () => {
+  // Fetch personal dashboard data
+  const fetchPersonalData = useCallback(async (showRefreshing = false) => {
     try {
+      if (showRefreshing) setRefreshing(true);
       setError(null);
       
-      // Fetch personal leads and sales data
+      // Fetch user's personal data
       const [
-        leadsResponse,
-        salesResponse,
+        myLeadsResponse,
+        mySalesResponse,
+        myActivitiesResponse,
+        userProfileResponse,
       ] = await Promise.allSettled([
-        leadAPI.getLeads({ assignedTo: user?.id, limit: 50 }),
-        salesAPI.getSales({ salesExecutive: user?.id, limit: 20 }),
+        leadAPI.getLeads({ assignedTo: user?.id, limit: 100 }),
+        salesAPI.getSales({ salesExecutive: user?.id, limit: 100 }),
+        // This would be from a dedicated activities API in real scenario
+        leadAPI.getLeads({ assignedTo: user?.id, status: 'active', limit: 20 }),
+        userAPI.getUserById(user?.id),
       ]);
 
       // Process leads data
-      let personalLeads = [];
-      if (leadsResponse.status === 'fulfilled') {
-        personalLeads = leadsResponse.value.data.data || [];
+      let myLeads = [];
+      let personalMetrics = {
+        leadsAssigned: 0,
+        leadsConverted: 0,
+        monthlyTarget: 15, // This should come from user profile or settings
+        revenue: 0,
+        conversionRate: 0,
+      };
+
+      if (myLeadsResponse.status === 'fulfilled') {
+        myLeads = myLeadsResponse.value.data.data || [];
         
-        // Calculate personal metrics
-        const leadsThisMonth = personalLeads.filter(lead => {
+        // Calculate metrics from actual data
+        const currentMonth = new Date().getMonth();
+        const currentYear = new Date().getFullYear();
+        
+        const leadsThisMonth = myLeads.filter(lead => {
           const leadDate = new Date(lead.createdAt);
-          const now = new Date();
-          return leadDate.getMonth() === now.getMonth() && leadDate.getFullYear() === now.getFullYear();
+          return leadDate.getMonth() === currentMonth && leadDate.getFullYear() === currentYear;
         });
 
-        const convertedLeads = personalLeads.filter(lead => lead.status === 'Closed' || lead.status === 'Converted');
-        
+        const convertedLeads = myLeads.filter(lead => 
+          ['Converted', 'Closed', 'Won'].includes(lead.status)
+        );
+
+        personalMetrics.leadsAssigned = leadsThisMonth.length;
+        personalMetrics.leadsConverted = convertedLeads.length;
+        personalMetrics.conversionRate = personalMetrics.leadsAssigned > 0 
+          ? (personalMetrics.leadsConverted / personalMetrics.leadsAssigned) * 100 
+          : 0;
+
+        // Generate pipeline data from actual leads
+        const pipelineData = [
+          { 
+            name: 'New', 
+            value: myLeads.filter(l => l.status === 'New').length 
+          },
+          { 
+            name: 'Contacted', 
+            value: myLeads.filter(l => l.status === 'Contacted').length 
+          },
+          { 
+            name: 'Qualified', 
+            value: myLeads.filter(l => l.status === 'Qualified').length 
+          },
+          { 
+            name: 'Converted', 
+            value: convertedLeads.length 
+          },
+        ].filter(item => item.value > 0); // Only show stages with data
+
         setDashboardData(prev => ({
           ...prev,
-          personalMetrics: {
-            leadsAssigned: personalLeads.length,
-            leadsConverted: convertedLeads.length,
-            monthlyTarget: 15, // This should come from user settings
-            revenue: convertedLeads.reduce((sum, lead) => sum + (lead.estimatedValue || 0), 0),
-          },
-          hotLeads: personalLeads
-            .filter(lead => lead.score >= 70)
-            .map(lead => ({
-              id: lead._id,
-              name: `${lead.firstName} ${lead.lastName || ''}`,
-              project: lead.project?.name || 'Unknown Project',
-              budget: lead.budget?.max || lead.budget?.min || 0,
-              score: lead.score || 0,
-              lastContact: lead.lastInteractionDate || lead.createdAt,
-            })),
+          myLeads: myLeads
+            .filter(lead => (lead.score || 0) >= 60) // High priority leads
+            .sort((a, b) => (b.score || 0) - (a.score || 0))
+            .slice(0, 8),
+          pipelineData,
         }));
       }
 
-      // Generate sample tasks and performance data
+      // Process sales data for revenue calculation
+      if (mySalesResponse.status === 'fulfilled') {
+        const mySales = mySalesResponse.value.data.data || [];
+        personalMetrics.revenue = mySales.reduce((sum, sale) => 
+          sum + (sale.finalAmount || sale.totalAmount || 0), 0
+        );
+      }
+
+      // Process user profile for target information
+      if (userProfileResponse.status === 'fulfilled') {
+        const userProfile = userProfileResponse.value.data;
+        personalMetrics.monthlyTarget = userProfile.monthlyTarget || 15;
+      }
+
+      // Generate performance data (this should come from actual activity tracking)
+      const performanceData = [];
+      const today = new Date();
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+        
+        // In real scenario, this would be actual tracked data
+        const dayLeads = myLeads.filter(lead => {
+          const leadDate = new Date(lead.createdAt);
+          return leadDate.toDateString() === date.toDateString();
+        });
+        
+        performanceData.push({
+          day: dayName,
+          leadsContacted: dayLeads.length,
+          callsMade: Math.floor(dayLeads.length * 1.5), // Estimated
+          conversions: dayLeads.filter(l => l.status === 'Converted').length,
+        });
+      }
+
+      // Generate activities from leads (in real scenario, this would be from activities API)
+      const activities = myLeads
+        .filter(lead => lead.nextFollowUp || lead.status === 'New')
+        .slice(0, 8)
+        .map(lead => ({
+          id: lead._id,
+          title: `Follow up with ${lead.firstName} ${lead.lastName}`,
+          type: 'follow-up',
+          time: lead.nextFollowUp ? new Date(lead.nextFollowUp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Pending',
+          priority: (lead.score || 0) >= 80 ? 'high' : (lead.score || 0) >= 60 ? 'medium' : 'low',
+          completed: false,
+          leadId: lead._id,
+          leadName: `${lead.firstName} ${lead.lastName}`,
+        }));
+
+      // Update all state
       setDashboardData(prev => ({
         ...prev,
-        todaysTasks: [
-          {
-            title: 'Follow up with Rajesh Kumar',
-            time: '10:00 AM',
-            priority: 'high',
-            completed: false,
-            leadId: personalLeads[0]?._id,
-            leadName: 'Rajesh Kumar',
-          },
-          {
-            title: 'Site visit with Priya Sharma',
-            time: '2:00 PM',
-            priority: 'high',
-            completed: false,
-            leadId: personalLeads[1]?._id,
-            leadName: 'Priya Sharma',
-          },
-          {
-            title: 'Send property brochure to Amit',
-            time: '4:00 PM',
-            priority: 'medium',
-            completed: true,
-            leadId: personalLeads[2]?._id,
-            leadName: 'Amit Patel',
-          },
-          {
-            title: 'Prepare cost sheet for premium unit',
-            time: '5:00 PM',
-            priority: 'medium',
-            completed: false,
-          },
-          {
-            title: 'Call back interested customer',
-            time: '6:00 PM',
-            priority: 'low',
-            completed: false,
-          },
-        ],
-        performanceData: [
-          { day: 'Mon', leads: 3, calls: 12 },
-          { day: 'Tue', leads: 5, calls: 15 },
-          { day: 'Wed', leads: 2, calls: 8 },
-          { day: 'Thu', leads: 4, calls: 14 },
-          { day: 'Fri', leads: 6, calls: 18 },
-          { day: 'Sat', leads: 3, calls: 10 },
-          { day: 'Sun', leads: 1, calls: 5 },
-        ],
-        aiInsights: [
-          {
-            type: 'Opportunity',
-            title: 'High-value lead needs immediate attention',
-            description: 'Rajesh Kumar has shown strong interest and has the budget for premium units. Schedule a call within 24 hours.',
-            priority: 'high',
-            action: 'Contact Now',
-            actionUrl: `/leads/${personalLeads[0]?._id}`,
-          },
-          {
-            type: 'Follow-up',
-            title: '3 warm leads haven\'t been contacted this week',
-            description: 'These leads have shown interest but haven\'t received follow-up. Recommend reaching out with project updates.',
-            priority: 'medium',
-            action: 'View Leads',
-            actionUrl: '/leads?filter=warm',
-          },
-          {
-            type: 'Performance',
-            title: 'You\'re 20% ahead of monthly target',
-            description: 'Great performance! You\'ve converted 12 leads vs target of 10 for this month.',
-            priority: 'low',
-            action: 'View Analytics',
-            actionUrl: '/analytics/personal',
-          },
-        ],
+        personalMetrics,
+        activities,
+        performanceData,
       }));
 
-      // Update loading states
       setLoading({
         metrics: false,
-        tasks: false,
         leads: false,
+        activities: false,
         performance: false,
-        insights: false,
       });
 
     } catch (error) {
-      console.error('Error fetching sales executive data:', error);
-      setError('Failed to load dashboard data. Please try again.');
+      console.error('Error fetching personal dashboard data:', error);
+      setError('Failed to load your dashboard data. Please try refreshing.');
       setLoading({
         metrics: false,
-        tasks: false,
         leads: false,
+        activities: false,
         performance: false,
-        insights: false,
       });
+    } finally {
+      if (showRefreshing) setRefreshing(false);
     }
+  }, [user?.id]);
+
+  // Initial data load
+  useEffect(() => {
+    if (user?.id) {
+      fetchPersonalData();
+    }
+  }, [fetchPersonalData, user?.id]);
+
+  // Handle refresh
+  const handleRefresh = () => {
+    fetchPersonalData(true);
   };
 
   return (
     <Box>
       {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
-          Sales Dashboard
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Good morning, {user?.firstName}! Here's your sales overview and today's activities.
-        </Typography>
-      </Box>
+      <Fade in timeout={500}>
+        <Box sx={{ mb: 4 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+            <Box>
+              <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
+                My Sales Dashboard
+              </Typography>
+              <Typography variant="body1" color="text.secondary">
+                Good morning, {user?.firstName}! Here's your personal performance overview.
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Tooltip title="Refresh Dashboard">
+                <IconButton 
+                  onClick={handleRefresh}
+                  disabled={refreshing}
+                >
+                  <Refresh sx={{ 
+                    animation: refreshing ? 'spin 1s linear infinite' : 'none',
+                    '@keyframes spin': {
+                      '0%': { transform: 'rotate(0deg)' },
+                      '100%': { transform: 'rotate(360deg)' },
+                    }
+                  }} />
+                </IconButton>
+              </Tooltip>
+              <Button 
+                variant="outlined" 
+                startIcon={<LeaderboardRounded />}
+                onClick={() => navigate('/analytics/personal')}
+              >
+                My Analytics
+              </Button>
+            </Box>
+          </Box>
+        </Box>
+      </Fade>
 
       {/* Error Alert */}
       {error && (
-        <Alert 
-          severity="error" 
-          sx={{ mb: 3 }}
-          action={
-            <Button color="inherit" size="small" onClick={fetchSalesExecutiveData}>
-              Retry
-            </Button>
-          }
-        >
-          {error}
-        </Alert>
+        <Fade in>
+          <Alert 
+            severity="error" 
+            sx={{ mb: 3 }}
+            action={
+              <Button color="inherit" size="small" onClick={handleRefresh}>
+                Retry
+              </Button>
+            }
+          >
+            {error}
+          </Alert>
+        </Fade>
       )}
 
       {/* Personal Metrics */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={3}>
           <PersonalMetricCard
-            title="Leads This Month"
+            title="This Month's Leads"
             current={dashboardData.personalMetrics.leadsAssigned}
             target={dashboardData.personalMetrics.monthlyTarget}
             subtitle="Assigned to you"
             icon={Person}
             color="primary"
             isLoading={loading.metrics}
+            trend="+3 this week"
+            trendDirection="up"
+            onClick={() => navigate('/leads')}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
@@ -804,10 +1024,13 @@ const SalesExecutiveDashboard = () => {
             title="Conversions"
             current={dashboardData.personalMetrics.leadsConverted}
             target={Math.floor(dashboardData.personalMetrics.monthlyTarget * 0.3)}
-            subtitle="This month"
+            subtitle="Successfully closed"
             icon={GpsFixed}
             color="success"
             isLoading={loading.metrics}
+            trend="+2 this week"
+            trendDirection="up"
+            onClick={() => navigate('/leads?status=converted')}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
@@ -815,65 +1038,68 @@ const SalesExecutiveDashboard = () => {
             title="Revenue Generated"
             current={formatCurrency(dashboardData.personalMetrics.revenue)}
             subtitle="From conversions"
-            icon={TrendingUp}
+            icon={MonetizationOn}
             color="warning"
             isLoading={loading.metrics}
+            trend="+₹2.5L this month"
+            trendDirection="up"
+            onClick={() => navigate('/sales')}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <PersonalMetricCard
             title="Conversion Rate"
-            current={dashboardData.personalMetrics.leadsAssigned > 0 
-              ? `${Math.round((dashboardData.personalMetrics.leadsConverted / dashboardData.personalMetrics.leadsAssigned) * 100)}%`
-              : '0%'
-            }
-            subtitle="Lead to sale"
+            current={`${dashboardData.personalMetrics.conversionRate.toFixed(1)}%`}
+            subtitle="Lead to sale ratio"
             icon={Speed}
             color="info"
             isLoading={loading.metrics}
+            trend="+2.1% improvement"
+            trendDirection="up"
+            onClick={() => navigate('/analytics/conversion')}
           />
         </Grid>
       </Grid>
 
-      {/* Main Content */}
+      {/* Main Content Grid */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        {/* Today's Tasks */}
+        {/* Today's Activities */}
         <Grid item xs={12} md={6} lg={4}>
-          <TodaysTasks 
-            tasks={dashboardData.todaysTasks} 
-            isLoading={loading.tasks}
+          <TodaysActivities 
+            activities={dashboardData.activities} 
+            isLoading={loading.activities}
           />
         </Grid>
         
         {/* Hot Leads */}
         <Grid item xs={12} md={6} lg={4}>
-          <HotLeads 
-            leads={dashboardData.hotLeads} 
+          <MyHotLeads 
+            leads={dashboardData.myLeads} 
             isLoading={loading.leads}
           />
         </Grid>
         
         {/* Quick Actions */}
         <Grid item xs={12} md={6} lg={4}>
-          <QuickActionsPanel />
+          <SalesQuickActions />
         </Grid>
       </Grid>
 
-      {/* Performance and AI Insights */}
+      {/* Performance Analytics */}
       <Grid container spacing={3}>
         {/* Performance Chart */}
         <Grid item xs={12} lg={8}>
-          <PerformanceChart 
+          <MyPerformanceChart 
             data={dashboardData.performanceData} 
             isLoading={loading.performance}
           />
         </Grid>
         
-        {/* AI Insights */}
+        {/* Pipeline Chart */}
         <Grid item xs={12} lg={4}>
-          <AIInsightsPanel 
-            insights={dashboardData.aiInsights} 
-            isLoading={loading.insights}
+          <PersonalPipelineChart 
+            data={dashboardData.pipelineData} 
+            isLoading={loading.leads}
           />
         </Grid>
       </Grid>

@@ -1,12 +1,15 @@
 // File: src/pages/auth/LoginPage.js
-// Description: Production-grade login page with real backend integration
-// Version: 2.0 - Complete login with validation and error handling
+// Description: Updated login page with proper AuthContext integration for role-based redirect
+// Version: 2.0 - Enhanced with proper redirect logic and error handling
 // Location: src/pages/auth/LoginPage.js
 
 import React, { useState, useEffect } from 'react';
 import { Link as RouterLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
+  Container,
+  Card,
+  CardContent,
   TextField,
   Button,
   Typography,
@@ -17,11 +20,10 @@ import {
   Checkbox,
   Alert,
   CircularProgress,
-  Container,
-  Card,
-  CardContent,
-  Avatar,
   Divider,
+  Avatar,
+  useTheme,
+  useMediaQuery,
 } from '@mui/material';
 import {
   Visibility,
@@ -29,44 +31,129 @@ import {
   Email,
   Lock,
   Login as LoginIcon,
-  Business,
   PersonAdd,
+  BusinessCenter,
 } from '@mui/icons-material';
+import { useSnackbar } from 'notistack';
 
 import { useAuth } from '../../context/AuthContext';
 
+// PropVantage AI Logo Component
+const PropVantageLogo = ({ size = 'large' }) => {
+  const theme = useTheme();
+  
+  const logoSizes = {
+    small: { fontSize: '1.5rem', iconSize: 24 },
+    medium: { fontSize: '2rem', iconSize: 32 },
+    large: { fontSize: '2.5rem', iconSize: 40 },
+  };
+  
+  const currentSize = logoSizes[size];
+  
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 2,
+        mb: 2,
+      }}
+    >
+      <Avatar
+        sx={{
+          bgcolor: theme.palette.primary.main,
+          width: currentSize.iconSize * 1.5,
+          height: currentSize.iconSize * 1.5,
+        }}
+      >
+        <BusinessCenter sx={{ fontSize: currentSize.iconSize }} />
+      </Avatar>
+      <Box sx={{ textAlign: 'center' }}>
+        <Typography
+          variant="h1"
+          sx={{
+            fontSize: currentSize.fontSize,
+            fontWeight: 700,
+            background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+            backgroundClip: 'text',
+            textFillColor: 'transparent',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            lineHeight: 1,
+          }}
+        >
+          PropVantage
+        </Typography>
+        <Typography
+          variant="body2"
+          sx={{
+            color: theme.palette.text.secondary,
+            fontWeight: 500,
+            letterSpacing: '0.1em',
+            mt: -0.5,
+          }}
+        >
+          AI POWERED CRM
+        </Typography>
+      </Box>
+    </Box>
+  );
+};
+
 const LoginPage = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, isLoading, error: authError, clearError } = useAuth();
+  const { login, isAuthenticated, error: authError, clearError } = useAuth();
+  const { enqueueSnackbar } = useSnackbar();
 
+  // Form state
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     rememberMe: false,
   });
-
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
-  const [submitAttempted, setSubmitAttempted] = useState(false);
 
+  // Clear auth errors on component mount
   useEffect(() => {
     clearError();
-    // Load remembered email
-    const rememberedEmail = localStorage.getItem('rememberedEmail');
-    if (rememberedEmail) {
-      setFormData(prev => ({
-        ...prev,
-        email: rememberedEmail,
-        rememberMe: true,
-      }));
-    }
   }, [clearError]);
 
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      const from = location.state?.from?.pathname || '/dashboard';
+      navigate(from, { replace: true });
+    }
+  }, [isAuthenticated, navigate, location]);
+
+  // Handle input changes
+  const handleInputChange = (field) => (event) => {
+    const value = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
+    setFormData(prev => ({
+      ...prev,
+      [field]: value,
+    }));
+    
+    // Clear field error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({
+        ...prev,
+        [field]: '',
+      }));
+    }
+  };
+
+  // Form validation
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.email) {
+    if (!formData.email.trim()) {
       newErrors.email = 'Email is required';
     } else if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(formData.email)) {
       newErrors.email = 'Please enter a valid email address';
@@ -82,52 +169,94 @@ const LoginPage = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleInputChange = (field) => (event) => {
-    const value = field === 'rememberMe' ? event.target.checked : event.target.value;
-    
-    setFormData(prev => ({
-      ...prev,
-      [field]: value,
-    }));
-
-    // Clear field error when user starts typing
-    if (errors[field]) {
-      setErrors(prev => ({
-        ...prev,
-        [field]: '',
-      }));
-    }
-
-    // Clear auth error when user modifies form
-    if (authError) {
-      clearError();
-    }
-  };
-
+  // Handle form submission
   const handleSubmit = async (event) => {
     event.preventDefault();
-    setSubmitAttempted(true);
-
+    
     if (!validateForm()) {
       return;
     }
 
-    const result = await login({
-      email: formData.email.trim().toLowerCase(),
-      password: formData.password,
-    });
+    setIsLoading(true);
+    setErrors({});
 
-    if (result.success) {
-      // Handle remember me
-      if (formData.rememberMe) {
-        localStorage.setItem('rememberedEmail', formData.email);
+    try {
+      const result = await login({
+        email: formData.email.trim(),
+        password: formData.password,
+      });
+
+      if (result.success) {
+        enqueueSnackbar(`Welcome back, ${result.user.firstName}!`, {
+          variant: 'success',
+        });
+
+        // Get redirect path
+        const from = location.state?.from?.pathname || result.redirectTo || '/dashboard';
+        
+        // Small delay to show success message
+        setTimeout(() => {
+          navigate(from, { replace: true });
+        }, 100);
+
       } else {
-        localStorage.removeItem('rememberedEmail');
+        throw new Error(result.error || 'Login failed');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      const errorMessage = error.message || 'Login failed. Please check your credentials and try again.';
+      
+      enqueueSnackbar(errorMessage, {
+        variant: 'error',
+      });
+      
+      setErrors({ submit: errorMessage });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Demo login functionality
+  const handleDemoLogin = async (role) => {
+    setIsLoading(true);
+    setErrors({});
+
+    try {
+      // Demo credentials based on role
+      const demoCredentials = {
+        'Business Head': { email: 'admin@demo.com', password: 'password123' },
+        'Sales Executive': { email: 'sales@demo.com', password: 'password123' },
+        'Sales Manager': { email: 'manager@demo.com', password: 'password123' },
+        'Finance Head': { email: 'finance@demo.com', password: 'password123' },
+        'Project Director': { email: 'director@demo.com', password: 'password123' },
+      };
+
+      const credentials = demoCredentials[role];
+      if (!credentials) {
+        throw new Error('Demo account not available for this role');
       }
 
-      // Redirect to intended page or dashboard
-      const from = location.state?.from?.pathname || '/dashboard';
-      navigate(from, { replace: true });
+      const result = await login(credentials);
+
+      if (result.success) {
+        enqueueSnackbar(`Logged in as ${role} (Demo)`, {
+          variant: 'success',
+        });
+
+        // Redirect to appropriate dashboard
+        setTimeout(() => {
+          navigate(result.redirectTo || '/dashboard', { replace: true });
+        }, 100);
+      } else {
+        throw new Error(result.error || 'Demo login failed');
+      }
+    } catch (error) {
+      console.error('Demo login error:', error);
+      enqueueSnackbar('Demo login failed. Please try again.', {
+        variant: 'error',
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -138,78 +267,62 @@ const LoginPage = () => {
         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center',
-        py: 4,
+        py: 3,
       }}
     >
       <Container maxWidth="sm">
+        {/* Logo */}
+        <PropVantageLogo size={isMobile ? 'medium' : 'large'} />
+
+        {/* Login Card */}
         <Card
           sx={{
-            backdropFilter: 'blur(20px)',
-            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+            borderRadius: 3,
+            background: 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(10px)',
+            border: `1px solid ${theme.palette.grey[200]}`,
             boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)',
-            borderRadius: 4,
           }}
         >
-          <CardContent sx={{ p: 6 }}>
-            {/* Logo and Header */}
+          <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
+            {/* Header */}
             <Box sx={{ textAlign: 'center', mb: 4 }}>
-              <Avatar
-                sx={{
-                  width: 80,
-                  height: 80,
-                  mx: 'auto',
-                  mb: 2,
-                  bgcolor: 'primary.main',
-                  fontSize: '2rem',
-                }}
-              >
-                <Business fontSize="large" />
-              </Avatar>
               <Typography
                 variant="h4"
                 sx={{
                   fontWeight: 700,
-                  background: 'linear-gradient(45deg, #667eea, #764ba2)',
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
+                  color: theme.palette.text.primary,
                   mb: 1,
                 }}
               >
-                PropVantage AI
-              </Typography>
-              <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
                 Welcome Back
               </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Sign in to your account to continue
+              <Typography variant="body1" color="text.secondary">
+                Sign in to your PropVantage AI account
               </Typography>
             </Box>
 
-            {/* Error Alert */}
-            {authError && (
-              <Alert 
-                severity="error" 
-                sx={{ mb: 3 }}
-                onClose={clearError}
-              >
-                {authError}
+            {/* Error Display */}
+            {(errors.submit || authError) && (
+              <Alert severity="error" sx={{ mb: 3 }}>
+                {errors.submit || authError}
               </Alert>
             )}
 
             {/* Login Form */}
             <Box component="form" onSubmit={handleSubmit}>
+              {/* Email Field */}
               <TextField
                 fullWidth
-                type="email"
                 label="Email Address"
-                placeholder="Enter your business email"
+                type="email"
+                placeholder="Enter your email"
                 value={formData.email}
                 onChange={handleInputChange('email')}
-                error={!!(submitAttempted && errors.email)}
-                helperText={submitAttempted && errors.email}
+                error={!!errors.email}
+                helperText={errors.email}
                 disabled={isLoading}
+                autoComplete="email"
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -217,20 +330,19 @@ const LoginPage = () => {
                     </InputAdornment>
                   ),
                 }}
-                sx={{ mb: 3 }}
-                autoComplete="email"
-                autoFocus
+                sx={{ mb: 2 }}
               />
 
+              {/* Password Field */}
               <TextField
                 fullWidth
-                type={showPassword ? 'text' : 'password'}
                 label="Password"
+                type={showPassword ? 'text' : 'password'}
                 placeholder="Enter your password"
                 value={formData.password}
                 onChange={handleInputChange('password')}
-                error={!!(submitAttempted && errors.password)}
-                helperText={submitAttempted && errors.password}
+                error={!!errors.password}
+                helperText={errors.password}
                 disabled={isLoading}
                 InputProps={{
                   startAdornment: (
@@ -254,22 +366,31 @@ const LoginPage = () => {
                 autoComplete="current-password"
               />
 
-              {/* Remember Me */}
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={formData.rememberMe}
-                    onChange={handleInputChange('rememberMe')}
-                    disabled={isLoading}
-                  />
-                }
-                label={
-                  <Typography variant="body2" color="text.secondary">
-                    Remember me
-                  </Typography>
-                }
-                sx={{ mb: 3 }}
-              />
+              {/* Remember Me & Forgot Password */}
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={formData.rememberMe}
+                      onChange={handleInputChange('rememberMe')}
+                      disabled={isLoading}
+                    />
+                  }
+                  label={
+                    <Typography variant="body2" color="text.secondary">
+                      Remember me
+                    </Typography>
+                  }
+                />
+                <Link
+                  component={RouterLink}
+                  to="/forgot-password"
+                  variant="body2"
+                  sx={{ textDecoration: 'none' }}
+                >
+                  Forgot Password?
+                </Link>
+              </Box>
 
               {/* Login Button */}
               <Button
@@ -298,6 +419,8 @@ const LoginPage = () => {
               >
                 {isLoading ? 'Signing In...' : 'Sign In'}
               </Button>
+
+
 
               {/* Register Link */}
               <Divider sx={{ mb: 3 }}>
@@ -332,7 +455,7 @@ const LoginPage = () => {
         {/* Footer */}
         <Box sx={{ textAlign: 'center', mt: 4 }}>
           <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
-            © 2024 PropVantage AI. All rights reserved.
+            © 2025 PropVantage AI. All rights reserved.
           </Typography>
         </Box>
       </Container>
