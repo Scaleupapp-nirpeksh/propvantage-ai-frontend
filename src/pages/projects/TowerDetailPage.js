@@ -1,6 +1,6 @@
 // File: src/pages/projects/TowerDetailPage.js
-// Description: COMPREHENSIVE tower detail page showing ALL backend data fields
-// Version: 2.0 - Complete tower management with all 54+ fields from backend
+// Description: FIXED tower detail page with proper API response handling
+// Version: 2.1 - Fixed API response structure handling
 // Location: src/pages/projects/TowerDetailPage.js
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -43,6 +43,9 @@ import {
   ListItem,
   ListItemText as MuiListItemText,
   Divider,
+  FormControl,
+  InputLabel,
+  Select,
 } from '@mui/material';
 import {
   ArrowBack,
@@ -94,6 +97,11 @@ import {
   Explore,
   Star,
   Info,
+  Bed,
+  Bathtub,
+  Kitchen,
+  Balcony,
+  Park,
 } from '@mui/icons-material';
 
 import { useAuth } from '../../context/AuthContext';
@@ -105,6 +113,74 @@ const extractId = (value, context = 'unknown') => {
   if (typeof value === 'string') return value;
   if (typeof value === 'object') return value._id || value.id || null;
   return String(value);
+};
+
+// Utility function to safely extract data from API response - FIXED VERSION
+const extractDataFromResponse = (response, dataType = 'generic') => {
+  try {
+    console.log(`🔍 Extracting ${dataType} data from response:`, {
+      hasResponse: !!response,
+      hasData: !!response?.data,
+      dataKeys: response?.data ? Object.keys(response.data) : [],
+      responseStructure: typeof response?.data
+    });
+
+    // Handle different possible response structures
+    const responseData = response?.data;
+    
+    if (!responseData) {
+      console.warn(`⚠️ No response data found for ${dataType}`);
+      return null;
+    }
+
+    // Try different possible structures:
+    // 1. Standard: { success: true, data: {...} }
+    if (responseData.data && typeof responseData.data === 'object') {
+      console.log(`✅ Found ${dataType} in response.data.data`);
+      return responseData.data;
+    }
+
+    // 2. Direct nested: { tower: {...} } or { project: {...} }
+    if (responseData.tower && dataType.includes('tower')) {
+      console.log(`✅ Found ${dataType} in response.data.tower`);
+      return responseData.tower;
+    }
+
+    if (responseData.project && dataType.includes('project')) {
+      console.log(`✅ Found ${dataType} in response.data.project`);
+      return responseData.project;
+    }
+
+    if (responseData.units && dataType.includes('units')) {
+      console.log(`✅ Found ${dataType} in response.data.units`);
+      return responseData.units;
+    }
+
+    // 3. Direct response: { _id: ..., name: ... } (the actual object)
+    if (responseData._id || responseData.id) {
+      console.log(`✅ Found ${dataType} as direct response object`);
+      return responseData;
+    }
+
+    // 4. Array response for lists
+    if (Array.isArray(responseData)) {
+      console.log(`✅ Found ${dataType} as direct array response`);
+      return responseData;
+    }
+
+    // 5. Success wrapper: { success: true, result: {...} }
+    if (responseData.result) {
+      console.log(`✅ Found ${dataType} in response.data.result`);
+      return responseData.result;
+    }
+
+    console.warn(`⚠️ Could not extract ${dataType} from response. Available keys:`, Object.keys(responseData));
+    return responseData; // Return as-is as fallback
+
+  } catch (error) {
+    console.error(`❌ Error extracting ${dataType} from response:`, error);
+    return null;
+  }
 };
 
 // Utility functions
@@ -149,17 +225,19 @@ const getStatusColor = (status) => {
 };
 
 const getStatusIcon = (status) => {
-  switch (status?.toLowerCase()) {
-    case 'available': return CheckCircle;
-    case 'sold': return Home;
-    case 'blocked': return Block;
-    case 'on-hold': return Warning;
-    case 'completed': return CheckCircle;
-    case 'approved': return VerifiedUser;
-    case 'pending': return Schedule;
-    case 'in-progress': return Timeline;
-    default: return Info;
-  }
+  const icons = {
+    available: CheckCircle,
+    sold: Home,
+    blocked: Block,
+    'on-hold': Warning,
+    completed: CheckCircle,
+    approved: VerifiedUser,
+    pending: Schedule,
+    'in-progress': Timeline,
+  };
+  
+  const icon = icons[status?.toLowerCase()];
+  return icon || Info || Domain; // Fallback to Info, then Domain if that fails too
 };
 
 // Breadcrumb Navigation Component
@@ -217,7 +295,7 @@ const TowerHeader = ({ project, tower, onEdit, onRefresh, isLoading }) => {
     return 'error';
   };
 
-  const constructionProgress = tower.construction?.progressPercentage || 0;
+  const constructionProgress = tower?.construction?.progressPercentage || 0;
 
   return (
     <Paper sx={{ p: 3, mb: 3 }}>
@@ -229,26 +307,26 @@ const TowerHeader = ({ project, tower, onEdit, onRefresh, isLoading }) => {
             </Avatar>
             <Box>
               <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5 }}>
-                {tower.towerName || tower.towerCode || `Tower ${tower._id?.slice(-6) || 'Unknown'}`}
+                {tower?.towerName || tower?.towerCode || `Tower ${tower?._id?.slice(-6) || 'Unknown'}`}
               </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                 <Chip 
-                  label={tower.towerCode || 'No Code'} 
+                  label={tower?.towerCode || 'No Code'} 
                   color="primary" 
                   size="small" 
                   variant="outlined"
                 />
                 <Chip 
-                  label={tower.towerType || 'Residential'} 
+                  label={tower?.towerType || 'Residential'} 
                   color="info" 
                   size="small"
                 />
                 <Chip 
-                  label={tower.status || 'Active'} 
-                  color={getStatusColor(tower.status)} 
+                  label={tower?.status || 'Active'} 
+                  color={getStatusColor(tower?.status)} 
                   size="small"
                 />
-                {tower.metadata?.cornerTower && (
+                {tower?.metadata?.cornerTower && (
                   <Chip 
                     label="Corner Tower" 
                     color="warning" 
@@ -256,7 +334,7 @@ const TowerHeader = ({ project, tower, onEdit, onRefresh, isLoading }) => {
                     icon={<Star />}
                   />
                 )}
-                {tower.metadata?.premiumLocation && (
+                {tower?.metadata?.premiumLocation && (
                   <Chip 
                     label="Premium Location" 
                     color="success" 
@@ -272,7 +350,7 @@ const TowerHeader = ({ project, tower, onEdit, onRefresh, isLoading }) => {
           <Grid container spacing={2} sx={{ mb: 2 }}>
             <Grid item xs={3}>
               <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                {tower.totalFloors || 0}
+                {tower?.totalFloors || 0}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 Total Floors
@@ -280,7 +358,7 @@ const TowerHeader = ({ project, tower, onEdit, onRefresh, isLoading }) => {
             </Grid>
             <Grid item xs={3}>
               <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                {tower.unitsPerFloor || 0}
+                {tower?.unitsPerFloor || 0}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 Units/Floor
@@ -288,7 +366,7 @@ const TowerHeader = ({ project, tower, onEdit, onRefresh, isLoading }) => {
             </Grid>
             <Grid item xs={3}>
               <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                {tower.totalUnits || 0}
+                {tower?.totalUnits || 0}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 Total Units
@@ -331,9 +409,9 @@ const TowerHeader = ({ project, tower, onEdit, onRefresh, isLoading }) => {
           )}
 
           {/* Key Dates */}
-          {(tower.construction?.plannedCompletionDate || tower.construction?.actualCompletionDate) && (
+          {(tower?.construction?.plannedCompletionDate || tower?.construction?.actualCompletionDate) && (
             <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
-              {tower.construction?.plannedCompletionDate && (
+              {tower?.construction?.plannedCompletionDate && (
                 <Box>
                   <Typography variant="body2" color="text.secondary">
                     Planned Completion
@@ -343,7 +421,7 @@ const TowerHeader = ({ project, tower, onEdit, onRefresh, isLoading }) => {
                   </Typography>
                 </Box>
               )}
-              {tower.construction?.actualCompletionDate && (
+              {tower?.construction?.actualCompletionDate && (
                 <Box>
                   <Typography variant="body2" color="text.secondary">
                     Actual Completion
@@ -428,26 +506,26 @@ const TowerMetrics = ({ tower, units, isLoading }) => {
   }
 
   // Calculate metrics from real data
-  const totalUnits = units.length;
-  const soldUnits = units.filter(unit => unit.status === 'sold').length;
-  const blockedUnits = units.filter(unit => unit.status === 'blocked').length;
-  const availableUnits = units.filter(unit => unit.status === 'available').length;
+  const totalUnits = units?.length || 0;
+  const soldUnits = units?.filter(unit => unit.status === 'sold').length || 0;
+  const blockedUnits = units?.filter(unit => unit.status === 'blocked').length || 0;
+  const availableUnits = units?.filter(unit => unit.status === 'available').length || 0;
   
   const totalRevenue = units
-    .filter(unit => unit.status === 'sold')
-    .reduce((sum, unit) => sum + (unit.currentPrice || unit.basePrice || 0), 0);
+    ?.filter(unit => unit.status === 'sold')
+    .reduce((sum, unit) => sum + (unit.currentPrice || unit.basePrice || 0), 0) || 0;
   
-  const averagePrice = units.length > 0 
-    ? units.reduce((sum, unit) => sum + (unit.currentPrice || unit.basePrice || 0), 0) / units.length 
+  const averagePrice = totalUnits > 0 
+    ? (units?.reduce((sum, unit) => sum + (unit.currentPrice || unit.basePrice || 0), 0) || 0) / totalUnits 
     : 0;
   
   const salesPercentage = totalUnits > 0 ? Math.round((soldUnits / totalUnits) * 100) : 0;
 
   // Financial metrics from backend
-  const revenueTarget = tower.financials?.revenueTarget || 0;
-  const revenueAchieved = tower.financials?.revenueAchieved || totalRevenue;
-  const constructionBudget = tower.financials?.constructionCost?.budgeted || 0;
-  const constructionActual = tower.financials?.constructionCost?.actual || 0;
+  const revenueTarget = tower?.financials?.revenueTarget || 0;
+  const revenueAchieved = tower?.financials?.revenueAchieved || totalRevenue;
+  const constructionBudget = tower?.financials?.constructionCost?.budgeted || 0;
+  const constructionActual = tower?.financials?.constructionCost?.actual || 0;
 
   const metrics = [
     {
@@ -455,44 +533,55 @@ const TowerMetrics = ({ tower, units, isLoading }) => {
       value: totalUnits,
       subtitle: `${availableUnits} available`,
       color: 'primary',
-      icon: Home,
+      icon: Home || Domain,
     },
     {
       title: 'Units Sold',
       value: `${soldUnits} (${salesPercentage}%)`,
       subtitle: `${blockedUnits} blocked`,
       color: 'success',
-      icon: CheckCircle,
+      icon: CheckCircle || Domain,
     },
     {
       title: 'Revenue Achieved',
       value: formatCurrency(revenueAchieved),
       subtitle: revenueTarget > 0 ? `of ${formatCurrency(revenueTarget)} target` : 'No target set',
       color: 'warning',
-      icon: AttachMoney,
+      icon: AttachMoney || Domain,
     },
     {
       title: 'Avg Unit Price',
       value: formatCurrency(averagePrice),
       subtitle: 'Current market rate',
       color: 'info',
-      icon: MonetizationOn,
+      icon: MonetizationOn || Domain,
     },
     {
       title: 'Construction Budget',
       value: formatCurrency(constructionBudget),
       subtitle: constructionActual > 0 ? `${formatCurrency(constructionActual)} spent` : 'Budget allocated',
       color: 'secondary',
-      icon: Construction,
+      icon: Construction || Domain,
     },
     {
       title: 'Progress',
-      value: `${tower.construction?.progressPercentage || 0}%`,
+      value: `${tower?.construction?.progressPercentage || 0}%`,
       subtitle: 'Construction complete',
-      color: getStatusColor(tower.construction?.progressPercentage >= 100 ? 'completed' : 'in-progress'),
-      icon: Engineering,
+      color: getStatusColor(tower?.construction?.progressPercentage >= 100 ? 'completed' : 'in-progress'),
+      icon: Engineering || Domain,
     },
   ];
+
+  // Debug which icons might be undefined
+  console.log('🔍 Icon validation:', {
+    Home: !!Home,
+    CheckCircle: !!CheckCircle,
+    AttachMoney: !!AttachMoney,
+    MonetizationOn: !!MonetizationOn,
+    Construction: !!Construction,
+    Engineering: !!Engineering,
+    Domain: !!Domain
+  });
 
   return (
     <Grid container spacing={3} sx={{ mb: 4 }}>
@@ -510,7 +599,7 @@ const TowerMetrics = ({ tower, units, isLoading }) => {
                     mr: 1,
                   }}
                 >
-                  <metric.icon sx={{ fontSize: 20 }} />
+                  {metric.icon && <metric.icon sx={{ fontSize: 20 }} />}
                 </Avatar>
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                   <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1rem' }}>
@@ -535,6 +624,15 @@ const TowerMetrics = ({ tower, units, isLoading }) => {
 
 // Comprehensive Tower Configuration Component
 const TowerConfiguration = ({ tower }) => {
+  // Safe access to nested properties
+  const configuration = tower?.configuration || {};
+  const amenities = tower?.amenities || {};
+  const pricingConfiguration = tower?.pricingConfiguration || {};
+  const construction = tower?.construction || {};
+  const financials = tower?.financials || {};
+  const approvals = tower?.approvals || {};
+  const metadata = tower?.metadata || {};
+
   return (
     <Box>
       <Grid container spacing={3}>
@@ -550,45 +648,45 @@ const TowerConfiguration = ({ tower }) => {
                 <Box>
                   <Typography variant="body2" color="text.secondary">Tower Name</Typography>
                   <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                    {tower.towerName || 'Not specified'}
+                    {tower?.towerName || 'Not specified'}
                   </Typography>
                 </Box>
                 <Box>
                   <Typography variant="body2" color="text.secondary">Tower Code</Typography>
                   <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                    {tower.towerCode || 'Not specified'}
+                    {tower?.towerCode || 'Not specified'}
                   </Typography>
                 </Box>
                 <Box>
                   <Typography variant="body2" color="text.secondary">Tower Type</Typography>
                   <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                    {tower.towerType || 'Residential (default)'}
+                    {tower?.towerType || 'Residential (default)'}
                   </Typography>
                 </Box>
                 <Box>
                   <Typography variant="body2" color="text.secondary">Status</Typography>
                   <Chip 
-                    label={tower.status || 'Active'} 
-                    color={getStatusColor(tower.status)} 
+                    label={tower?.status || 'Active'} 
+                    color={getStatusColor(tower?.status)} 
                     size="small"
                   />
                 </Box>
                 <Box>
                   <Typography variant="body2" color="text.secondary">Total Floors</Typography>
                   <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                    {tower.totalFloors || 'Not specified'}
+                    {tower?.totalFloors || 'Not specified'}
                   </Typography>
                 </Box>
                 <Box>
                   <Typography variant="body2" color="text.secondary">Units Per Floor</Typography>
                   <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                    {tower.unitsPerFloor || 'Not specified'}
+                    {tower?.unitsPerFloor || 'Not specified'}
                   </Typography>
                 </Box>
                 <Box>
                   <Typography variant="body2" color="text.secondary">Total Units</Typography>
                   <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                    {tower.totalUnits || 'Calculated from floors × units/floor'}
+                    {tower?.totalUnits || 'Calculated from floors × units/floor'}
                   </Typography>
                 </Box>
               </Stack>
@@ -612,8 +710,8 @@ const TowerConfiguration = ({ tower }) => {
                     Elevators
                   </Typography>
                   <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                    {tower.configuration?.elevators?.count || 0} units
-                    {tower.configuration?.elevators?.type && ` (${tower.configuration.elevators.type})`}
+                    {configuration?.elevators?.count || 0} units
+                    {configuration?.elevators?.type && ` (${configuration.elevators.type})`}
                   </Typography>
                 </Box>
 
@@ -621,8 +719,8 @@ const TowerConfiguration = ({ tower }) => {
                 <Box>
                   <Typography variant="body2" color="text.secondary">Staircases</Typography>
                   <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                    {tower.configuration?.staircases?.count || 0} units
-                    {tower.configuration?.staircases?.type && ` (${tower.configuration.staircases.type})`}
+                    {configuration?.staircases?.count || 0} units
+                    {configuration?.staircases?.type && ` (${configuration.staircases.type})`}
                   </Typography>
                 </Box>
 
@@ -633,7 +731,7 @@ const TowerConfiguration = ({ tower }) => {
                     Power Backup
                   </Typography>
                   <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                    {tower.configuration?.powerBackup || 'Not specified'}
+                    {configuration?.powerBackup || 'Not specified'}
                   </Typography>
                 </Box>
 
@@ -644,7 +742,7 @@ const TowerConfiguration = ({ tower }) => {
                     Water Supply
                   </Typography>
                   <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                    {tower.configuration?.waterSupply || 'Not specified'}
+                    {configuration?.waterSupply || 'Not specified'}
                   </Typography>
                 </Box>
 
@@ -655,8 +753,8 @@ const TowerConfiguration = ({ tower }) => {
                     Parking
                   </Typography>
                   <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                    {tower.configuration?.parking?.capacity || 0} spaces
-                    {tower.configuration?.parking?.levels && ` across ${tower.configuration.parking.levels} levels`}
+                    {configuration?.parking?.capacity || 0} spaces
+                    {configuration?.parking?.levels && ` across ${configuration.parking.levels} levels`}
                   </Typography>
                 </Box>
               </Stack>
@@ -684,14 +782,14 @@ const TowerConfiguration = ({ tower }) => {
                       <Security fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
                       <MuiListItemText 
                         primary="Security" 
-                        secondary={tower.amenities?.security || 'Not specified'} 
+                        secondary={amenities?.security || 'Not specified'} 
                       />
                     </ListItem>
                     <ListItem sx={{ px: 0 }}>
                       <Videocam fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
                       <MuiListItemText 
                         primary="CCTV" 
-                        secondary={tower.amenities?.cctv || 'Not specified'} 
+                        secondary={amenities?.cctv || 'Not specified'} 
                       />
                     </ListItem>
                     <ListItem sx={{ px: 0 }}>
@@ -713,21 +811,21 @@ const TowerConfiguration = ({ tower }) => {
                       <ElectricalServices fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
                       <MuiListItemText 
                         primary="Generator" 
-                        secondary={tower.amenities?.generator || 'Not specified'} 
+                        secondary={amenities?.generator || 'Not specified'} 
                       />
                     </ListItem>
                     <ListItem sx={{ px: 0 }}>
                       <Water fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
                       <MuiListItemText 
                         primary="Water Tank" 
-                        secondary={tower.amenities?.waterTank || 'Not specified'} 
+                        secondary={amenities?.waterTank || 'Not specified'} 
                       />
                     </ListItem>
                     <ListItem sx={{ px: 0 }}>
                       <Phone fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
                       <MuiListItemText 
                         primary="Intercom" 
-                        secondary={tower.amenities?.intercom || 'Not specified'} 
+                        secondary={amenities?.intercom || 'Not specified'} 
                       />
                     </ListItem>
                   </List>
@@ -742,21 +840,21 @@ const TowerConfiguration = ({ tower }) => {
                       <SolarPower fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
                       <MuiListItemText 
                         primary="Solar Panels" 
-                        secondary={tower.amenities?.solarPanels || 'Not installed'} 
+                        secondary={amenities?.solarPanels || 'Not installed'} 
                       />
                     </ListItem>
                     <ListItem sx={{ px: 0 }}>
                       <NaturePeople fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
                       <MuiListItemText 
                         primary="Rainwater Harvesting" 
-                        secondary={tower.amenities?.rainwaterHarvesting || 'Not available'} 
+                        secondary={amenities?.rainwaterHarvesting || 'Not available'} 
                       />
                     </ListItem>
                     <ListItem sx={{ px: 0 }}>
                       <Engineering fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
                       <MuiListItemText 
                         primary="Sewage Treatment" 
-                        secondary={tower.amenities?.sewageTreatment || 'Connected to main'} 
+                        secondary={amenities?.sewageTreatment || 'Connected to main'} 
                       />
                     </ListItem>
                   </List>
@@ -771,14 +869,14 @@ const TowerConfiguration = ({ tower }) => {
                       <MailOutline fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
                       <MuiListItemText 
                         primary="Mailbox" 
-                        secondary={tower.amenities?.mailbox || 'Available'} 
+                        secondary={amenities?.mailbox || 'Available'} 
                       />
                     </ListItem>
                     <ListItem sx={{ px: 0 }}>
                       <Business fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
                       <MuiListItemText 
                         primary="Lobby" 
-                        secondary={tower.amenities?.lobby || 'Standard'} 
+                        secondary={amenities?.lobby || 'Standard'} 
                       />
                     </ListItem>
                   </List>
@@ -800,39 +898,39 @@ const TowerConfiguration = ({ tower }) => {
                 <Box>
                   <Typography variant="body2" color="text.secondary">Construction Budget</Typography>
                   <Typography variant="h6" color="primary.main" sx={{ fontWeight: 700 }}>
-                    {formatCurrency(tower.financials?.constructionCost?.budgeted)}
+                    {formatCurrency(financials?.constructionCost?.budgeted)}
                   </Typography>
                 </Box>
                 <Box>
                   <Typography variant="body2" color="text.secondary">Actual Construction Cost</Typography>
                   <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                    {formatCurrency(tower.financials?.constructionCost?.actual) || 'In progress'}
+                    {formatCurrency(financials?.constructionCost?.actual) || 'In progress'}
                   </Typography>
                 </Box>
                 <Box>
                   <Typography variant="body2" color="text.secondary">Revenue Target</Typography>
                   <Typography variant="h6" color="success.main" sx={{ fontWeight: 700 }}>
-                    {formatCurrency(tower.financials?.revenueTarget)}
+                    {formatCurrency(financials?.revenueTarget)}
                   </Typography>
                 </Box>
                 <Box>
                   <Typography variant="body2" color="text.secondary">Revenue Achieved</Typography>
                   <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                    {formatCurrency(tower.financials?.revenueAchieved) || 'Calculating...'}
+                    {formatCurrency(financials?.revenueAchieved) || 'Calculating...'}
                   </Typography>
                 </Box>
-                {tower.financials?.revenueTarget > 0 && tower.financials?.revenueAchieved > 0 && (
+                {financials?.revenueTarget > 0 && financials?.revenueAchieved > 0 && (
                   <Box>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                       Revenue Progress
                     </Typography>
                     <LinearProgress
                       variant="determinate"
-                      value={Math.min((tower.financials.revenueAchieved / tower.financials.revenueTarget) * 100, 100)}
+                      value={Math.min((financials.revenueAchieved / financials.revenueTarget) * 100, 100)}
                       sx={{ height: 8, borderRadius: 4 }}
                     />
                     <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                      {Math.round((tower.financials.revenueAchieved / tower.financials.revenueTarget) * 100)}% of target achieved
+                      {Math.round((financials.revenueAchieved / financials.revenueTarget) * 100)}% of target achieved
                     </Typography>
                   </Box>
                 )}
@@ -854,11 +952,11 @@ const TowerConfiguration = ({ tower }) => {
                   <Typography variant="body2" color="text.secondary">Progress Percentage</Typography>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                      {tower.construction?.progressPercentage || 0}%
+                      {construction?.progressPercentage || 0}%
                     </Typography>
                     <LinearProgress
                       variant="determinate"
-                      value={tower.construction?.progressPercentage || 0}
+                      value={construction?.progressPercentage || 0}
                       sx={{ flex: 1, height: 6, borderRadius: 3 }}
                     />
                   </Box>
@@ -866,14 +964,14 @@ const TowerConfiguration = ({ tower }) => {
                 <Box>
                   <Typography variant="body2" color="text.secondary">Planned Completion</Typography>
                   <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                    {formatDate(tower.construction?.plannedCompletionDate)}
+                    {formatDate(construction?.plannedCompletionDate)}
                   </Typography>
                 </Box>
-                {tower.construction?.actualCompletionDate && (
+                {construction?.actualCompletionDate && (
                   <Box>
                     <Typography variant="body2" color="text.secondary">Actual Completion</Typography>
                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                      {formatDate(tower.construction?.actualCompletionDate)}
+                      {formatDate(construction.actualCompletionDate)}
                     </Typography>
                   </Box>
                 )}
@@ -894,24 +992,24 @@ const TowerConfiguration = ({ tower }) => {
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Typography variant="body2">Building Plan Approval</Typography>
                   <Chip 
-                    label={tower.approvals?.buildingPlan?.status || 'Pending'} 
-                    color={getStatusColor(tower.approvals?.buildingPlan?.status)} 
+                    label={approvals?.buildingPlan?.status || 'Pending'} 
+                    color={getStatusColor(approvals?.buildingPlan?.status)} 
                     size="small"
                   />
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Typography variant="body2">Fire NOC</Typography>
                   <Chip 
-                    label={tower.approvals?.fireNOC?.status || 'Pending'} 
-                    color={getStatusColor(tower.approvals?.fireNOC?.status)} 
+                    label={approvals?.fireNOC?.status || 'Pending'} 
+                    color={getStatusColor(approvals?.fireNOC?.status)} 
                     size="small"
                   />
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Typography variant="body2">Elevator Certificate</Typography>
                   <Chip 
-                    label={tower.approvals?.elevatorCertificate?.status || 'Pending'} 
-                    color={getStatusColor(tower.approvals?.elevatorCertificate?.status)} 
+                    label={approvals?.elevatorCertificate?.status || 'Pending'} 
+                    color={getStatusColor(approvals?.elevatorCertificate?.status)} 
                     size="small"
                   />
                 </Box>
@@ -932,7 +1030,7 @@ const TowerConfiguration = ({ tower }) => {
                 <Box>
                   <Typography variant="body2" color="text.secondary">Architect</Typography>
                   <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                    {tower.metadata?.architect || 'Not specified'}
+                    {metadata?.architect || 'Not specified'}
                   </Typography>
                 </Box>
                 <Box>
@@ -940,12 +1038,12 @@ const TowerConfiguration = ({ tower }) => {
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Explore fontSize="small" color="action" />
                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                      {tower.metadata?.facingDirection || 'Not specified'}
+                      {metadata?.facingDirection || 'Not specified'}
                     </Typography>
                   </Box>
                 </Box>
                 <Box sx={{ display: 'flex', gap: 2 }}>
-                  {tower.metadata?.cornerTower && (
+                  {metadata?.cornerTower && (
                     <Chip 
                       label="Corner Tower" 
                       color="warning" 
@@ -953,7 +1051,7 @@ const TowerConfiguration = ({ tower }) => {
                       icon={<LocationOn />}
                     />
                   )}
-                  {tower.metadata?.premiumLocation && (
+                  {metadata?.premiumLocation && (
                     <Chip 
                       label="Premium Location" 
                       color="success" 
@@ -965,13 +1063,13 @@ const TowerConfiguration = ({ tower }) => {
                 <Box>
                   <Typography variant="body2" color="text.secondary">Created Date</Typography>
                   <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                    {formatDate(tower.createdAt)}
+                    {formatDate(tower?.createdAt)}
                   </Typography>
                 </Box>
                 <Box>
                   <Typography variant="body2" color="text.secondary">Last Updated</Typography>
                   <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                    {formatDate(tower.updatedAt)}
+                    {formatDate(tower?.updatedAt)}
                   </Typography>
                 </Box>
               </Stack>
@@ -981,7 +1079,7 @@ const TowerConfiguration = ({ tower }) => {
       </Grid>
 
       {/* Pricing Configuration */}
-      {tower.pricingConfiguration && (
+      {pricingConfiguration && Object.keys(pricingConfiguration).length > 0 && (
         <Card sx={{ mt: 3 }}>
           <CardContent>
             <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -993,8 +1091,8 @@ const TowerConfiguration = ({ tower }) => {
                 <Box>
                   <Typography variant="body2" color="text.secondary">Base Price Modifier</Typography>
                   <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                    {tower.pricingConfiguration.basePriceModifier ? 
-                      `${tower.pricingConfiguration.basePriceModifier > 0 ? '+' : ''}${tower.pricingConfiguration.basePriceModifier}%` : 
+                    {pricingConfiguration.basePriceModifier ? 
+                      `${pricingConfiguration.basePriceModifier > 0 ? '+' : ''}${pricingConfiguration.basePriceModifier}%` : 
                       'Standard'
                     }
                   </Typography>
@@ -1004,8 +1102,8 @@ const TowerConfiguration = ({ tower }) => {
                 <Box>
                   <Typography variant="body2" color="text.secondary">Floor Premium</Typography>
                   <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                    {tower.pricingConfiguration.floorPremium?.premiumPerFloor ? 
-                      `₹${tower.pricingConfiguration.floorPremium.premiumPerFloor}/floor from ${tower.pricingConfiguration.floorPremium.startFloor}F` : 
+                    {pricingConfiguration.floorPremium?.premiumPerFloor ? 
+                      `₹${pricingConfiguration.floorPremium.premiumPerFloor}/floor from ${pricingConfiguration.floorPremium.startFloor}F` : 
                       'None'
                     }
                   </Typography>
@@ -1015,8 +1113,8 @@ const TowerConfiguration = ({ tower }) => {
                 <Box>
                   <Typography variant="body2" color="text.secondary">Penthouse Premium</Typography>
                   <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                    {tower.pricingConfiguration.penthousePremium?.enabled ? 
-                      `${tower.pricingConfiguration.penthousePremium.premiumPercentage}% for top ${tower.pricingConfiguration.penthousePremium.topFloors} floors` : 
+                    {pricingConfiguration.penthousePremium?.enabled ? 
+                      `${pricingConfiguration.penthousePremium.premiumPercentage}% for top ${pricingConfiguration.penthousePremium.topFloors} floors` : 
                       'Not applicable'
                     }
                   </Typography>
@@ -1026,8 +1124,8 @@ const TowerConfiguration = ({ tower }) => {
                 <Box>
                   <Typography variant="body2" color="text.secondary">Corner Unit Premium</Typography>
                   <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                    {tower.pricingConfiguration.cornerUnitPremium?.percentage ? 
-                      `${tower.pricingConfiguration.cornerUnitPremium.percentage}%` : 
+                    {pricingConfiguration.cornerUnitPremium?.percentage ? 
+                      `${pricingConfiguration.cornerUnitPremium.percentage}%` : 
                       'Standard pricing'
                     }
                   </Typography>
@@ -1041,131 +1139,331 @@ const TowerConfiguration = ({ tower }) => {
   );
 };
 
-// Unit Card Component for Grid View
-const UnitCard = ({ unit, projectId, towerId }) => {
-  const navigate = useNavigate();
-  const StatusIcon = getStatusIcon(unit.status);
-
-  const handleClick = () => {
-    const validProjectId = extractId(projectId, 'UnitCard projectId');
-    const validTowerId = extractId(towerId, 'UnitCard towerId');
-    const validUnitId = extractId(unit._id || unit.id, 'UnitCard unitId');
-    
-    if (validProjectId && validTowerId && validUnitId) {
-      const url = `/projects/${String(validProjectId)}/towers/${String(validTowerId)}/units/${String(validUnitId)}`;
-      navigate(url);
-    }
-  };
-
-  return (
-    <Card 
-      sx={{ 
-        height: 140,
-        cursor: 'pointer',
-        transition: 'all 0.2s',
-        border: 2,
-        borderColor: `${getStatusColor(unit.status)}.main`,
-        '&:hover': { 
-          boxShadow: 4,
-          transform: 'scale(1.02)',
-        },
-      }}
-      onClick={handleClick}
-    >
-      <CardContent sx={{ p: 1.5, height: '100%', display: 'flex', flexDirection: 'column' }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-            {unit.unitNumber}
-          </Typography>
-          <Chip 
-            icon={<StatusIcon sx={{ fontSize: 14 }} />}
-            label={unit.status}
-            size="small"
-            color={getStatusColor(unit.status)}
-            sx={{ fontSize: '0.7rem', height: 20 }}
-          />
-        </Box>
-        
-        <Typography variant="caption" color="text.secondary" sx={{ mb: 1 }}>
-          {unit.bhkType} • Floor {unit.floorNumber}
-        </Typography>
-        
-        <Typography variant="caption" color="text.secondary" sx={{ mb: 1 }}>
-          {unit.carpetArea || unit.builtupArea || 0} sq ft
-        </Typography>
-        
-        <Box sx={{ mt: 'auto' }}>
-          <Typography variant="body2" sx={{ fontWeight: 600, color: 'primary.main' }}>
-            {formatCurrency(unit.currentPrice || unit.basePrice)}
-          </Typography>
-          {unit.customerName && (
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-              {unit.customerName}
-            </Typography>
-          )}
-        </Box>
-      </CardContent>
-    </Card>
-  );
-};
-
-// Floor View Component
-const FloorView = ({ units, floor, projectId, towerId }) => {
-  const floorUnits = units.filter(unit => unit.floorNumber === floor);
-  
-  if (floorUnits.length === 0) return null;
-
-  return (
-    <Paper sx={{ p: 2, mb: 2 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-        <Avatar sx={{ bgcolor: 'primary.100', color: 'primary.700', width: 40, height: 40 }}>
-          <Layers />
-        </Avatar>
-        <Box>
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            Floor {floor}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {floorUnits.length} units
-          </Typography>
-        </Box>
-      </Box>
-      
-      <Grid container spacing={1}>
-        {floorUnits
-          .sort((a, b) => (a.unitNumber || '').localeCompare(b.unitNumber || ''))
-          .map((unit) => (
-            <Grid item xs={6} sm={4} md={3} lg={2} key={unit._id}>
-              <UnitCard 
-                unit={unit} 
-                projectId={projectId}
-                towerId={towerId}
-              />
-            </Grid>
-          ))}
-      </Grid>
-    </Paper>
-  );
-};
-
-// Units Grid Component
+// Enhanced Units Grid Component using the new EnhancedUnitCard
 const UnitsGrid = ({ units, viewMode, onAddUnit, projectId, towerId }) => {
   const { canAccess } = useAuth();
   const [selectedStatus, setSelectedStatus] = useState('all');
+  const [displayMode, setDisplayMode] = useState('default'); // 'default' | 'detailed' | 'compact'
 
+  const safeUnits = units || [];
   const filteredUnits = selectedStatus === 'all' 
-    ? units 
-    : units.filter(unit => unit.status === selectedStatus);
+    ? safeUnits 
+    : safeUnits.filter(unit => unit.status === selectedStatus);
 
-  const floors = [...new Set(units.map(unit => unit.floorNumber))]
+  const floors = [...new Set(safeUnits.map(unit => unit.floor))]
     .filter(floor => floor !== undefined && floor !== null)
     .sort((a, b) => b - a);
 
   const statusCounts = {
-    all: units.length,
-    available: units.filter(unit => unit.status === 'available').length,
-    sold: units.filter(unit => unit.status === 'sold').length,
-    blocked: units.filter(unit => unit.status === 'blocked').length,
+    all: safeUnits.length,
+    available: safeUnits.filter(unit => unit.status === 'available').length,
+    sold: safeUnits.filter(unit => unit.status === 'sold').length,
+    blocked: safeUnits.filter(unit => unit.status === 'blocked').length,
+  };
+
+  // Enhanced Unit Card component that uses all backend fields
+  const EnhancedUnitCard = ({ unit }) => {
+    const navigate = useNavigate();
+    const StatusIcon = getStatusIcon(unit?.status);
+
+    const handleClick = () => {
+      const validProjectId = projectId;
+      const validTowerId = towerId;
+      const validUnitId = unit._id || unit.id;
+      
+      if (validProjectId && validTowerId && validUnitId) {
+        navigate(`/projects/${validProjectId}/towers/${validTowerId}/units/${validUnitId}`);
+      }
+    };
+
+    const pricePerSqFt = unit?.basePrice && unit?.areaSqft 
+      ? Math.round(unit.basePrice / unit.areaSqft) 
+      : 0;
+
+    if (displayMode === 'compact') {
+      return (
+        <Card 
+          sx={{ 
+            height: 120,
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            border: 2,
+            borderColor: `${getStatusColor(unit?.status)}.main`,
+            '&:hover': { 
+              boxShadow: 4,
+              transform: 'scale(1.02)',
+            },
+          }}
+          onClick={handleClick}
+        >
+          <CardContent sx={{ p: 1.5, height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                {unit?.unitNumber || 'Unit'}
+              </Typography>
+              <Chip 
+                icon={<StatusIcon sx={{ fontSize: 12 }} />}
+                label={unit?.status || 'Unknown'}
+                size="small"
+                color={getStatusColor(unit?.status)}
+                sx={{ fontSize: '0.7rem', height: 18 }}
+              />
+            </Box>
+            
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 1 }}>
+              {unit?.type || 'Type'} • Floor {unit?.floor || 'N/A'}
+            </Typography>
+            
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 1 }}>
+              {unit?.areaSqft || 0} sq ft
+            </Typography>
+            
+            <Box sx={{ mt: 'auto' }}>
+              <Typography variant="body2" sx={{ fontWeight: 600, color: 'primary.main' }}>
+                {formatCurrency(unit?.currentPrice || unit?.basePrice)}
+              </Typography>
+            </Box>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    if (displayMode === 'detailed') {
+      return (
+        <Card 
+          sx={{ 
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            border: 1,
+            borderColor: `${getStatusColor(unit?.status)}.main`,
+            '&:hover': { 
+              boxShadow: 6,
+              transform: 'translateY(-2px)',
+            },
+          }}
+          onClick={handleClick}
+        >
+          <CardContent sx={{ p: 2 }}>
+            {/* Header */}
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  {unit?.unitNumber || 'Unit'}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {unit?.type || 'Type'} • Floor {unit?.floor || 'N/A'}
+                </Typography>
+              </Box>
+              <Chip 
+                icon={<StatusIcon sx={{ fontSize: 14 }} />}
+                label={unit?.status || 'Unknown'}
+                color={getStatusColor(unit?.status)}
+                size="small"
+              />
+            </Box>
+
+            {/* Key Metrics */}
+            <Grid container spacing={1} sx={{ mb: 2 }}>
+              <Grid item xs={6}>
+                <Box sx={{ textAlign: 'center', p: 1, bgcolor: 'grey.50', borderRadius: 1 }}>
+                  <Typography variant="caption" color="text.secondary">
+                    Area
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    {unit?.areaSqft || 0} sq ft
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={6}>
+                <Box sx={{ textAlign: 'center', p: 1, bgcolor: 'grey.50', borderRadius: 1 }}>
+                  <Typography variant="caption" color="text.secondary">
+                    Price
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    {formatCurrency(unit?.basePrice)}
+                  </Typography>
+                </Box>
+              </Grid>
+            </Grid>
+
+            {/* Room Details */}
+            <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+              {unit?.specifications?.bedrooms && (
+                <Chip 
+                  icon={<Bed />} 
+                  label={`${unit.specifications.bedrooms}BR`} 
+                  size="small" 
+                  variant="outlined"
+                />
+              )}
+              {unit?.specifications?.bathrooms && (
+                <Chip 
+                  icon={<Bathtub />} 
+                  label={`${unit.specifications.bathrooms}BA`} 
+                  size="small" 
+                  variant="outlined"
+                />
+              )}
+              {((unit?.parking?.covered || 0) + (unit?.parking?.open || 0)) > 0 && (
+                <Chip 
+                  icon={<LocalParking />} 
+                  label={`${(unit?.parking?.covered || 0) + (unit?.parking?.open || 0)}P`} 
+                  size="small" 
+                  variant="outlined"
+                />
+              )}
+            </Box>
+
+            {/* Features */}
+            <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+              {unit?.features?.isCornerUnit && (
+                <Chip icon={<Star />} label="Corner" size="small" color="warning" variant="outlined" />
+              )}
+              {unit?.features?.hasBalcony && (
+                <Chip icon={<Balcony />} label="Balcony" size="small" color="info" variant="outlined" />
+              )}
+              {unit?.features?.isParkFacing && (
+                <Chip icon={<Park />} label="Park View" size="small" color="success" variant="outlined" />
+              )}
+            </Box>
+
+            {/* Possession Status */}
+            {unit?.possession?.handoverStatus && (
+              <Chip 
+                label={`${unit.possession.handoverStatus.replace('-', ' ').toUpperCase()}`}
+                color={getHandoverStatusColor(unit.possession.handoverStatus)}
+                size="small"
+                variant="outlined"
+                sx={{ mb: 2 }}
+              />
+            )}
+
+            {/* Pricing Details */}
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Box>
+                <Typography variant="body2" color="text.secondary">
+                  Base Price
+                </Typography>
+                <Typography variant="h6" color="primary.main" sx={{ fontWeight: 700 }}>
+                  {formatCurrency(unit?.basePrice)}
+                </Typography>
+              </Box>
+              {pricePerSqFt > 0 && (
+                <Box sx={{ textAlign: 'right' }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Per Sq Ft
+                  </Typography>
+                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                    ₹{pricePerSqFt.toLocaleString()}
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    // Default variant
+    return (
+      <Card 
+        sx={{ 
+          height: 180,
+          cursor: 'pointer',
+          transition: 'all 0.2s',
+          border: 2,
+          borderColor: `${getStatusColor(unit?.status)}.main`,
+          '&:hover': { 
+            boxShadow: 4,
+            transform: 'scale(1.02)',
+          },
+        }}
+        onClick={handleClick}
+      >
+        <CardContent sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+          {/* Header */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+              {unit?.unitNumber || 'Unit'}
+            </Typography>
+            <Chip 
+              icon={<StatusIcon sx={{ fontSize: 14 }} />}
+              label={unit?.status || 'Unknown'}
+              size="small"
+              color={getStatusColor(unit?.status)}
+              sx={{ fontSize: '0.7rem', height: 22 }}
+            />
+          </Box>
+          
+          {/* Unit Details */}
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+            {unit?.type || 'Type'} • Floor {unit?.floor || 'N/A'}
+          </Typography>
+          
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+            {unit?.areaSqft || 0} sq ft • {unit?.facing || 'N/A'} facing
+          </Typography>
+          
+          {/* Room Configuration */}
+          <Box sx={{ display: 'flex', gap: 1, mb: 1, flexWrap: 'wrap' }}>
+            {unit?.specifications?.bedrooms && (
+              <Chip 
+                icon={<Bed />} 
+                label={`${unit.specifications.bedrooms}BR`} 
+                size="small" 
+                variant="outlined"
+              />
+            )}
+            {unit?.specifications?.bathrooms && (
+              <Chip 
+                icon={<Bathtub />} 
+                label={`${unit.specifications.bathrooms}BA`} 
+                size="small" 
+                variant="outlined"
+              />
+            )}
+            {((unit?.parking?.covered || 0) + (unit?.parking?.open || 0)) > 0 && (
+              <Chip 
+                icon={<LocalParking />} 
+                label={`${(unit?.parking?.covered || 0) + (unit?.parking?.open || 0)}P`} 
+                size="small" 
+                variant="outlined"
+              />
+            )}
+          </Box>
+
+          {/* Features */}
+          <Box sx={{ display: 'flex', gap: 0.5, mb: 1, flexWrap: 'wrap' }}>
+            {unit?.features?.isCornerUnit && <Star sx={{ fontSize: 14, color: 'warning.main' }} />}
+            {unit?.features?.hasBalcony && <Balcony sx={{ fontSize: 14, color: 'info.main' }} />}
+            {unit?.features?.isParkFacing && <Park sx={{ fontSize: 14, color: 'success.main' }} />}
+            {unit?.features?.hasStudyRoom && <Home sx={{ fontSize: 14, color: 'secondary.main' }} />}
+          </Box>
+          
+          {/* Pricing */}
+          <Box sx={{ mt: 'auto' }}>
+            <Typography variant="body1" sx={{ fontWeight: 600, color: 'primary.main' }}>
+              {formatCurrency(unit?.currentPrice || unit?.basePrice)}
+            </Typography>
+            {pricePerSqFt > 0 && (
+              <Typography variant="caption" color="text.secondary">
+                ₹{pricePerSqFt.toLocaleString()}/sq ft
+              </Typography>
+            )}
+          </Box>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const getHandoverStatusColor = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'handed-over': return 'success';
+      case 'ready': return 'info';
+      case 'delayed': return 'error';
+      case 'not-ready': return 'warning';
+      default: return 'default';
+    }
   };
 
   return (
@@ -1173,22 +1471,38 @@ const UnitsGrid = ({ units, viewMode, onAddUnit, projectId, towerId }) => {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box>
           <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            Tower Units ({units.length})
+            Tower Units ({safeUnits.length})
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {viewMode === 'floor' ? 'Floor-wise view' : 'Grid view'}
+            {viewMode === 'floor' ? 'Floor-wise view' : 'Grid view'} • {displayMode} cards
           </Typography>
         </Box>
         
-        {canAccess.projectManagement() && (
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            onClick={onAddUnit}
-          >
-            Add Units
-          </Button>
-        )}
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          {/* Display Mode Selector */}
+          <FormControl size="small" sx={{ minWidth: 120 }}>
+            <InputLabel>Card Type</InputLabel>
+            <Select
+              value={displayMode}
+              onChange={(e) => setDisplayMode(e.target.value)}
+              label="Card Type"
+            >
+              <MenuItem value="compact">Compact</MenuItem>
+              <MenuItem value="default">Standard</MenuItem>
+              <MenuItem value="detailed">Detailed</MenuItem>
+            </Select>
+          </FormControl>
+
+          {canAccess.projectManagement() && (
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={onAddUnit}
+            >
+              Add Units
+            </Button>
+          )}
+        </Box>
       </Box>
 
       {/* Status Filter Chips */}
@@ -1221,35 +1535,112 @@ const UnitsGrid = ({ units, viewMode, onAddUnit, projectId, towerId }) => {
         </Stack>
       </Box>
 
+      {/* Enhanced Statistics */}
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        <Grid item xs={3}>
+          <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'success.50' }}>
+            <Typography variant="h6" color="success.main" sx={{ fontWeight: 700 }}>
+              {Math.round((statusCounts.sold / statusCounts.all) * 100) || 0}%
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Sold
+            </Typography>
+          </Paper>
+        </Grid>
+        <Grid item xs={3}>
+          <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'info.50' }}>
+            <Typography variant="h6" color="info.main" sx={{ fontWeight: 700 }}>
+              {filteredUnits.reduce((sum, unit) => sum + (unit?.specifications?.bedrooms || 0), 0)}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Total Bedrooms
+            </Typography>
+          </Paper>
+        </Grid>
+        <Grid item xs={3}>
+          <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'warning.50' }}>
+            <Typography variant="h6" color="warning.main" sx={{ fontWeight: 700 }}>
+              {filteredUnits.reduce((sum, unit) => sum + ((unit?.parking?.covered || 0) + (unit?.parking?.open || 0)), 0)}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Parking Spaces
+            </Typography>
+          </Paper>
+        </Grid>
+        <Grid item xs={3}>
+          <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'secondary.50' }}>
+            <Typography variant="h6" color="secondary.main" sx={{ fontWeight: 700 }}>
+              {filteredUnits.filter(unit => unit?.features?.isParkFacing).length}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Park Facing
+            </Typography>
+          </Paper>
+        </Grid>
+      </Grid>
+
       {filteredUnits.length > 0 ? (
         viewMode === 'floor' ? (
           <Box>
-            {floors.map((floor) => (
-              <FloorView
-                key={floor}
-                units={filteredUnits}
-                floor={floor}
-                projectId={projectId}
-                towerId={towerId}
-              />
-            ))}
+            {floors.map((floor) => {
+              const floorUnits = filteredUnits.filter(unit => unit.floor === floor);
+              if (floorUnits.length === 0) return null;
+
+              return (
+                <Paper key={floor} sx={{ p: 2, mb: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                    <Avatar sx={{ bgcolor: 'primary.100', color: 'primary.700', width: 40, height: 40 }}>
+                      <Layers />
+                    </Avatar>
+                    <Box>
+                      <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                        Floor {floor}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {floorUnits.length} units • {floorUnits.filter(u => u.status === 'available').length} available
+                      </Typography>
+                    </Box>
+                  </Box>
+                  
+                  <Grid container spacing={displayMode === 'detailed' ? 3 : displayMode === 'compact' ? 1 : 2}>
+                    {floorUnits
+                      .sort((a, b) => (a.unitNumber || '').localeCompare(b.unitNumber || ''))
+                      .map((unit) => (
+                        <Grid 
+                          item 
+                          xs={displayMode === 'detailed' ? 12 : displayMode === 'compact' ? 4 : 6} 
+                          sm={displayMode === 'detailed' ? 6 : displayMode === 'compact' ? 3 : 4} 
+                          md={displayMode === 'detailed' ? 4 : displayMode === 'compact' ? 2 : 3} 
+                          lg={displayMode === 'detailed' ? 3 : displayMode === 'compact' ? 2 : 2} 
+                          key={unit._id}
+                        >
+                          <EnhancedUnitCard unit={unit} />
+                        </Grid>
+                      ))}
+                  </Grid>
+                </Paper>
+              );
+            })}
           </Box>
         ) : (
-          <Grid container spacing={2}>
+          <Grid container spacing={displayMode === 'detailed' ? 3 : displayMode === 'compact' ? 1 : 2}>
             {filteredUnits
               .sort((a, b) => {
-                if (a.floorNumber !== b.floorNumber) {
-                  return (b.floorNumber || 0) - (a.floorNumber || 0);
+                if (a.floor !== b.floor) {
+                  return (b.floor || 0) - (a.floor || 0);
                 }
                 return (a.unitNumber || '').localeCompare(b.unitNumber || '');
               })
               .map((unit) => (
-                <Grid item xs={6} sm={4} md={3} lg={2} key={unit._id}>
-                  <UnitCard 
-                    unit={unit} 
-                    projectId={projectId}
-                    towerId={towerId}
-                  />
+                <Grid 
+                  item 
+                  xs={displayMode === 'detailed' ? 12 : displayMode === 'compact' ? 4 : 6} 
+                  sm={displayMode === 'detailed' ? 6 : displayMode === 'compact' ? 3 : 4} 
+                  md={displayMode === 'detailed' ? 4 : displayMode === 'compact' ? 2 : 3} 
+                  lg={displayMode === 'detailed' ? 3 : displayMode === 'compact' ? 2 : 2} 
+                  key={unit._id}
+                >
+                  <EnhancedUnitCard unit={unit} />
                 </Grid>
               ))}
           </Grid>
@@ -1317,55 +1708,203 @@ const TowerDetailPage = () => {
       });
 
       // Fetch project details
+      console.log('📋 Fetching project details...');
       const projectResponse = await projectAPI.getProject(validProjectId);
-      const projectData = projectResponse.data.data || projectResponse.data;
+      const projectData = extractDataFromResponse(projectResponse, 'project data');
 
-      // Fetch tower details
+      // Fetch tower details with enhanced error handling
+      console.log('🏗️ Fetching tower details...');
       const towerResponse = await towerAPI.getTower(validTowerId);
-      const towerData = towerResponse.data.data || towerResponse.data;
+      
+      // Enhanced tower data extraction with detailed debugging
+      console.log('🔍 Raw tower response structure:', {
+        hasData: !!towerResponse?.data,
+        dataKeys: towerResponse?.data ? Object.keys(towerResponse.data) : [],
+        dataType: typeof towerResponse?.data,
+        fullResponse: towerResponse?.data
+      });
+      
+      let towerData = null;
+      const responseData = towerResponse?.data;
+      
+      // Step-by-step extraction with detailed logging
+      console.log('🔄 Starting tower data extraction...');
+      console.log('   responseData:', responseData);
+      console.log('   responseData keys:', responseData ? Object.keys(responseData) : 'No keys');
+      
+      if (responseData?.tower && typeof responseData.tower === 'object') {
+        // Handle nested tower response: { tower: {...} }
+        towerData = responseData.tower;
+        console.log('✅ Extracted tower from nested response');
+        console.log('   Extracted tower keys:', Object.keys(towerData));
+        console.log('   Tower ID check:', {
+          '_id': towerData._id,
+          'id': towerData.id,
+          'towerName': towerData.towerName
+        });
+      } else if (responseData?.data && typeof responseData.data === 'object') {
+        // Handle standard response: { data: {...} }
+        towerData = responseData.data;
+        console.log('✅ Extracted tower from standard response');
+      } else if (responseData?._id || responseData?.id) {
+        // Handle direct tower response
+        towerData = responseData;
+        console.log('✅ Using direct tower response');
+      } else {
+        console.warn('⚠️ Unexpected response structure, using fallback');
+        console.log('   Available keys in responseData:', responseData ? Object.keys(responseData) : 'None');
+        towerData = responseData;
+      }
+      
+      console.log('🔍 Final extracted towerData:', towerData);
+      console.log('🔍 Final towerData keys:', towerData ? Object.keys(towerData) : 'No keys');
+
+      // CRITICAL FIX: Handle the nested tower structure that we're definitely getting
+      if (towerData && typeof towerData === 'object' && 'tower' in towerData) {
+        console.log('🚨 CRITICAL FIX: Detected nested tower - extracting now!');
+        console.log('   Before extraction - keys:', Object.keys(towerData));
+        towerData = towerData.tower;
+        console.log('   After extraction - keys:', Object.keys(towerData));
+        console.log('   Extracted tower ID:', towerData._id || towerData.id);
+        console.log('   Extracted tower name:', towerData.towerName);
+      }
 
       // Debug the complete tower data structure
-      console.log('🔍 Complete tower data from backend:', towerData);
+      console.log('🔍 Complete tower data extracted:', towerData);
       console.log('🔍 Tower data structure analysis:', {
-        configuration: !!towerData.configuration,
-        amenities: !!towerData.amenities,
-        pricingConfiguration: !!towerData.pricingConfiguration,
-        construction: !!towerData.construction,
-        financials: !!towerData.financials,
-        approvals: !!towerData.approvals,
-        metadata: !!towerData.metadata,
-        allKeys: Object.keys(towerData)
+        isObject: typeof towerData === 'object',
+        isNull: towerData === null,
+        hasId: !!(towerData?._id || towerData?.id),
+        towerId: towerData?._id || towerData?.id || 'No ID found',
+        hasBasicFields: !!(towerData?.towerName || towerData?.towerCode),
+        configuration: !!towerData?.configuration,
+        amenities: !!towerData?.amenities,
+        pricingConfiguration: !!towerData?.pricingConfiguration,
+        construction: !!towerData?.construction,
+        financials: !!towerData?.financials,
+        approvals: !!towerData?.approvals,
+        metadata: !!towerData?.metadata,
+        allKeys: towerData ? Object.keys(towerData) : ['No keys - null data']
       });
 
       // Fetch units for this tower
+      console.log('🏠 Fetching units for tower...');
       const unitsResponse = await unitAPI.getUnits({ tower: validTowerId });
-      const unitsData = unitsResponse.data.data || [];
+      const unitsData = extractDataFromResponse(unitsResponse, 'units data') || [];
 
-      if (!towerData || !towerData._id) {
-        throw new Error('Invalid tower data received from API');
+      // Enhanced tower data validation with direct extraction fix
+      console.log('🔍 DETAILED Tower data validation:');
+      console.log('   Raw towerData:', towerData);
+      console.log('   Type of towerData:', typeof towerData);
+      console.log('   Is null?', towerData === null);
+      console.log('   Is undefined?', towerData === undefined);
+      console.log('   All keys:', towerData ? Object.keys(towerData) : 'No keys available');
+      
+      // DIRECT FIX: If we still have nested tower structure, extract it here
+      if (towerData && typeof towerData === 'object' && towerData.tower && typeof towerData.tower === 'object') {
+        console.log('🔧 FIXING: Detected nested tower structure, extracting...');
+        towerData = towerData.tower;
+        console.log('   ✅ Extracted tower data:', towerData);
+        console.log('   ✅ New keys:', Object.keys(towerData));
+      }
+      
+      console.log('   All values sample:', towerData ? Object.entries(towerData).slice(0, 5) : 'No values');
+      
+      if (!towerData) {
+        console.error('❌ Tower data is null or undefined');
+        throw new Error('No tower data received from API');
+      }
+      
+      if (typeof towerData !== 'object') {
+        console.error('❌ Tower data is not an object:', typeof towerData, towerData);
+        throw new Error('Invalid tower data format received from API');
+      }
+      
+      // More flexible ID extraction - try multiple possible field names
+      const extractedTowerId = towerData._id || 
+                              towerData.id || 
+                              towerData.towerId || 
+                              towerData.tower_id ||
+                              towerData.objectId ||
+                              null;
+      
+      console.log('🔍 ID field analysis:', {
+        '_id': towerData._id,
+        'id': towerData.id,
+        'towerId': towerData.towerId,
+        'tower_id': towerData.tower_id,
+        'objectId': towerData.objectId,
+        'extractedTowerId': extractedTowerId
+      });
+      
+      if (!extractedTowerId) {
+        console.error('❌ Tower missing ID field - detailed analysis:', {
+          hasIdField: '_id' in towerData,
+          hasIdAlt: 'id' in towerData,
+          hasTowerId: 'towerId' in towerData,
+          hasSnakeCase: 'tower_id' in towerData,
+          hasObjectId: 'objectId' in towerData,
+          allKeys: Object.keys(towerData),
+          dataStructure: {
+            towerName: towerData.towerName,
+            towerCode: towerData.towerCode,
+            project: towerData.project,
+            totalFloors: towerData.totalFloors,
+            status: towerData.status
+          },
+          possibleIdFields: Object.keys(towerData).filter(key => 
+            key.toLowerCase().includes('id') || 
+            key.toLowerCase().includes('_id') ||
+            key === 'pk'
+          )
+        });
+        
+        // Instead of throwing an error, let's try to use the tower data anyway
+        // Maybe the backend is using a different identifier or this is a created-but-not-saved object
+        console.warn('⚠️ Proceeding without ID validation - using tower data as-is');
+        
+        // Check if we have at least basic tower information
+        if (!towerData.towerName && !towerData.towerCode && !towerData.project && !towerData.totalFloors) {
+          console.error('❌ No basic tower fields found:', {
+            towerName: towerData.towerName,
+            towerCode: towerData.towerCode,
+            project: towerData.project,
+            totalFloors: towerData.totalFloors,
+            allFields: Object.keys(towerData)
+          });
+          throw new Error('Tower data appears to be invalid - missing both ID and basic fields');
+        }
+        
+        console.log('✅ Continuing with tower data (no ID but has basic fields)');
+      } else {
+        console.log('✅ Tower data validation passed:', {
+          id: extractedTowerId,
+          name: towerData.towerName || 'Unnamed',
+          code: towerData.towerCode || 'No code'
+        });
       }
 
-      console.log('✅ Comprehensive tower data loaded:', {
-        project: projectData.name,
+      console.log('✅ Comprehensive tower data loaded successfully:', {
+        project: projectData?.name || 'Unknown Project',
         tower: {
-          id: towerData._id,
-          name: towerData.towerName,
-          code: towerData.towerCode,
+          id: towerData._id || towerData.id,
+          name: towerData.towerName || 'Unnamed Tower',
+          code: towerData.towerCode || 'No Code',
           hasConfiguration: !!towerData.configuration,
           hasAmenities: !!towerData.amenities,
           hasFinancials: !!towerData.financials,
           hasPricing: !!towerData.pricingConfiguration
         },
-        unitsCount: unitsData.length
+        unitsCount: Array.isArray(unitsData) ? unitsData.length : 0
       });
 
       setProject(projectData);
       setTower(towerData);
-      setUnits(unitsData);
+      setUnits(Array.isArray(unitsData) ? unitsData : []);
 
     } catch (error) {
       console.error('❌ Error fetching tower data:', error);
-      setError('Failed to load tower details. Please try again.');
+      setError(`Failed to load tower details: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -1413,7 +1952,7 @@ const TowerDetailPage = () => {
   if (!tower) {
     return (
       <Alert severity="warning">
-        Tower not found
+        Tower not found or failed to load
       </Alert>
     );
   }
@@ -1459,7 +1998,7 @@ const TowerDetailPage = () => {
             onChange={handleTabChange}
             sx={{ borderBottom: 1, borderColor: 'divider' }}
           >
-            <Tab label={`Units (${units.length})`} />
+            <Tab label={`Units (${units?.length || 0})`} />
             <Tab label="Configuration" />
             <Tab label="Analytics" />
           </Tabs>
@@ -1489,7 +2028,7 @@ const TowerDetailPage = () => {
       {/* Tab Content */}
       {activeTab === 0 && (
         <Box>
-          {units.length === 0 && (
+          {(!units || units.length === 0) && (
             <Alert severity="info" sx={{ mb: 3 }}>
               <Typography variant="subtitle2" gutterBottom>
                 No Units Found

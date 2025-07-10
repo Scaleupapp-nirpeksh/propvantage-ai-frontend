@@ -1,6 +1,6 @@
 // File: src/pages/projects/CreateUnitPage.js
-// Description: Professional unit creation form supporting both tower units and villa units (direct project units)
-// Version: 1.0 - Production-grade unit creation with complete backend integration
+// Description: ENHANCED unit creation form with ALL backend fields from CSV
+// Version: 2.0 - Complete backend integration with all 34 fields
 // Location: src/pages/projects/CreateUnitPage.js
 
 import React, { useState, useEffect } from 'react';
@@ -34,6 +34,8 @@ import {
   Stepper,
   Step,
   StepLabel,
+  Checkbox,
+  FormGroup,
 } from '@mui/material';
 import {
   ArrowBack,
@@ -45,15 +47,18 @@ import {
   ExpandMore,
   Villa,
   Apartment,
+  Info,
+  CheckCircle,
 } from '@mui/icons-material';
 
 import { useAuth } from '../../context/AuthContext';
 import { projectAPI, towerAPI, unitAPI } from '../../services/api';
 
-// Unit types and configurations
-const BHK_TYPES = [
+// Enhanced configurations based on backend CSV structure
+const UNIT_TYPES = [
   'Studio', '1 BHK', '1.5 BHK', '2 BHK', '2.5 BHK', '3 BHK', 
-  '3.5 BHK', '4 BHK', '4.5 BHK', '5 BHK', 'Penthouse', 'Duplex'
+  '3.5 BHK', '4 BHK', '4.5 BHK', '5 BHK', 'Penthouse', 'Duplex',
+  'Shop', 'Office'
 ];
 
 const UNIT_STATUSES = [
@@ -66,6 +71,13 @@ const UNIT_STATUSES = [
 const FACING_OPTIONS = [
   'North', 'South', 'East', 'West', 'North-East', 'North-West', 
   'South-East', 'South-West', 'Park Facing', 'Road Facing', 'Garden Facing'
+];
+
+const HANDOVER_STATUS_OPTIONS = [
+  { value: 'not-ready', label: 'Not Ready' },
+  { value: 'ready', label: 'Ready for Handover' },
+  { value: 'handed-over', label: 'Handed Over' },
+  { value: 'delayed', label: 'Delayed' },
 ];
 
 // Breadcrumb Navigation Component
@@ -130,50 +142,64 @@ const CreateUnitPage = () => {
   const [success, setSuccess] = useState(false);
   const [activeStep, setActiveStep] = useState(0);
 
-  // Form data state
+  // Enhanced form data state with ALL backend fields
   const [formData, setFormData] = useState({
-    // Basic Information
+    // Core Information (matches backend exactly)
     project: projectId,
-    tower: towerId || null, // null for villa projects
+    tower: towerId || null,
     unitNumber: '',
-    floorNumber: isVillaProject ? null : '',
-    bhkType: '',
-    unitType: isVillaProject ? 'villa' : 'apartment',
-    status: 'available',
-    
-    // Area Information
-    carpetArea: '',
-    builtupArea: '',
-    superBuiltupArea: '',
-    
-    // Location & Features
-    facing: '',
-    balconies: '',
-    bathrooms: '',
-    parkingSpaces: '',
-    
-    // Pricing
+    type: '',                    // Backend field name
+    floor: isVillaProject ? 0 : 1,  // Backend field name
+    areaSqft: '',               // Backend field name
     basePrice: '',
     currentPrice: '',
-    pricePerSqFt: '',
+    facing: 'North',
+    status: 'available',
     
-    // Additional Details
-    features: [],
+    // Features object (matches backend exactly)
+    features: {
+      isParkFacing: false,
+      isCornerUnit: false,
+      hasBalcony: true,
+      hasServantRoom: false,
+      hasParkingSlot: false,
+      hasStudyRoom: false,
+      hasUtilityArea: false,
+    },
+    
+    // Specifications object (matches backend exactly)
+    specifications: {
+      bedrooms: 1,
+      bathrooms: 1,
+      livingRooms: 1,
+      kitchen: 1,
+      balconies: 0,
+      terraceArea: 0,
+      carpetArea: 0,
+      builtUpArea: 0,
+      superBuiltUpArea: 0,
+    },
+    
+    // Parking object (matches backend exactly)
+    parking: {
+      covered: 0,
+      open: 0,
+    },
+    
+    // Possession object (matches backend exactly)
+    possession: {
+      handoverStatus: 'not-ready',
+    },
+    
+    // Additional UI fields
     description: '',
-    
-    // Villa-specific fields
-    ...(isVillaProject && {
-      plotArea: '',
-      gardenArea: '',
-      constructedArea: '',
-      villaType: 'independent', // independent, row-house, cluster
-    }),
   });
 
   const steps = [
     'Basic Information',
-    'Area & Features',
-    'Pricing & Details'
+    'Specifications',
+    'Features & Amenities',
+    'Pricing & Possession'
   ];
 
   // Fetch project and tower data
@@ -189,14 +215,36 @@ const CreateUnitPage = () => {
       
       // Fetch project details
       const projectResponse = await projectAPI.getProject(projectId);
-      const projectData = projectResponse.data.data || projectResponse.data;
+      
+      // Handle different response structures
+      let projectData;
+      if (projectResponse.data.data) {
+        projectData = projectResponse.data.data;
+      } else if (projectResponse.data.project) {
+        projectData = projectResponse.data.project;
+      } else {
+        projectData = projectResponse.data;
+      }
+      
       setProject(projectData);
+      console.log('📋 Project loaded:', projectData?.name);
 
       // Fetch tower details if this is a tower unit
       if (towerId) {
         const towerResponse = await towerAPI.getTower(towerId);
-        const towerData = towerResponse.data.data || towerResponse.data;
+        
+        // Handle different response structures
+        let towerData;
+        if (towerResponse.data.data) {
+          towerData = towerResponse.data.data;
+        } else if (towerResponse.data.tower) {
+          towerData = towerResponse.data.tower;
+        } else {
+          towerData = towerResponse.data;
+        }
+        
         setTower(towerData);
+        console.log('🏗️ Tower loaded:', towerData?.towerName);
 
         // Get existing units to auto-generate unit number
         const unitsResponse = await unitAPI.getUnits({ tower: towerId });
@@ -206,7 +254,7 @@ const CreateUnitPage = () => {
         setFormData(prev => ({
           ...prev,
           unitNumber: nextUnitNumber,
-          floorNumber: 1, // Default to first floor
+          floor: 1,
         }));
       } else {
         // For villa projects, get existing units to auto-generate villa number
@@ -217,6 +265,7 @@ const CreateUnitPage = () => {
         setFormData(prev => ({
           ...prev,
           unitNumber: nextVillaNumber,
+          floor: 0, // Ground level for villas
         }));
       }
       
@@ -229,19 +278,30 @@ const CreateUnitPage = () => {
   };
 
   const generateNextUnitNumber = (existingUnits, tower) => {
-    // Simple logic: Floor + Unit (e.g., 101, 102, 201, 202)
     const floorNumber = 1;
-    const unitsOnFloor = existingUnits.filter(unit => unit.floorNumber === floorNumber);
+    const unitsOnFloor = existingUnits.filter(unit => unit.floor === floorNumber);
     const nextUnitOnFloor = unitsOnFloor.length + 1;
-    return `${floorNumber}${nextUnitOnFloor.toString().padStart(2, '0')}`;
+    return `${tower?.towerCode || 'T'}-${floorNumber}${nextUnitOnFloor.toString().padStart(2, '0')}`;
   };
 
   // Form handlers
   const handleInputChange = (field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value,
-    }));
+    if (field.includes('.')) {
+      // Handle nested object fields (e.g., 'features.hasBalcony')
+      const [parent, child] = field.split('.');
+      setFormData(prev => ({
+        ...prev,
+        [parent]: {
+          ...prev[parent],
+          [child]: value,
+        },
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [field]: value,
+      }));
+    }
   };
 
   const handleNext = () => {
@@ -252,36 +312,112 @@ const CreateUnitPage = () => {
     setActiveStep(prev => prev - 1);
   };
 
-  // Form validation
+  // Enhanced form validation
   const validateStep = (step) => {
     switch (step) {
       case 0: // Basic Information
-        return formData.unitNumber && formData.bhkType && 
-               (isVillaProject || formData.floorNumber);
-      case 1: // Area & Features
-        return formData.carpetArea || formData.builtupArea;
-      case 2: // Pricing
-        return formData.basePrice || formData.currentPrice;
+        return formData.unitNumber && formData.type && formData.areaSqft;
+      case 1: // Specifications
+        return formData.specifications.bedrooms && formData.specifications.bathrooms;
+      case 2: // Features - always valid (optional)
+        return true;
+      case 3: // Pricing
+        return formData.basePrice;
       default:
         return true;
     }
   };
 
-  // Form submission
+  // Auto-calculate parking total
+  useEffect(() => {
+    const total = (formData.parking.covered || 0) + (formData.parking.open || 0);
+    if (total !== formData.parking.total) {
+      setFormData(prev => ({
+        ...prev,
+        features: {
+          ...prev.features,
+          hasParkingSlot: total > 0,
+        }
+      }));
+    }
+  }, [formData.parking.covered, formData.parking.open]);
+
+  // Auto-update corner unit based on unit number
+  useEffect(() => {
+    if (formData.unitNumber && tower) {
+      const unitPosition = parseInt(formData.unitNumber.split('-')[1]?.slice(-1)) || 0;
+      const isCorner = unitPosition === 1 || unitPosition === (tower.unitsPerFloor || 0);
+      setFormData(prev => ({
+        ...prev,
+        features: {
+          ...prev.features,
+          isCornerUnit: isCorner,
+        }
+      }));
+    }
+  }, [formData.unitNumber, tower]);
+
+  // Form submission with exact backend structure
   const handleSubmit = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Calculate price per sq ft if not provided
-      const finalFormData = { ...formData };
-      if (finalFormData.currentPrice && finalFormData.carpetArea && !finalFormData.pricePerSqFt) {
-        finalFormData.pricePerSqFt = Math.round(finalFormData.currentPrice / finalFormData.carpetArea);
-      }
+      // Create backend payload with exact structure matching CSV
+      const backendPayload = {
+        // Core fields (exactly as in backend)
+        project: formData.project,
+        unitNumber: formData.unitNumber,
+        type: formData.type,
+        floor: formData.floor,
+        areaSqft: parseInt(formData.areaSqft) || 0,
+        basePrice: parseInt(formData.basePrice) || 0,
+        currentPrice: parseInt(formData.currentPrice) || parseInt(formData.basePrice) || 0,
+        facing: formData.facing,
+        status: formData.status,
+        
+        // Include tower only if it exists
+        ...(formData.tower && { tower: formData.tower }),
+        
+        // Features object (exactly as in backend)
+        features: {
+          isParkFacing: formData.features.isParkFacing,
+          isCornerUnit: formData.features.isCornerUnit,
+          hasBalcony: formData.features.hasBalcony,
+          hasServantRoom: formData.features.hasServantRoom,
+          hasParkingSlot: formData.features.hasParkingSlot,
+          hasStudyRoom: formData.features.hasStudyRoom,
+          hasUtilityArea: formData.features.hasUtilityArea,
+        },
+        
+        // Specifications object (exactly as in backend)
+        specifications: {
+          bedrooms: parseInt(formData.specifications.bedrooms) || 0,
+          bathrooms: parseInt(formData.specifications.bathrooms) || 0,
+          livingRooms: parseInt(formData.specifications.livingRooms) || 0,
+          kitchen: parseInt(formData.specifications.kitchen) || 0,
+          balconies: parseInt(formData.specifications.balconies) || 0,
+          terraceArea: parseInt(formData.specifications.terraceArea) || 0,
+          carpetArea: parseInt(formData.specifications.carpetArea) || 0,
+          builtUpArea: parseInt(formData.specifications.builtUpArea) || 0,
+          superBuiltUpArea: parseInt(formData.specifications.superBuiltUpArea) || 0,
+        },
+        
+        // Parking object (exactly as in backend)
+        parking: {
+          covered: parseInt(formData.parking.covered) || 0,
+          open: parseInt(formData.parking.open) || 0,
+        },
+        
+        // Possession object (exactly as in backend)
+        possession: {
+          handoverStatus: formData.possession.handoverStatus,
+        },
+      };
 
-      console.log('🚀 Creating unit with data:', finalFormData);
+      console.log('🚀 Creating unit with exact backend structure:', backendPayload);
 
-      const response = await unitAPI.createUnit(finalFormData);
+      const response = await unitAPI.createUnit(backendPayload);
       
       console.log('✅ Unit created successfully:', response.data);
       
@@ -298,6 +434,7 @@ const CreateUnitPage = () => {
 
     } catch (error) {
       console.error('❌ Unit creation failed:', error);
+      console.error('Error response:', error.response?.data);
       setError(error.response?.data?.message || 'Failed to create unit. Please try again.');
     } finally {
       setLoading(false);
@@ -312,7 +449,7 @@ const CreateUnitPage = () => {
           Basic Unit Information
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          Provide the fundamental details about this {isVillaProject ? 'villa' : 'unit'}
+          Core details for this {isVillaProject ? 'villa' : 'unit'} (Required fields marked with *)
         </Typography>
       </Grid>
       
@@ -322,37 +459,67 @@ const CreateUnitPage = () => {
           label={`${isVillaProject ? 'Villa' : 'Unit'} Number *`}
           value={formData.unitNumber}
           onChange={(e) => handleInputChange('unitNumber', e.target.value)}
-          placeholder={isVillaProject ? 'e.g., V1' : 'e.g., 101'}
-          helperText={`Unique identifier for this ${isVillaProject ? 'villa' : 'unit'}`}
+          placeholder={isVillaProject ? 'e.g., V1' : 'e.g., T1-101'}
+          helperText="Unique identifier for this unit"
         />
       </Grid>
       
-      {!isVillaProject && (
-        <Grid item xs={12} md={6}>
-          <TextField
-            fullWidth
-            type="number"
-            label="Floor Number *"
-            value={formData.floorNumber}
-            onChange={(e) => handleInputChange('floorNumber', parseInt(e.target.value) || '')}
-            placeholder="e.g., 1"
-            inputProps={{ min: 0, max: tower?.totalFloors || 100 }}
-            helperText={`Floor 0 = Ground Floor (Max: ${tower?.totalFloors || 'N/A'})`}
-          />
-        </Grid>
-      )}
+      <Grid item xs={12} md={6}>
+        <FormControl fullWidth>
+          <InputLabel>Unit Type *</InputLabel>
+          <Select
+            value={formData.type}
+            onChange={(e) => handleInputChange('type', e.target.value)}
+            label="Unit Type *"
+          >
+            {UNIT_TYPES.map(type => (
+              <MenuItem key={type} value={type}>
+                {type}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Grid>
+      
+      <Grid item xs={12} md={6}>
+        <TextField
+          fullWidth
+          type="number"
+          label="Floor Number"
+          value={formData.floor}
+          onChange={(e) => handleInputChange('floor', parseInt(e.target.value) || 0)}
+          placeholder="e.g., 1"
+          inputProps={{ min: 0, max: tower?.totalFloors || 100 }}
+          helperText={isVillaProject ? "0 for ground level villa" : `Max: ${tower?.totalFloors || 'N/A'} floors`}
+        />
+      </Grid>
+      
+      <Grid item xs={12} md={6}>
+        <TextField
+          fullWidth
+          type="number"
+          label="Area (sq ft) *"
+          value={formData.areaSqft}
+          onChange={(e) => handleInputChange('areaSqft', parseInt(e.target.value) || '')}
+          InputProps={{
+            endAdornment: <InputAdornment position="end">sq ft</InputAdornment>,
+          }}
+          placeholder="e.g., 1200"
+          helperText="Primary area used by backend"
+        />
+      </Grid>
       
       <Grid item xs={12} md={6}>
         <FormControl fullWidth>
-          <InputLabel>BHK Type *</InputLabel>
+          <InputLabel>Facing</InputLabel>
           <Select
-            value={formData.bhkType}
-            onChange={(e) => handleInputChange('bhkType', e.target.value)}
-            label="BHK Type *"
+            value={formData.facing}
+            onChange={(e) => handleInputChange('facing', e.target.value)}
+            label="Facing"
           >
-            {BHK_TYPES.map(type => (
-              <MenuItem key={type} value={type}>
-                {type}
+            {FACING_OPTIONS.map(facing => (
+              <MenuItem key={facing} value={facing}>
+                {facing}
               </MenuItem>
             ))}
           </Select>
@@ -375,54 +542,99 @@ const CreateUnitPage = () => {
           </Select>
         </FormControl>
       </Grid>
-
-      {isVillaProject && (
-        <Grid item xs={12} md={6}>
-          <FormControl fullWidth>
-            <InputLabel>Villa Type</InputLabel>
-            <Select
-              value={formData.villaType}
-              onChange={(e) => handleInputChange('villaType', e.target.value)}
-              label="Villa Type"
-            >
-              <MenuItem value="independent">Independent Villa</MenuItem>
-              <MenuItem value="row-house">Row House</MenuItem>
-              <MenuItem value="cluster">Cluster Villa</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
-      )}
-      
-      <Grid item xs={12}>
-        <TextField
-          fullWidth
-          multiline
-          rows={2}
-          label="Description"
-          value={formData.description}
-          onChange={(e) => handleInputChange('description', e.target.value)}
-          placeholder={`Describe this ${isVillaProject ? 'villa' : 'unit'}...`}
-          helperText="Optional: Additional details about this unit"
-        />
-      </Grid>
     </Grid>
   );
 
-  const renderAreaAndFeatures = () => (
+  const renderSpecifications = () => (
     <Grid container spacing={3}>
       <Grid item xs={12}>
         <Typography variant="h6" gutterBottom>
-          Area & Features
+          Unit Specifications
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          Specify the area measurements and key features
+          Detailed specifications and room configuration
         </Typography>
       </Grid>
       
-      {/* Area Information */}
+      {/* Room Configuration */}
       <Grid item xs={12}>
         <Typography variant="subtitle1" gutterBottom>
-          Area Details (sq ft)
+          Room Configuration
+        </Typography>
+      </Grid>
+      
+      <Grid item xs={6} md={3}>
+        <TextField
+          fullWidth
+          type="number"
+          label="Bedrooms *"
+          value={formData.specifications.bedrooms}
+          onChange={(e) => handleInputChange('specifications.bedrooms', parseInt(e.target.value) || 0)}
+          inputProps={{ min: 0, max: 10 }}
+        />
+      </Grid>
+      
+      <Grid item xs={6} md={3}>
+        <TextField
+          fullWidth
+          type="number"
+          label="Bathrooms *"
+          value={formData.specifications.bathrooms}
+          onChange={(e) => handleInputChange('specifications.bathrooms', parseInt(e.target.value) || 0)}
+          inputProps={{ min: 1, max: 10 }}
+        />
+      </Grid>
+      
+      <Grid item xs={6} md={3}>
+        <TextField
+          fullWidth
+          type="number"
+          label="Living Rooms"
+          value={formData.specifications.livingRooms}
+          onChange={(e) => handleInputChange('specifications.livingRooms', parseInt(e.target.value) || 0)}
+          inputProps={{ min: 0, max: 5 }}
+        />
+      </Grid>
+      
+      <Grid item xs={6} md={3}>
+        <TextField
+          fullWidth
+          type="number"
+          label="Kitchen"
+          value={formData.specifications.kitchen}
+          onChange={(e) => handleInputChange('specifications.kitchen', parseInt(e.target.value) || 0)}
+          inputProps={{ min: 0, max: 3 }}
+        />
+      </Grid>
+      
+      <Grid item xs={6} md={3}>
+        <TextField
+          fullWidth
+          type="number"
+          label="Balconies"
+          value={formData.specifications.balconies}
+          onChange={(e) => handleInputChange('specifications.balconies', parseInt(e.target.value) || 0)}
+          inputProps={{ min: 0, max: 10 }}
+        />
+      </Grid>
+      
+      <Grid item xs={6} md={3}>
+        <TextField
+          fullWidth
+          type="number"
+          label="Terrace Area"
+          value={formData.specifications.terraceArea}
+          onChange={(e) => handleInputChange('specifications.terraceArea', parseInt(e.target.value) || 0)}
+          InputProps={{
+            endAdornment: <InputAdornment position="end">sq ft</InputAdornment>,
+          }}
+        />
+      </Grid>
+      
+      {/* Detailed Area Specifications */}
+      <Grid item xs={12}>
+        <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
+          Detailed Area Breakdown
         </Typography>
       </Grid>
       
@@ -431,12 +643,12 @@ const CreateUnitPage = () => {
           fullWidth
           type="number"
           label="Carpet Area"
-          value={formData.carpetArea}
-          onChange={(e) => handleInputChange('carpetArea', parseInt(e.target.value) || '')}
+          value={formData.specifications.carpetArea}
+          onChange={(e) => handleInputChange('specifications.carpetArea', parseInt(e.target.value) || 0)}
           InputProps={{
             endAdornment: <InputAdornment position="end">sq ft</InputAdornment>,
           }}
-          placeholder="e.g., 850"
+          helperText="Usable floor area"
         />
       </Grid>
       
@@ -445,12 +657,12 @@ const CreateUnitPage = () => {
           fullWidth
           type="number"
           label="Built-up Area"
-          value={formData.builtupArea}
-          onChange={(e) => handleInputChange('builtupArea', parseInt(e.target.value) || '')}
+          value={formData.specifications.builtUpArea}
+          onChange={(e) => handleInputChange('specifications.builtUpArea', parseInt(e.target.value) || 0)}
           InputProps={{
             endAdornment: <InputAdornment position="end">sq ft</InputAdornment>,
           }}
-          placeholder="e.g., 1000"
+          helperText="Carpet + wall area"
         />
       </Grid>
       
@@ -459,151 +671,176 @@ const CreateUnitPage = () => {
           fullWidth
           type="number"
           label="Super Built-up Area"
-          value={formData.superBuiltupArea}
-          onChange={(e) => handleInputChange('superBuiltupArea', parseInt(e.target.value) || '')}
+          value={formData.specifications.superBuiltUpArea}
+          onChange={(e) => handleInputChange('specifications.superBuiltUpArea', parseInt(e.target.value) || 0)}
           InputProps={{
             endAdornment: <InputAdornment position="end">sq ft</InputAdornment>,
           }}
-          placeholder="e.g., 1200"
-        />
-      </Grid>
-
-      {/* Villa-specific areas */}
-      {isVillaProject && (
-        <>
-          <Grid item xs={12} md={4}>
-            <TextField
-              fullWidth
-              type="number"
-              label="Plot Area"
-              value={formData.plotArea}
-              onChange={(e) => handleInputChange('plotArea', parseInt(e.target.value) || '')}
-              InputProps={{
-                endAdornment: <InputAdornment position="end">sq ft</InputAdornment>,
-              }}
-              placeholder="e.g., 2400"
-            />
-          </Grid>
-          
-          <Grid item xs={12} md={4}>
-            <TextField
-              fullWidth
-              type="number"
-              label="Garden Area"
-              value={formData.gardenArea}
-              onChange={(e) => handleInputChange('gardenArea', parseInt(e.target.value) || '')}
-              InputProps={{
-                endAdornment: <InputAdornment position="end">sq ft</InputAdornment>,
-              }}
-              placeholder="e.g., 500"
-            />
-          </Grid>
-          
-          <Grid item xs={12} md={4}>
-            <TextField
-              fullWidth
-              type="number"
-              label="Constructed Area"
-              value={formData.constructedArea}
-              onChange={(e) => handleInputChange('constructedArea', parseInt(e.target.value) || '')}
-              InputProps={{
-                endAdornment: <InputAdornment position="end">sq ft</InputAdornment>,
-              }}
-              placeholder="e.g., 1800"
-            />
-          </Grid>
-        </>
-      )}
-      
-      {/* Features */}
-      <Grid item xs={12}>
-        <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
-          Unit Features
-        </Typography>
-      </Grid>
-      
-      <Grid item xs={12} md={3}>
-        <FormControl fullWidth>
-          <InputLabel>Facing</InputLabel>
-          <Select
-            value={formData.facing}
-            onChange={(e) => handleInputChange('facing', e.target.value)}
-            label="Facing"
-          >
-            {FACING_OPTIONS.map(facing => (
-              <MenuItem key={facing} value={facing}>
-                {facing}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </Grid>
-      
-      <Grid item xs={12} md={3}>
-        <TextField
-          fullWidth
-          type="number"
-          label="Balconies"
-          value={formData.balconies}
-          onChange={(e) => handleInputChange('balconies', parseInt(e.target.value) || '')}
-          inputProps={{ min: 0, max: 10 }}
-          placeholder="e.g., 2"
-        />
-      </Grid>
-      
-      <Grid item xs={12} md={3}>
-        <TextField
-          fullWidth
-          type="number"
-          label="Bathrooms"
-          value={formData.bathrooms}
-          onChange={(e) => handleInputChange('bathrooms', parseInt(e.target.value) || '')}
-          inputProps={{ min: 1, max: 10 }}
-          placeholder="e.g., 2"
-        />
-      </Grid>
-      
-      <Grid item xs={12} md={3}>
-        <TextField
-          fullWidth
-          type="number"
-          label="Parking Spaces"
-          value={formData.parkingSpaces}
-          onChange={(e) => handleInputChange('parkingSpaces', parseInt(e.target.value) || '')}
-          inputProps={{ min: 0, max: 5 }}
-          placeholder="e.g., 1"
+          helperText="Built-up + common areas"
         />
       </Grid>
     </Grid>
   );
 
-  const renderPricingAndDetails = () => (
+  const renderFeaturesAndAmenities = () => (
     <Grid container spacing={3}>
       <Grid item xs={12}>
         <Typography variant="h6" gutterBottom>
-          Pricing & Final Details
+          Features & Amenities
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          Set the pricing and finalize unit details
+          Select the features and amenities available in this unit
         </Typography>
       </Grid>
       
-      <Grid item xs={12} md={4}>
+      {/* Unit Features */}
+      <Grid item xs={12}>
+        <Typography variant="subtitle1" gutterBottom>
+          Unit Features
+        </Typography>
+        <FormGroup row>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={formData.features.hasBalcony}
+                onChange={(e) => handleInputChange('features.hasBalcony', e.target.checked)}
+              />
+            }
+            label="Has Balcony"
+          />
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={formData.features.hasServantRoom}
+                onChange={(e) => handleInputChange('features.hasServantRoom', e.target.checked)}
+              />
+            }
+            label="Servant Room"
+          />
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={formData.features.hasStudyRoom}
+                onChange={(e) => handleInputChange('features.hasStudyRoom', e.target.checked)}
+              />
+            }
+            label="Study Room"
+          />
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={formData.features.hasUtilityArea}
+                onChange={(e) => handleInputChange('features.hasUtilityArea', e.target.checked)}
+              />
+            }
+            label="Utility Area"
+          />
+        </FormGroup>
+      </Grid>
+      
+      {/* Location Features */}
+      <Grid item xs={12}>
+        <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
+          Location Features
+        </Typography>
+        <FormGroup row>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={formData.features.isParkFacing}
+                onChange={(e) => handleInputChange('features.isParkFacing', e.target.checked)}
+              />
+            }
+            label="Park Facing"
+          />
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={formData.features.isCornerUnit}
+                onChange={(e) => handleInputChange('features.isCornerUnit', e.target.checked)}
+              />
+            }
+            label="Corner Unit"
+          />
+        </FormGroup>
+      </Grid>
+      
+      {/* Parking */}
+      <Grid item xs={12}>
+        <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
+          Parking Allocation
+        </Typography>
+      </Grid>
+      
+      <Grid item xs={6} md={3}>
         <TextField
           fullWidth
           type="number"
-          label="Base Price"
+          label="Covered Parking"
+          value={formData.parking.covered}
+          onChange={(e) => handleInputChange('parking.covered', parseInt(e.target.value) || 0)}
+          inputProps={{ min: 0, max: 5 }}
+        />
+      </Grid>
+      
+      <Grid item xs={6} md={3}>
+        <TextField
+          fullWidth
+          type="number"
+          label="Open Parking"
+          value={formData.parking.open}
+          onChange={(e) => handleInputChange('parking.open', parseInt(e.target.value) || 0)}
+          inputProps={{ min: 0, max: 5 }}
+        />
+      </Grid>
+      
+      <Grid item xs={12} md={6}>
+        <Paper sx={{ p: 2, bgcolor: 'info.50' }}>
+          <Typography variant="body2">
+            <strong>Total Parking:</strong> {(formData.parking.covered || 0) + (formData.parking.open || 0)} spaces
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            {formData.features.hasParkingSlot ? '✅ Has parking allocation' : '❌ No parking allocated'}
+          </Typography>
+        </Paper>
+      </Grid>
+    </Grid>
+  );
+
+  const renderPricingAndPossession = () => (
+    <Grid container spacing={3}>
+      <Grid item xs={12}>
+        <Typography variant="h6" gutterBottom>
+          Pricing & Possession Details
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          Set pricing information and possession status
+        </Typography>
+      </Grid>
+      
+      {/* Pricing */}
+      <Grid item xs={12}>
+        <Typography variant="subtitle1" gutterBottom>
+          Pricing Information
+        </Typography>
+      </Grid>
+      
+      <Grid item xs={12} md={6}>
+        <TextField
+          fullWidth
+          type="number"
+          label="Base Price *"
           value={formData.basePrice}
           onChange={(e) => handleInputChange('basePrice', parseInt(e.target.value) || '')}
           InputProps={{
             startAdornment: <InputAdornment position="start">₹</InputAdornment>,
           }}
           placeholder="e.g., 5000000"
-          helperText="Original price without additional charges"
+          helperText="Original unit price"
         />
       </Grid>
       
-      <Grid item xs={12} md={4}>
+      <Grid item xs={12} md={6}>
         <TextField
           fullWidth
           type="number"
@@ -618,58 +855,99 @@ const CreateUnitPage = () => {
         />
       </Grid>
       
-      <Grid item xs={12} md={4}>
-        <TextField
-          fullWidth
-          type="number"
-          label="Price per Sq Ft"
-          value={formData.pricePerSqFt}
-          onChange={(e) => handleInputChange('pricePerSqFt', parseInt(e.target.value) || '')}
-          InputProps={{
-            startAdornment: <InputAdornment position="start">₹</InputAdornment>,
-          }}
-          placeholder="e.g., 6500"
-          helperText="Will be auto-calculated if left empty"
-        />
+      {/* Auto-calculated fields */}
+      <Grid item xs={12} md={6}>
+        <Paper sx={{ p: 2, bgcolor: 'success.50' }}>
+          <Typography variant="body2" gutterBottom>
+            <strong>Price per Sq Ft:</strong>
+          </Typography>
+          <Typography variant="h6" color="success.main">
+            {formData.basePrice && formData.areaSqft ? 
+              `₹${Math.round(formData.basePrice / formData.areaSqft).toLocaleString()}` : 
+              'Enter price and area'
+            }
+          </Typography>
+        </Paper>
+      </Grid>
+      
+      {/* Possession */}
+      <Grid item xs={12}>
+        <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
+          Possession Details
+        </Typography>
+      </Grid>
+      
+      <Grid item xs={12} md={6}>
+        <FormControl fullWidth>
+          <InputLabel>Handover Status</InputLabel>
+          <Select
+            value={formData.possession.handoverStatus}
+            onChange={(e) => handleInputChange('possession.handoverStatus', e.target.value)}
+            label="Handover Status"
+          >
+            {HANDOVER_STATUS_OPTIONS.map(status => (
+              <MenuItem key={status.value} value={status.value}>
+                {status.label}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
       </Grid>
 
-      {/* Summary */}
+      {/* Complete Unit Summary */}
       <Grid item xs={12}>
-        <Paper sx={{ p: 3, mt: 2, bgcolor: 'grey.50' }}>
-          <Typography variant="h6" gutterBottom>
-            Unit Summary
+        <Paper sx={{ p: 3, mt: 3, bgcolor: 'grey.50' }}>
+          <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <CheckCircle color="primary" />
+            Complete Unit Summary
           </Typography>
           <Grid container spacing={2}>
-            <Grid item xs={6}>
-              <Typography variant="body2" color="text.secondary">
-                {isVillaProject ? 'Villa' : 'Unit'} Number
-              </Typography>
+            <Grid item xs={6} md={3}>
+              <Typography variant="body2" color="text.secondary">Unit Number</Typography>
               <Typography variant="body1" sx={{ fontWeight: 500 }}>
                 {formData.unitNumber || 'N/A'}
               </Typography>
             </Grid>
-            <Grid item xs={6}>
-              <Typography variant="body2" color="text.secondary">
-                Type
-              </Typography>
+            <Grid item xs={6} md={3}>
+              <Typography variant="body2" color="text.secondary">Type</Typography>
               <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                {formData.bhkType || 'N/A'}
+                {formData.type || 'N/A'}
               </Typography>
             </Grid>
-            <Grid item xs={6}>
-              <Typography variant="body2" color="text.secondary">
-                Carpet Area
-              </Typography>
+            <Grid item xs={6} md={3}>
+              <Typography variant="body2" color="text.secondary">Floor</Typography>
               <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                {formData.carpetArea ? `${formData.carpetArea} sq ft` : 'N/A'}
+                {formData.floor}
               </Typography>
             </Grid>
-            <Grid item xs={6}>
-              <Typography variant="body2" color="text.secondary">
-                Current Price
-              </Typography>
+            <Grid item xs={6} md={3}>
+              <Typography variant="body2" color="text.secondary">Area</Typography>
               <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                {formData.currentPrice ? `₹${formData.currentPrice.toLocaleString()}` : 'N/A'}
+                {formData.areaSqft ? `${formData.areaSqft} sq ft` : 'N/A'}
+              </Typography>
+            </Grid>
+            <Grid item xs={6} md={3}>
+              <Typography variant="body2" color="text.secondary">Bedrooms</Typography>
+              <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                {formData.specifications.bedrooms}
+              </Typography>
+            </Grid>
+            <Grid item xs={6} md={3}>
+              <Typography variant="body2" color="text.secondary">Bathrooms</Typography>
+              <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                {formData.specifications.bathrooms}
+              </Typography>
+            </Grid>
+            <Grid item xs={6} md={3}>
+              <Typography variant="body2" color="text.secondary">Parking</Typography>
+              <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                {(formData.parking.covered || 0) + (formData.parking.open || 0)} spaces
+              </Typography>
+            </Grid>
+            <Grid item xs={6} md={3}>
+              <Typography variant="body2" color="text.secondary">Base Price</Typography>
+              <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                {formData.basePrice ? `₹${formData.basePrice.toLocaleString()}` : 'N/A'}
               </Typography>
             </Grid>
           </Grid>
@@ -715,7 +993,7 @@ const CreateUnitPage = () => {
             Create New {isVillaProject ? 'Villa Unit' : 'Unit'}
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            Add a new {isVillaProject ? 'villa' : 'unit'} to {isVillaProject ? project.name : tower?.towerName || 'the tower'}
+            Add a comprehensive {isVillaProject ? 'villa' : 'unit'} with all specifications to {isVillaProject ? project.name : tower?.towerName || 'the tower'}
           </Typography>
         </Box>
 
@@ -726,7 +1004,7 @@ const CreateUnitPage = () => {
               {isVillaProject ? 'Villa Unit' : 'Unit'} Created Successfully! 🎉
             </Typography>
             <Typography>
-              {isVillaProject ? 'Villa' : 'Unit'} "{formData.unitNumber}" has been created. Redirecting...
+              {isVillaProject ? 'Villa' : 'Unit'} "{formData.unitNumber}" has been created with all specifications. Redirecting...
             </Typography>
           </Alert>
         )}
@@ -738,7 +1016,7 @@ const CreateUnitPage = () => {
           </Alert>
         )}
 
-        {/* Stepper */}
+        {/* Enhanced Stepper */}
         <Paper sx={{ p: 3, mb: 3 }}>
           <Stepper activeStep={activeStep}>
             {steps.map((label) => (
@@ -753,8 +1031,9 @@ const CreateUnitPage = () => {
         <Card>
           <CardContent sx={{ p: 4 }}>
             {activeStep === 0 && renderBasicInformation()}
-            {activeStep === 1 && renderAreaAndFeatures()}
-            {activeStep === 2 && renderPricingAndDetails()}
+            {activeStep === 1 && renderSpecifications()}
+            {activeStep === 2 && renderFeaturesAndAmenities()}
+            {activeStep === 3 && renderPricingAndPossession()}
             
             {/* Navigation Buttons */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4, pt: 3, borderTop: 1, borderColor: 'divider' }}>

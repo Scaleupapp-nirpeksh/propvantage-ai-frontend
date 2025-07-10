@@ -1,9 +1,9 @@
 // File: src/pages/projects/UnitDetailPage.js
-// Description: Complete unit detail page with comprehensive unit information and management capabilities
-// Version: 1.0 - Production-grade unit detail view with real backend integration
+// Description: Comprehensive unit detail page displaying ALL backend fields from CSV
+// Version: 1.0 - Complete backend integration with all 34+ unit fields
 // Location: src/pages/projects/UnitDetailPage.js
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -20,33 +20,25 @@ import {
   Alert,
   CircularProgress,
   Tooltip,
-  useTheme,
   Menu,
   MenuItem,
   ListItemIcon,
   ListItemText,
   Tab,
   Tabs,
+  Breadcrumbs,
+  Link,
+  LinearProgress,
+  List,
+  ListItem,
+  ListItemText as MuiListItemText,
+  Divider,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  Breadcrumbs,
-  Link,
-  Divider,
-  List,
-  ListItem,
-  LinearProgress,
 } from '@mui/material';
 import {
   ArrowBack,
@@ -56,55 +48,38 @@ import {
   CheckCircle,
   Warning,
   Block,
-  Person,
-  AttachMoney,
+  Schedule,
   Analytics,
-  Settings,
   Download,
   Refresh,
-  Timeline,
   NavigateNext,
-  AspectRatio,
   Business,
   Domain,
-  Phone,
-  Email,
-  LocationOn,
-  CalendarToday,
-  Receipt,
-  Assignment,
-  Visibility,
-  Share,
-  Print,
-  Villa,
-  Apartment,
-  Info,
-  TrendingUp,
+  Star,
+  Park,
+  LocalParking,
+  Balcony,
+  Bathtub,
+  Bed,
+  Kitchen,
+  AspectRatio,
+  MonetizationOn,
   AccountBalance,
+  Construction,
+  VerifiedUser,
+  LocationOn,
+  Person,
+  Info,
+  Assignment,
+  Apartment,
+  Villa,
+  Timeline,
+  Security,
+  Explore,
 } from '@mui/icons-material';
 
 import { useAuth } from '../../context/AuthContext';
 import { projectAPI, towerAPI, unitAPI } from '../../services/api';
-
-// Utility function to ensure proper ID handling
-const ensureValidId = (id, context = 'ID') => {
-  if (!id) {
-    console.error(`${context} is undefined or null`);
-    return null;
-  }
-  
-  if (typeof id === 'object') {
-    console.error(`${context} is an object, expected string:`, id);
-    return id._id || id.id || null;
-  }
-  
-  if (typeof id !== 'string') {
-    console.error(`${context} is not a string:`, typeof id, id);
-    return String(id);
-  }
-  
-  return id;
-};
 
 // Utility functions
 const formatCurrency = (amount) => {
@@ -119,6 +94,21 @@ const formatCurrency = (amount) => {
   return `₹${amount?.toLocaleString() || 0}`;
 };
 
+const formatDate = (dateString) => {
+  if (!dateString) return 'Not set';
+  try {
+    return new Date(dateString).toLocaleDateString('en-IN', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  } catch {
+    return 'Invalid date';
+  }
+};
+
 const getStatusColor = (status) => {
   switch (status?.toLowerCase()) {
     case 'available': return 'success';
@@ -130,25 +120,31 @@ const getStatusColor = (status) => {
 };
 
 const getStatusIcon = (status) => {
+  const icons = {
+    available: CheckCircle,
+    sold: Home,
+    blocked: Block,
+    'on-hold': Warning,
+  };
+  return icons[status?.toLowerCase()] || Info;
+};
+
+const getHandoverStatusColor = (status) => {
   switch (status?.toLowerCase()) {
-    case 'available': return CheckCircle;
-    case 'sold': return Home;
-    case 'blocked': return Block;
-    case 'on-hold': return Warning;
-    default: return Home;
+    case 'handed-over': return 'success';
+    case 'ready': return 'info';
+    case 'delayed': return 'error';
+    case 'not-ready': return 'warning';
+    default: return 'default';
   }
 };
 
 // Breadcrumb Navigation Component
 const UnitBreadcrumbs = ({ project, tower, unit }) => {
   const navigate = useNavigate();
-  const isVillaUnit = !tower;
 
   return (
-    <Breadcrumbs 
-      separator={<NavigateNext fontSize="small" />} 
-      sx={{ mb: 3 }}
-    >
+    <Breadcrumbs separator={<NavigateNext fontSize="small" />} sx={{ mb: 3 }}>
       <Link
         underline="hover"
         color="inherit"
@@ -162,29 +158,22 @@ const UnitBreadcrumbs = ({ project, tower, unit }) => {
         underline="hover"
         color="inherit"
         sx={{ cursor: 'pointer' }}
-        onClick={() => {
-          const validProjectId = ensureValidId(project?._id, 'Project ID');
-          navigate(`/projects/${validProjectId}`);
-        }}
+        onClick={() => navigate(`/projects/${project?._id}`)}
       >
         {project?.name || 'Project'}
       </Link>
-      {!isVillaUnit && tower && (
+      {tower && (
         <Link
           underline="hover"
           color="inherit"
           sx={{ cursor: 'pointer' }}
-          onClick={() => {
-            const validProjectId = ensureValidId(project?._id, 'Project ID');
-            const validTowerId = ensureValidId(tower._id, 'Tower ID');
-            navigate(`/projects/${validProjectId}/towers/${validTowerId}`);
-          }}
+          onClick={() => navigate(`/projects/${project?._id}/towers/${tower._id}`)}
         >
           {tower.towerName || tower.towerCode}
         </Link>
       )}
       <Typography color="text.primary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-        {isVillaUnit ? <Villa fontSize="small" /> : <Home fontSize="small" />}
+        <Home fontSize="small" />
         {unit?.unitNumber || 'Unit'}
       </Typography>
     </Breadcrumbs>
@@ -193,10 +182,9 @@ const UnitBreadcrumbs = ({ project, tower, unit }) => {
 
 // Unit Header Component
 const UnitHeader = ({ project, tower, unit, onEdit, onRefresh, isLoading }) => {
-  const { hasPermission } = useAuth();
+  const { canAccess } = useAuth();
   const [anchorEl, setAnchorEl] = useState(null);
-  const StatusIcon = getStatusIcon(unit.status);
-  const isVillaUnit = !tower;
+  const StatusIcon = getStatusIcon(unit?.status);
 
   const handleMenuClick = (event) => {
     setAnchorEl(event.currentTarget);
@@ -206,94 +194,127 @@ const UnitHeader = ({ project, tower, unit, onEdit, onRefresh, isLoading }) => {
     setAnchorEl(null);
   };
 
+  const pricePerSqFt = unit?.basePrice && unit?.areaSqft 
+    ? Math.round(unit.basePrice / unit.areaSqft) 
+    : 0;
+
   return (
     <Paper sx={{ p: 3, mb: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <Box sx={{ flex: 1 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-            <Avatar 
-              sx={{ 
-                width: 56, 
-                height: 56, 
-                bgcolor: `${getStatusColor(unit.status)}.main`,
-                color: 'white' 
-              }}
-            >
-              {isVillaUnit ? <Villa sx={{ fontSize: 28 }} /> : <StatusIcon sx={{ fontSize: 28 }} />}
+            <Avatar sx={{ width: 56, height: 56, bgcolor: `${getStatusColor(unit?.status)}.main` }}>
+              {tower ? <Apartment sx={{ fontSize: 28 }} /> : <Villa sx={{ fontSize: 28 }} />}
             </Avatar>
             <Box>
               <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5 }}>
-                {isVillaUnit ? 'Villa ' : 'Unit '}{unit.unitNumber}
+                {unit?.unitNumber || 'Unit'}
               </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                 <Chip 
-                  label={unit.status || 'Available'} 
-                  color={getStatusColor(unit.status)} 
+                  icon={<StatusIcon sx={{ fontSize: 16 }} />}
+                  label={unit?.status || 'Unknown'} 
+                  color={getStatusColor(unit?.status)} 
                   size="small"
                 />
                 <Chip 
-                  label={unit.bhkType || 'N/A'} 
+                  label={unit?.type || 'Unit Type'} 
+                  color="info" 
+                  size="small"
+                />
+                <Chip 
+                  label={`Floor ${unit?.floor || 0}`} 
                   color="primary" 
                   size="small" 
                   variant="outlined"
                 />
-                <Chip 
-                  label={isVillaUnit ? unit.villaType || 'Villa' : 'Apartment'} 
-                  color="info" 
-                  size="small" 
-                  variant="outlined"
-                />
-                {!isVillaUnit && (
-                  <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-                    Floor {unit.floorNumber} • {unit.carpetArea || unit.builtupArea || 0} sq ft
-                  </Typography>
+                {unit?.features?.isCornerUnit && (
+                  <Chip 
+                    label="Corner Unit" 
+                    color="warning" 
+                    size="small"
+                    icon={<Star />}
+                  />
+                )}
+                {unit?.features?.isParkFacing && (
+                  <Chip 
+                    label="Park Facing" 
+                    color="success" 
+                    size="small"
+                    icon={<Park />}
+                  />
                 )}
               </Box>
             </Box>
           </Box>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 2 }}>
-            <Box>
-              <Typography variant="h5" sx={{ fontWeight: 700, color: 'primary.main' }}>
-                {formatCurrency(unit.currentPrice)}
+          {/* Unit Statistics */}
+          <Grid container spacing={2} sx={{ mb: 2 }}>
+            <Grid item xs={3}>
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                {unit?.areaSqft || 0}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Current Price
+                Total Area (sq ft)
+              </Typography>
+            </Grid>
+            <Grid item xs={3}>
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                {unit?.specifications?.bedrooms || 0}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Bedrooms
+              </Typography>
+            </Grid>
+            <Grid item xs={3}>
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                {unit?.specifications?.bathrooms || 0}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Bathrooms
+              </Typography>
+            </Grid>
+            <Grid item xs={3}>
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                {((unit?.parking?.covered || 0) + (unit?.parking?.open || 0)) || 0}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Parking Spaces
+              </Typography>
+            </Grid>
+          </Grid>
+
+          {/* Pricing Information */}
+          <Box sx={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+            <Box>
+              <Typography variant="body2" color="text.secondary">
+                Base Price
+              </Typography>
+              <Typography variant="h5" color="primary.main" sx={{ fontWeight: 700 }}>
+                {formatCurrency(unit?.basePrice)}
               </Typography>
             </Box>
-            
-            {unit.pricePerSqFt && (
+            {unit?.currentPrice && unit?.currentPrice !== unit?.basePrice && (
               <Box>
-                <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                  {formatCurrency(unit.pricePerSqFt)}/sq ft
-                </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Price per sq ft
+                  Current Price
+                </Typography>
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  {formatCurrency(unit?.currentPrice)}
                 </Typography>
               </Box>
             )}
-
-            {isVillaUnit && unit.plotArea && (
+            {pricePerSqFt > 0 && (
               <Box>
-                <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                  {unit.plotArea} sq ft
-                </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Plot Area
+                  Price per Sq Ft
+                </Typography>
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  ₹{pricePerSqFt.toLocaleString()}
                 </Typography>
               </Box>
             )}
           </Box>
-
-          {unit.customerName && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Person sx={{ fontSize: 18, color: 'text.secondary' }} />
-              <Typography variant="body1" color="text.secondary">
-                Customer: {unit.customerName}
-                {unit.customerPhone && ` • ${unit.customerPhone}`}
-              </Typography>
-            </Box>
-          )}
         </Box>
 
         <Box sx={{ display: 'flex', gap: 1 }}>
@@ -303,7 +324,7 @@ const UnitHeader = ({ project, tower, unit, onEdit, onRefresh, isLoading }) => {
             </IconButton>
           </Tooltip>
           
-          {hasPermission('MANAGEMENT') && (
+          {canAccess.projectManagement() && (
             <Button
               variant="contained"
               startIcon={<Edit />}
@@ -325,27 +346,21 @@ const UnitHeader = ({ project, tower, unit, onEdit, onRefresh, isLoading }) => {
           >
             <MenuItem onClick={handleMenuClose}>
               <ListItemIcon>
-                <Receipt fontSize="small" />
+                <Analytics fontSize="small" />
               </ListItemIcon>
-              <ListItemText>Generate Cost Sheet</ListItemText>
+              <ListItemText>View Analytics</ListItemText>
+            </MenuItem>
+            <MenuItem onClick={handleMenuClose}>
+              <ListItemIcon>
+                <Download fontSize="small" />
+              </ListItemIcon>
+              <ListItemText>Export Details</ListItemText>
             </MenuItem>
             <MenuItem onClick={handleMenuClose}>
               <ListItemIcon>
                 <Assignment fontSize="small" />
               </ListItemIcon>
-              <ListItemText>Book Unit</ListItemText>
-            </MenuItem>
-            <MenuItem onClick={handleMenuClose}>
-              <ListItemIcon>
-                <Print fontSize="small" />
-              </ListItemIcon>
-              <ListItemText>Print Details</ListItemText>
-            </MenuItem>
-            <MenuItem onClick={handleMenuClose}>
-              <ListItemIcon>
-                <Share fontSize="small" />
-              </ListItemIcon>
-              <ListItemText>Share Unit</ListItemText>
+              <ListItemText>Generate Report</ListItemText>
             </MenuItem>
           </Menu>
         </Box>
@@ -354,431 +369,501 @@ const UnitHeader = ({ project, tower, unit, onEdit, onRefresh, isLoading }) => {
   );
 };
 
-// Unit Specifications Component
-const UnitSpecifications = ({ unit }) => {
-  const isVillaUnit = !unit.tower;
-  
-  const specifications = [
-    { label: 'Unit Number', value: unit.unitNumber },
-    !isVillaUnit && { label: 'Floor Number', value: unit.floorNumber },
-    { label: 'Unit Type', value: unit.bhkType },
-    { label: 'Carpet Area', value: unit.carpetArea ? `${unit.carpetArea} sq ft` : 'N/A' },
-    { label: 'Built-up Area', value: unit.builtupArea ? `${unit.builtupArea} sq ft` : 'N/A' },
-    { label: 'Super Built-up Area', value: unit.superBuiltupArea ? `${unit.superBuiltupArea} sq ft` : 'N/A' },
-    isVillaUnit && { label: 'Plot Area', value: unit.plotArea ? `${unit.plotArea} sq ft` : 'N/A' },
-    isVillaUnit && { label: 'Garden Area', value: unit.gardenArea ? `${unit.gardenArea} sq ft` : 'N/A' },
-    isVillaUnit && { label: 'Constructed Area', value: unit.constructedArea ? `${unit.constructedArea} sq ft` : 'N/A' },
-    isVillaUnit && { label: 'Villa Type', value: unit.villaType || 'Independent Villa' },
-    { label: 'Facing', value: unit.facing || 'N/A' },
-    { label: 'Balconies', value: unit.balconies || 'N/A' },
-    { label: 'Bathrooms', value: unit.bathrooms || 'N/A' },
-    { label: 'Parking', value: unit.parkingSpaces ? `${unit.parkingSpaces} spaces` : 'N/A' },
-  ].filter(item => item && item.value && item.value !== 'N/A');
-
+// Unit Overview Component
+const UnitOverview = ({ unit }) => {
   return (
-    <Card>
-      <CardContent>
-        <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
-          {isVillaUnit ? 'Villa' : 'Unit'} Specifications
-        </Typography>
-        
-        <Grid container spacing={3}>
-          {specifications.map((spec, index) => (
-            <Grid item xs={6} md={4} key={index}>
+    <Grid container spacing={3}>
+      {/* Basic Information */}
+      <Grid item xs={12} md={6}>
+        <Card>
+          <CardContent>
+            <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Info color="primary" />
+              Basic Information
+            </Typography>
+            <Stack spacing={2}>
               <Box>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  {spec.label}
-                </Typography>
+                <Typography variant="body2" color="text.secondary">Unit Number</Typography>
                 <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                  {spec.value}
+                  {unit?.unitNumber || 'Not specified'}
                 </Typography>
               </Box>
-            </Grid>
-          ))}
-        </Grid>
-
-        {unit.features && unit.features.length > 0 && (
-          <Box sx={{ mt: 3 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
-              Features & Amenities
-            </Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-              {unit.features.map((feature, index) => (
-                <Chip key={index} label={feature} size="small" variant="outlined" />
-              ))}
-            </Box>
-          </Box>
-        )}
-
-        {unit.description && (
-          <Box sx={{ mt: 3 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-              Description
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {unit.description}
-            </Typography>
-          </Box>
-        )}
-      </CardContent>
-    </Card>
-  );
-};
-
-// Pricing Information Component
-const PricingInformation = ({ unit }) => {
-  const pricingDetails = [
-    { label: 'Base Price', value: formatCurrency(unit.basePrice || unit.currentPrice) },
-    { label: 'Current Price', value: formatCurrency(unit.currentPrice) },
-    { label: 'Price per Sq Ft', value: unit.pricePerSqFt ? formatCurrency(unit.pricePerSqFt) : 'N/A' },
-    { label: 'Floor Rise Charges', value: formatCurrency(unit.floorRiseCharges || 0) },
-    { label: 'PLC Charges', value: formatCurrency(unit.plcCharges || 0) },
-    { label: 'GST', value: unit.gst ? `${unit.gst}%` : 'As applicable' },
-  ];
-
-  const additionalCharges = unit.additionalCharges || [];
-
-  // Calculate total price breakdown
-  const basePrice = unit.currentPrice || 0;
-  const gstAmount = basePrice * (unit.gst || 5) / 100;
-  const totalPrice = basePrice + gstAmount + (unit.floorRiseCharges || 0) + (unit.plcCharges || 0);
-
-  return (
-    <Card>
-      <CardContent>
-        <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
-          Pricing Information
-        </Typography>
-        
-        <Grid container spacing={3}>
-          {pricingDetails.map((price, index) => (
-            <Grid item xs={6} md={4} key={index}>
               <Box>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  {price.label}
-                </Typography>
+                <Typography variant="body2" color="text.secondary">Unit Type</Typography>
                 <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                  {price.value}
+                  {unit?.type || 'Not specified'}
                 </Typography>
               </Box>
-            </Grid>
-          ))}
-        </Grid>
+              <Box>
+                <Typography variant="body2" color="text.secondary">Floor Number</Typography>
+                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                  {unit?.floor || 0}
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="body2" color="text.secondary">Facing Direction</Typography>
+                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                  {unit?.facing || 'Not specified'}
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="body2" color="text.secondary">Status</Typography>
+                <Chip 
+                  label={unit?.status || 'Unknown'} 
+                  color={getStatusColor(unit?.status)} 
+                  size="small"
+                />
+              </Box>
+            </Stack>
+          </CardContent>
+        </Card>
+      </Grid>
 
-        {/* Price Breakdown */}
-        <Box sx={{ mt: 3 }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
-            Price Breakdown
-          </Typography>
-          <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
-            <Stack spacing={1}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Typography variant="body2">Base Price</Typography>
-                <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                  {formatCurrency(basePrice)}
+      {/* Area Specifications */}
+      <Grid item xs={12} md={6}>
+        <Card>
+          <CardContent>
+            <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <AspectRatio color="primary" />
+              Area Specifications
+            </Typography>
+            <Stack spacing={2}>
+              <Box>
+                <Typography variant="body2" color="text.secondary">Primary Area (Backend)</Typography>
+                <Typography variant="h6" color="primary.main" sx={{ fontWeight: 700 }}>
+                  {unit?.areaSqft || 0} sq ft
                 </Typography>
               </Box>
-              {unit.floorRiseCharges > 0 && (
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="body2">Floor Rise Charges</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                    {formatCurrency(unit.floorRiseCharges)}
-                  </Typography>
-                </Box>
-              )}
-              {unit.plcCharges > 0 && (
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="body2">PLC Charges</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                    {formatCurrency(unit.plcCharges)}
-                  </Typography>
-                </Box>
-              )}
-              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Typography variant="body2">GST ({unit.gst || 5}%)</Typography>
-                <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                  {formatCurrency(gstAmount)}
+              <Box>
+                <Typography variant="body2" color="text.secondary">Carpet Area</Typography>
+                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                  {unit?.specifications?.carpetArea || 0} sq ft
                 </Typography>
               </Box>
-              <Divider />
-              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Total Price</Typography>
-                <Typography variant="subtitle1" sx={{ fontWeight: 700, color: 'primary.main' }}>
-                  {formatCurrency(totalPrice)}
+              <Box>
+                <Typography variant="body2" color="text.secondary">Built-up Area</Typography>
+                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                  {unit?.specifications?.builtUpArea || 0} sq ft
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="body2" color="text.secondary">Super Built-up Area</Typography>
+                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                  {unit?.specifications?.superBuiltUpArea || 0} sq ft
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="body2" color="text.secondary">Terrace Area</Typography>
+                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                  {unit?.specifications?.terraceArea || 0} sq ft
                 </Typography>
               </Box>
             </Stack>
-          </Paper>
-        </Box>
+          </CardContent>
+        </Card>
+      </Grid>
 
-        {additionalCharges.length > 0 && (
-          <Box sx={{ mt: 3 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
-              Additional Charges
+      {/* Room Configuration */}
+      <Grid item xs={12} md={6}>
+        <Card>
+          <CardContent>
+            <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Home color="primary" />
+              Room Configuration
             </Typography>
-            <TableContainer component={Paper} variant="outlined">
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Charge Type</TableCell>
-                    <TableCell align="right">Amount</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {additionalCharges.map((charge, index) => (
-                    <TableRow key={index}>
-                      <TableCell>{charge.name || charge.type}</TableCell>
-                      <TableCell align="right">{formatCurrency(charge.amount)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Box>
-        )}
-      </CardContent>
-    </Card>
-  );
-};
-
-// Customer Information Component
-const CustomerInformation = ({ unit }) => {
-  const isVillaUnit = !unit.tower;
-  
-  if (!unit.customerName && unit.status === 'available') {
-    return (
-      <Card>
-        <CardContent sx={{ textAlign: 'center', py: 6 }}>
-          <CheckCircle sx={{ fontSize: 64, color: 'success.main', mb: 2 }} />
-          <Typography variant="h6" color="text.primary" gutterBottom>
-            {isVillaUnit ? 'Villa' : 'Unit'} Available
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            This {isVillaUnit ? 'villa' : 'unit'} is available for booking
-          </Typography>
-          <Button variant="contained" startIcon={<Assignment />} size="large">
-            Book This {isVillaUnit ? 'Villa' : 'Unit'}
-          </Button>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const customerDetails = [
-    { label: 'Customer Name', value: unit.customerName, icon: Person },
-    { label: 'Phone Number', value: unit.customerPhone, icon: Phone },
-    { label: 'Email Address', value: unit.customerEmail, icon: Email },
-    { label: 'Booking Date', value: unit.bookingDate ? new Date(unit.bookingDate).toLocaleDateString() : 'N/A', icon: CalendarToday },
-    { label: 'Sale Date', value: unit.saleDate ? new Date(unit.saleDate).toLocaleDateString() : 'N/A', icon: CheckCircle },
-    { label: 'Registration Date', value: unit.registrationDate ? new Date(unit.registrationDate).toLocaleDateString() : 'N/A', icon: Receipt },
-  ].filter(item => item.value && item.value !== 'N/A');
-
-  return (
-    <Card>
-      <CardContent>
-        <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
-          Customer Information
-        </Typography>
-        
-        {customerDetails.length > 0 ? (
-          <Grid container spacing={3}>
-            {customerDetails.map((detail, index) => (
-              <Grid item xs={12} md={6} key={index}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Avatar sx={{ bgcolor: 'primary.100', color: 'primary.700', width: 40, height: 40 }}>
-                    <detail.icon fontSize="small" />
-                  </Avatar>
+            <Grid container spacing={2}>
+              <Grid item xs={6}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                  <Bed color="action" />
                   <Box>
-                    <Typography variant="body2" color="text.secondary">
-                      {detail.label}
+                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                      {unit?.specifications?.bedrooms || 0}
                     </Typography>
-                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                      {detail.value}
+                    <Typography variant="caption" color="text.secondary">
+                      Bedrooms
                     </Typography>
                   </Box>
                 </Box>
               </Grid>
-            ))}
-          </Grid>
-        ) : (
-          <Typography variant="body2" color="text.secondary">
-            No customer information available
-          </Typography>
-        )}
+              <Grid item xs={6}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                  <Bathtub color="action" />
+                  <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                      {unit?.specifications?.bathrooms || 0}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Bathrooms
+                    </Typography>
+                  </Box>
+                </Box>
+              </Grid>
+              <Grid item xs={6}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                  <Home color="action" />
+                  <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                      {unit?.specifications?.livingRooms || 0}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Living Rooms
+                    </Typography>
+                  </Box>
+                </Box>
+              </Grid>
+              <Grid item xs={6}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                  <Kitchen color="action" />
+                  <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                      {unit?.specifications?.kitchen || 0}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Kitchen
+                    </Typography>
+                  </Box>
+                </Box>
+              </Grid>
+              <Grid item xs={6}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Balcony color="action" />
+                  <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                      {unit?.specifications?.balconies || 0}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Balconies
+                    </Typography>
+                  </Box>
+                </Box>
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+      </Grid>
 
-        {unit.paymentSchedule && (
-          <Box sx={{ mt: 3 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
-              Payment Schedule
+      {/* Features & Amenities */}
+      <Grid item xs={12} md={6}>
+        <Card>
+          <CardContent>
+            <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Star color="primary" />
+              Features & Amenities
             </Typography>
-            <Alert severity="info" icon={<AccountBalance />}>
-              Payment schedule and installment details will be displayed here
-            </Alert>
-          </Box>
-        )}
-      </CardContent>
-    </Card>
-  );
-};
+            <Grid container spacing={1}>
+              <Grid item xs={12}>
+                <Typography variant="subtitle2" color="primary" gutterBottom>
+                  Unit Features
+                </Typography>
+                <Stack direction="row" spacing={1} flexWrap="wrap">
+                  <Chip 
+                    icon={<Balcony />}
+                    label="Balcony" 
+                    size="small" 
+                    color={unit?.features?.hasBalcony ? 'success' : 'default'}
+                    variant={unit?.features?.hasBalcony ? 'filled' : 'outlined'}
+                  />
+                  <Chip 
+                    icon={<Person />}
+                    label="Servant Room" 
+                    size="small" 
+                    color={unit?.features?.hasServantRoom ? 'success' : 'default'}
+                    variant={unit?.features?.hasServantRoom ? 'filled' : 'outlined'}
+                  />
+                  <Chip 
+                    icon={<Home />}
+                    label="Study Room" 
+                    size="small" 
+                    color={unit?.features?.hasStudyRoom ? 'success' : 'default'}
+                    variant={unit?.features?.hasStudyRoom ? 'filled' : 'outlined'}
+                  />
+                  <Chip 
+                    icon={<Construction />}
+                    label="Utility Area" 
+                    size="small" 
+                    color={unit?.features?.hasUtilityArea ? 'success' : 'default'}
+                    variant={unit?.features?.hasUtilityArea ? 'filled' : 'outlined'}
+                  />
+                </Stack>
+              </Grid>
+              <Grid item xs={12} sx={{ mt: 2 }}>
+                <Typography variant="subtitle2" color="primary" gutterBottom>
+                  Location Features
+                </Typography>
+                <Stack direction="row" spacing={1} flexWrap="wrap">
+                  <Chip 
+                    icon={<Star />}
+                    label="Corner Unit" 
+                    size="small" 
+                    color={unit?.features?.isCornerUnit ? 'warning' : 'default'}
+                    variant={unit?.features?.isCornerUnit ? 'filled' : 'outlined'}
+                  />
+                  <Chip 
+                    icon={<Park />}
+                    label="Park Facing" 
+                    size="small" 
+                    color={unit?.features?.isParkFacing ? 'success' : 'default'}
+                    variant={unit?.features?.isParkFacing ? 'filled' : 'outlined'}
+                  />
+                  <Chip 
+                    icon={<LocalParking />}
+                    label="Parking Slot" 
+                    size="small" 
+                    color={unit?.features?.hasParkingSlot ? 'info' : 'default'}
+                    variant={unit?.features?.hasParkingSlot ? 'filled' : 'outlined'}
+                  />
+                </Stack>
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+      </Grid>
 
-// Unit Timeline Component
-const UnitTimeline = ({ unit }) => {
-  const timelineEvents = [
-    {
-      date: unit.createdAt,
-      title: 'Unit Created',
-      description: 'Unit was added to the system',
-      icon: Home,
-      color: 'primary',
-    },
-    {
-      date: unit.bookingDate,
-      title: 'Unit Booked',
-      description: `Booked by ${unit.customerName}`,
-      icon: Assignment,
-      color: 'warning',
-    },
-    {
-      date: unit.saleDate,
-      title: 'Sale Completed',
-      description: 'Unit sale was finalized',
-      icon: CheckCircle,
-      color: 'success',
-    },
-    {
-      date: unit.registrationDate,
-      title: 'Registration Completed',
-      description: 'Legal registration completed',
-      icon: Receipt,
-      color: 'info',
-    },
-  ].filter(event => event.date);
-
-  return (
-    <Card>
-      <CardContent>
-        <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
-          Unit Timeline
-        </Typography>
-        
-        {timelineEvents.length > 0 ? (
-          <Stack spacing={3}>
-            {timelineEvents.map((event, index) => (
-              <Box key={index} sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
-                <Avatar 
-                  sx={{ 
-                    bgcolor: `${event.color}.100`,
-                    color: `${event.color}.700`,
-                    width: 40,
-                    height: 40,
-                  }}
-                >
-                  <event.icon sx={{ fontSize: 20 }} />
-                </Avatar>
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                    {event.title}
+      {/* Parking Details */}
+      <Grid item xs={12} md={6}>
+        <Card>
+          <CardContent>
+            <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <LocalParking color="primary" />
+              Parking Allocation
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={4}>
+                <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'primary.50', borderRadius: 1 }}>
+                  <Typography variant="h4" color="primary.main" sx={{ fontWeight: 700 }}>
+                    {unit?.parking?.covered || 0}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                    {event.description}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {new Date(event.date).toLocaleDateString()}
+                  <Typography variant="body2" color="text.secondary">
+                    Covered
                   </Typography>
                 </Box>
-              </Box>
-            ))}
-          </Stack>
-        ) : (
-          <Alert severity="info" icon={<Info />}>
-            No timeline events available for this unit
-          </Alert>
-        )}
-      </CardContent>
-    </Card>
+              </Grid>
+              <Grid item xs={4}>
+                <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'info.50', borderRadius: 1 }}>
+                  <Typography variant="h4" color="info.main" sx={{ fontWeight: 700 }}>
+                    {unit?.parking?.open || 0}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Open
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={4}>
+                <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'success.50', borderRadius: 1 }}>
+                  <Typography variant="h4" color="success.main" sx={{ fontWeight: 700 }}>
+                    {((unit?.parking?.covered || 0) + (unit?.parking?.open || 0)) || 0}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Total
+                  </Typography>
+                </Box>
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+      </Grid>
+
+      {/* Possession Status */}
+      <Grid item xs={12} md={6}>
+        <Card>
+          <CardContent>
+            <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <VerifiedUser color="primary" />
+              Possession Status
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Chip 
+                label={unit?.possession?.handoverStatus?.replace('-', ' ').toUpperCase() || 'NOT SET'}
+                color={getHandoverStatusColor(unit?.possession?.handoverStatus)}
+                size="medium"
+                sx={{ fontSize: '1rem', px: 2, py: 1 }}
+              />
+            </Box>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+              Current handover status of this unit
+            </Typography>
+          </CardContent>
+        </Card>
+      </Grid>
+    </Grid>
   );
 };
 
-// Analytics Component
-const UnitAnalytics = ({ unit }) => {
-  const isVillaUnit = !unit.tower;
-  
-  // Mock analytics data - replace with real analytics API
-  const analytics = {
-    viewsThisMonth: Math.floor(Math.random() * 50) + 10,
-    inquiriesThisMonth: Math.floor(Math.random() * 20) + 5,
-    avgMarketPrice: unit.currentPrice * (0.9 + Math.random() * 0.2),
-    priceHistory: [
-      { month: 'Jan', price: unit.currentPrice * 0.95 },
-      { month: 'Feb', price: unit.currentPrice * 0.97 },
-      { month: 'Mar', price: unit.currentPrice },
-    ],
-  };
-
-  const marketComparison = analytics.avgMarketPrice > unit.currentPrice ? 'below' : 'above';
-  const priceDifference = Math.abs(analytics.avgMarketPrice - unit.currentPrice);
-  const pricePercentage = Math.round((priceDifference / analytics.avgMarketPrice) * 100);
+// Financial Details Component
+const FinancialDetails = ({ unit }) => {
+  const pricePerSqFt = unit?.basePrice && unit?.areaSqft 
+    ? Math.round(unit.basePrice / unit.areaSqft) 
+    : 0;
 
   return (
-    <Card>
-      <CardContent>
-        <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
-          Unit Analytics
-        </Typography>
-        
-        <Grid container spacing={3}>
-          {/* Key Metrics */}
-          <Grid item xs={6} md={3}>
-            <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'primary.50' }}>
-              <Typography variant="h4" sx={{ fontWeight: 700, color: 'primary.main' }}>
-                {analytics.viewsThisMonth}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Views This Month
-              </Typography>
-            </Paper>
-          </Grid>
-          
-          <Grid item xs={6} md={3}>
-            <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'success.50' }}>
-              <Typography variant="h4" sx={{ fontWeight: 700, color: 'success.main' }}>
-                {analytics.inquiriesThisMonth}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Inquiries
-              </Typography>
-            </Paper>
-          </Grid>
-          
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-                Market Comparison
-              </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                {marketComparison === 'below' ? (
-                  <TrendingUp color="success" />
-                ) : (
-                  <TrendingUp color="error" sx={{ transform: 'rotate(180deg)' }} />
-                )}
-                <Typography variant="body2">
-                  Priced {pricePercentage}% {marketComparison} market average
+    <Grid container spacing={3}>
+      <Grid item xs={12} md={6}>
+        <Card>
+          <CardContent>
+            <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <MonetizationOn color="primary" />
+              Pricing Details
+            </Typography>
+            <Stack spacing={2}>
+              <Box>
+                <Typography variant="body2" color="text.secondary">Base Price</Typography>
+                <Typography variant="h5" color="primary.main" sx={{ fontWeight: 700 }}>
+                  {formatCurrency(unit?.basePrice)}
                 </Typography>
               </Box>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                Market avg: {formatCurrency(analytics.avgMarketPrice)}
-              </Typography>
-            </Paper>
-          </Grid>
-        </Grid>
+              {unit?.currentPrice && (
+                <Box>
+                  <Typography variant="body2" color="text.secondary">Current Price</Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                    {formatCurrency(unit?.currentPrice)}
+                  </Typography>
+                </Box>
+              )}
+              {pricePerSqFt > 0 && (
+                <Box>
+                  <Typography variant="body2" color="text.secondary">Price per Sq Ft</Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                    ₹{pricePerSqFt.toLocaleString()}
+                  </Typography>
+                </Box>
+              )}
+              {unit?.currentPrice && unit?.basePrice && unit?.currentPrice !== unit?.basePrice && (
+                <Box>
+                  <Typography variant="body2" color="text.secondary">Price Difference</Typography>
+                  <Typography 
+                    variant="body1" 
+                    sx={{ 
+                      fontWeight: 600,
+                      color: unit?.currentPrice > unit?.basePrice ? 'success.main' : 'error.main'
+                    }}
+                  >
+                    {unit?.currentPrice > unit?.basePrice ? '+' : ''}
+                    {formatCurrency(unit?.currentPrice - unit?.basePrice)}
+                  </Typography>
+                </Box>
+              )}
+            </Stack>
+          </CardContent>
+        </Card>
+      </Grid>
 
-        <Alert severity="info" sx={{ mt: 3 }}>
-          <Typography variant="body2">
-            Analytics data is updated daily. Contact your analytics team for detailed market reports.
-          </Typography>
-        </Alert>
-      </CardContent>
-    </Card>
+      <Grid item xs={12} md={6}>
+        <Card>
+          <CardContent>
+            <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <AccountBalance color="primary" />
+              Investment Analysis
+            </Typography>
+            <Stack spacing={2}>
+              <Box>
+                <Typography variant="body2" color="text.secondary">Price per Sq Ft (Carpet)</Typography>
+                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                  {unit?.specifications?.carpetArea && unit?.basePrice
+                    ? `₹${Math.round(unit.basePrice / unit.specifications.carpetArea).toLocaleString()}`
+                    : 'N/A'
+                  }
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="body2" color="text.secondary">Price per Sq Ft (Built-up)</Typography>
+                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                  {unit?.specifications?.builtUpArea && unit?.basePrice
+                    ? `₹${Math.round(unit.basePrice / unit.specifications.builtUpArea).toLocaleString()}`
+                    : 'N/A'
+                  }
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="body2" color="text.secondary">Price per Sq Ft (Super Built-up)</Typography>
+                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                  {unit?.specifications?.superBuiltUpArea && unit?.basePrice
+                    ? `₹${Math.round(unit.basePrice / unit.specifications.superBuiltUpArea).toLocaleString()}`
+                    : 'N/A'
+                  }
+                </Typography>
+              </Box>
+            </Stack>
+          </CardContent>
+        </Card>
+      </Grid>
+    </Grid>
+  );
+};
+
+// Unit History & Metadata Component
+const UnitHistory = ({ unit }) => {
+  return (
+    <Grid container spacing={3}>
+      <Grid item xs={12} md={8}>
+        <Card>
+          <CardContent>
+            <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Timeline color="primary" />
+              Unit Information
+            </Typography>
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell><strong>Field</strong></TableCell>
+                    <TableCell><strong>Value</strong></TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  <TableRow>
+                    <TableCell>Unit ID</TableCell>
+                    <TableCell sx={{ fontFamily: 'monospace' }}>{unit?._id}</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell>Project ID</TableCell>
+                    <TableCell sx={{ fontFamily: 'monospace' }}>{unit?.project}</TableCell>
+                  </TableRow>
+                  {unit?.tower && (
+                    <TableRow>
+                      <TableCell>Tower ID</TableCell>
+                      <TableCell sx={{ fontFamily: 'monospace' }}>{unit?.tower}</TableCell>
+                    </TableRow>
+                  )}
+                  <TableRow>
+                    <TableCell>Organization ID</TableCell>
+                    <TableCell sx={{ fontFamily: 'monospace' }}>{unit?.organization}</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell>Version</TableCell>
+                    <TableCell>{unit?.__v || 0}</TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </CardContent>
+        </Card>
+      </Grid>
+
+      <Grid item xs={12} md={4}>
+        <Card>
+          <CardContent>
+            <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Schedule color="primary" />
+              Timestamps
+            </Typography>
+            <Stack spacing={2}>
+              <Box>
+                <Typography variant="body2" color="text.secondary">Created At</Typography>
+                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                  {formatDate(unit?.createdAt)}
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="body2" color="text.secondary">Last Updated</Typography>
+                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                  {formatDate(unit?.updatedAt)}
+                </Typography>
+              </Box>
+            </Stack>
+          </CardContent>
+        </Card>
+      </Grid>
+    </Grid>
   );
 };
 
@@ -786,10 +871,7 @@ const UnitAnalytics = ({ unit }) => {
 const UnitDetailPage = () => {
   const { projectId, towerId, unitId } = useParams();
   const navigate = useNavigate();
-  const { hasPermission } = useAuth();
-
-  // Determine if this is a villa unit (no towerId in URL)
-  const isVillaUnit = !towerId;
+  const { canAccess } = useAuth();
 
   // State management
   const [project, setProject] = useState(null);
@@ -799,7 +881,7 @@ const UnitDetailPage = () => {
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState(0);
 
-  // Fetch unit data
+  // Fetch data
   useEffect(() => {
     if (projectId && unitId) {
       fetchUnitData();
@@ -811,31 +893,57 @@ const UnitDetailPage = () => {
       setLoading(true);
       setError(null);
 
-      const validProjectId = ensureValidId(projectId, 'Project ID');
-      const validUnitId = ensureValidId(unitId, 'Unit ID');
-
-      console.log('🔄 Fetching unit data for ID:', validUnitId);
+      console.log('🔄 Fetching unit data for:', {
+        projectId,
+        towerId,
+        unitId
+      });
 
       // Fetch project details
-      const projectResponse = await projectAPI.getProject(validProjectId);
-      const projectData = projectResponse.data.data || projectResponse.data;
+      const projectResponse = await projectAPI.getProject(projectId);
+      let projectData;
+      if (projectResponse.data.data) {
+        projectData = projectResponse.data.data;
+      } else if (projectResponse.data.project) {
+        projectData = projectResponse.data.project;
+      } else {
+        projectData = projectResponse.data;
+      }
+      setProject(projectData);
 
-      // Fetch tower details only if this is a tower unit
-      let towerData = null;
+      // Fetch tower details if tower exists
       if (towerId) {
-        const validTowerId = ensureValidId(towerId, 'Tower ID');
-        const towerResponse = await towerAPI.getTower(validTowerId);
-        towerData = towerResponse.data.data || towerResponse.data;
+        const towerResponse = await towerAPI.getTower(towerId);
+        let towerData;
+        if (towerResponse.data.data) {
+          towerData = towerResponse.data.data;
+        } else if (towerResponse.data.tower) {
+          towerData = towerResponse.data.tower;
+        } else {
+          towerData = towerResponse.data;
+        }
+        setTower(towerData);
       }
 
       // Fetch unit details
-      const unitResponse = await unitAPI.getUnit(validUnitId);
-      const unitData = unitResponse.data.data || unitResponse.data;
+      const unitResponse = await unitAPI.getUnit(unitId);
+      let unitData;
+      if (unitResponse.data.data) {
+        unitData = unitResponse.data.data;
+      } else if (unitResponse.data.unit) {
+        unitData = unitResponse.data.unit;
+      } else {
+        unitData = unitResponse.data;
+      }
 
-      console.log('✅ Unit data:', unitData);
+      console.log('✅ Unit data loaded successfully:', {
+        unit: unitData?.unitNumber,
+        status: unitData?.status,
+        hasFeatures: !!unitData?.features,
+        hasSpecifications: !!unitData?.specifications,
+        hasPossession: !!unitData?.possession
+      });
 
-      setProject(projectData);
-      setTower(towerData);
       setUnit(unitData);
 
     } catch (error) {
@@ -847,14 +955,10 @@ const UnitDetailPage = () => {
   };
 
   const handleEdit = () => {
-    const validProjectId = ensureValidId(projectId, 'Project ID');
-    const validUnitId = ensureValidId(unitId, 'Unit ID');
-    
-    if (isVillaUnit) {
-      navigate(`/projects/${validProjectId}/units/${validUnitId}/edit`);
+    if (towerId) {
+      navigate(`/projects/${projectId}/towers/${towerId}/units/${unitId}/edit`);
     } else {
-      const validTowerId = ensureValidId(towerId, 'Tower ID');
-      navigate(`/projects/${validProjectId}/towers/${validTowerId}/units/${validUnitId}/edit`);
+      navigate(`/projects/${projectId}/units/${unitId}/edit`);
     }
   };
 
@@ -915,24 +1019,16 @@ const UnitDetailPage = () => {
           onChange={handleTabChange}
           sx={{ borderBottom: 1, borderColor: 'divider' }}
         >
-          <Tab label="Specifications" />
-          <Tab label="Pricing" />
-          <Tab label="Customer" />
-          <Tab label="Timeline" />
-          <Tab label="Analytics" />
+          <Tab label="Overview" />
+          <Tab label="Financial Details" />
+          <Tab label="History & Metadata" />
         </Tabs>
       </Paper>
 
       {/* Tab Content */}
-      <Grid container spacing={3}>
-        <Grid item xs={12}>
-          {activeTab === 0 && <UnitSpecifications unit={unit} />}
-          {activeTab === 1 && <PricingInformation unit={unit} />}
-          {activeTab === 2 && <CustomerInformation unit={unit} />}
-          {activeTab === 3 && <UnitTimeline unit={unit} />}
-          {activeTab === 4 && <UnitAnalytics unit={unit} />}
-        </Grid>
-      </Grid>
+      {activeTab === 0 && <UnitOverview unit={unit} />}
+      {activeTab === 1 && <FinancialDetails unit={unit} />}
+      {activeTab === 2 && <UnitHistory unit={unit} />}
     </Box>
   );
 };
