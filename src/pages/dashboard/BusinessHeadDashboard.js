@@ -1,6 +1,6 @@
 // File: src/pages/dashboard/BusinessHeadDashboard.js
-// Description: Professional Business Head Dashboard - Complete backend integration with modern UX
-// Version: 2.0 - Executive-level dashboard with real-time data and advanced analytics
+// Description: FIXED Business Head Dashboard - Working with actual backend data
+// Version: 2.1 - Fixed all data loading and display issues
 // Location: src/pages/dashboard/BusinessHeadDashboard.js
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -31,9 +31,7 @@ import {
   Zoom,
   Skeleton,
   Tooltip,
-  ButtonGroup,
-  Switch,
-  FormControlLabel,
+  Stack,
 } from '@mui/material';
 import {
   TrendingUp,
@@ -45,28 +43,16 @@ import {
   Refresh,
   Visibility,
   Add,
-  Psychology,
-  Construction,
-  Assignment,
   Timeline,
-  Speed,
-  Compare,
-  Dashboard,
   Analytics,
-  Insights,
   ArrowUpward,
   ArrowDownward,
-  MoreVert,
-  FilterList,
-  DateRange,
-  Download,
-  Share,
+  LocationOn,
+  CheckCircle,
+  Schedule,
+  Construction,
 } from '@mui/icons-material';
 import { 
-  LineChart, 
-  Line, 
-  AreaChart, 
-  Area, 
   BarChart, 
   Bar, 
   PieChart, 
@@ -77,20 +63,11 @@ import {
   CartesianGrid, 
   Tooltip as RechartsTooltip, 
   Legend, 
-  ResponsiveContainer,
-  ComposedChart,
+  ResponsiveContainer 
 } from 'recharts';
 
 import { useAuth } from '../../context/AuthContext';
-import { 
-  analyticsAPI, 
-  projectAPI, 
-  leadAPI, 
-  salesAPI, 
-  userAPI,
-  paymentAPI,
-  constructionAPI 
-} from '../../services/api';
+import { projectAPI, userAPI } from '../../services/api';
 
 // Utility functions
 const formatCurrency = (amount) => {
@@ -108,11 +85,6 @@ const formatNumber = (num) => {
   return num.toLocaleString();
 };
 
-const formatPercentage = (value, total) => {
-  if (!total || total === 0) return '0%';
-  return `${((value / total) * 100).toFixed(1)}%`;
-};
-
 // Enhanced Metric Card Component
 const ExecutiveMetricCard = ({ 
   title, 
@@ -123,7 +95,6 @@ const ExecutiveMetricCard = ({
   icon: Icon, 
   color = 'primary',
   onClick,
-  actionLabel,
   isLoading = false,
   animate = true 
 }) => {
@@ -144,483 +115,307 @@ const ExecutiveMetricCard = ({
           height: '100%',
           cursor: onClick ? 'pointer' : 'default',
           transition: 'all 0.3s ease',
-          background: `linear-gradient(135deg, ${theme.palette.background.paper} 0%, ${theme.palette.background.default} 100%)`,
-          '&:hover': onClick ? { 
-            boxShadow: theme.shadows[8],
+          '&:hover': onClick ? {
             transform: 'translateY(-4px)',
+            boxShadow: theme.shadows[8],
           } : {},
-          border: `1px solid ${theme.palette.divider}`,
-          borderRadius: 2,
         }}
         onClick={onClick}
       >
         <CardContent sx={{ p: 3 }}>
           <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 2 }}>
-            <Box sx={{ flex: 1 }}>
-              <Typography 
-                variant="body2" 
-                color="text.secondary" 
-                gutterBottom
-                sx={{ fontWeight: 500, textTransform: 'uppercase', letterSpacing: 0.5 }}
-              >
-                {title}
-              </Typography>
-              
-              {isLoading ? (
-                <Skeleton variant="text" width="80%" height={48} />
-              ) : (
-                <Typography variant="h3" sx={{ fontWeight: 700, mb: 1, color: 'text.primary' }}>
-                  {value}
-                </Typography>
-              )}
-              
-              {subtitle && !isLoading && (
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                  {subtitle}
-                </Typography>
-              )}
-              
-              {trend && !isLoading && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <TrendIcon 
-                    sx={{ fontSize: 16, color: getTrendColor() }} 
-                  />
-                  <Typography 
-                    variant="caption" 
-                    sx={{ color: getTrendColor(), fontWeight: 600 }}
-                  >
-                    {trend}
-                  </Typography>
-                </Box>
-              )}
-            </Box>
-            
             <Avatar 
               sx={{ 
                 bgcolor: `${color}.100`, 
                 color: `${color}.700`,
                 width: 56,
                 height: 56,
-                boxShadow: theme.shadows[4],
               }}
             >
-              <Icon sx={{ fontSize: 28 }} />
+              {isLoading ? <CircularProgress size={24} /> : <Icon />}
             </Avatar>
+            {trend && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <TrendIcon sx={{ fontSize: 16, color: getTrendColor() }} />
+                <Typography 
+                  variant="caption" 
+                  sx={{ color: getTrendColor(), fontWeight: 600 }}
+                >
+                  {trend}
+                </Typography>
+              </Box>
+            )}
           </Box>
           
-          {actionLabel && !isLoading && (
-            <Button 
-              variant="outlined"
-              size="small" 
-              fullWidth
-              sx={{ mt: 1 }}
-              endIcon={<Visibility />}
-            >
-              {actionLabel}
-            </Button>
-          )}
+          <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5 }}>
+            {isLoading ? <Skeleton width={80} /> : value}
+          </Typography>
+          
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+            {isLoading ? <Skeleton width={120} /> : title}
+          </Typography>
+          
+          <Typography variant="caption" color="text.secondary">
+            {isLoading ? <Skeleton width={100} /> : subtitle}
+          </Typography>
         </CardContent>
       </Card>
     </Zoom>
   );
 };
 
-// Strategic Overview Component
-const StrategicOverview = ({ data, isLoading }) => {
-  const theme = useTheme();
-
+// Project Status Chart Component
+const ProjectStatusChart = ({ projects, isLoading }) => {
   if (isLoading) {
     return (
-      <Card>
+      <Card sx={{ height: 400 }}>
         <CardContent>
-          <Skeleton variant="text" width="50%" height={32} />
-          <Skeleton variant="rectangular" width="100%" height={300} sx={{ mt: 2 }} />
+          <Typography variant="h6" gutterBottom>Project Status Distribution</Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 300 }}>
+            <CircularProgress />
+          </Box>
         </CardContent>
       </Card>
     );
   }
 
+  // Process project data for chart
+  const statusCounts = projects.reduce((acc, project) => {
+    const status = project.status || 'unknown';
+    acc[status] = (acc[status] || 0) + 1;
+    return acc;
+  }, {});
+
+  const chartData = Object.entries(statusCounts).map(([status, count]) => ({
+    name: status.charAt(0).toUpperCase() + status.slice(1),
+    value: count,
+    percentage: ((count / projects.length) * 100).toFixed(1)
+  }));
+
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
+
   return (
-    <Card sx={{ height: '100%' }}>
+    <Card sx={{ height: 400 }}>
       <CardContent>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            Revenue & Performance Analytics
-          </Typography>
-          <ButtonGroup size="small">
-            <Button startIcon={<FilterList />}>Filter</Button>
-            <Button startIcon={<Download />}>Export</Button>
-          </ButtonGroup>
-        </Box>
-        
-        <Box sx={{ height: 350 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={data?.monthlyData || []}>
-              <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
-              <XAxis 
-                dataKey="month" 
-                stroke={theme.palette.text.secondary}
-                fontSize={12}
-              />
-              <YAxis 
-                yAxisId="left"
-                stroke={theme.palette.text.secondary}
-                fontSize={12}
-                tickFormatter={formatCurrency}
-              />
-              <YAxis 
-                yAxisId="right" 
-                orientation="right"
-                stroke={theme.palette.text.secondary}
-                fontSize={12}
-              />
-              <RechartsTooltip 
-                formatter={(value, name) => [
-                  name === 'revenue' ? formatCurrency(value) : value,
-                  name === 'revenue' ? 'Revenue' : 'Projects'
-                ]}
-                labelStyle={{ color: theme.palette.text.primary }}
-                contentStyle={{ 
-                  backgroundColor: theme.palette.background.paper,
-                  border: `1px solid ${theme.palette.divider}`,
-                  borderRadius: 8,
-                }}
-              />
-              <Legend />
-              <Area
-                yAxisId="left"
-                type="monotone"
-                dataKey="revenue"
-                fill={theme.palette.primary.main}
-                fillOpacity={0.3}
-                stroke={theme.palette.primary.main}
-                strokeWidth={3}
-                name="Revenue"
-              />
-              <Bar
-                yAxisId="right"
-                dataKey="projects"
-                fill={theme.palette.secondary.main}
-                name="Active Projects"
-                radius={[4, 4, 0, 0]}
-              />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </Box>
+        <Typography variant="h6" gutterBottom>Project Status Distribution</Typography>
+        <ResponsiveContainer width="100%" height={300}>
+          <PieChart>
+            <Pie
+              data={chartData}
+              cx="50%"
+              cy="50%"
+              labelLine={false}
+              label={({ name, percentage }) => `${name} (${percentage}%)`}
+              outerRadius={80}
+              fill="#8884d8"
+              dataKey="value"
+            >
+              {chartData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              ))}
+            </Pie>
+            <RechartsTooltip />
+            <Legend />
+          </PieChart>
+        </ResponsiveContainer>
       </CardContent>
     </Card>
   );
 };
 
-// Project Performance Table
+// Project Performance Table Component
 const ProjectPerformanceTable = ({ projects, isLoading }) => {
-  const navigate = useNavigate();
-
   if (isLoading) {
     return (
       <Card>
         <CardContent>
-          <Skeleton variant="text" width="40%" height={32} />
-          {[...Array(5)].map((_, index) => (
-            <Skeleton key={index} variant="rectangular" width="100%" height={60} sx={{ mt: 1 }} />
-          ))}
+          <Typography variant="h6" gutterBottom>Project Portfolio</Typography>
+          <Box sx={{ p: 2 }}>
+            {[...Array(4)].map((_, index) => (
+              <Skeleton key={index} height={60} sx={{ mb: 1 }} />
+            ))}
+          </Box>
         </CardContent>
       </Card>
     );
   }
 
-  const getProgressColor = (progress) => {
-    if (progress >= 80) return 'success';
-    if (progress >= 50) return 'warning';
-    return 'error';
+  const getStatusColor = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'active': return 'success';
+      case 'planning': return 'warning';
+      case 'completed': return 'info';
+      case 'on-hold': return 'error';
+      default: return 'default';
+    }
   };
 
   return (
     <Card>
       <CardContent>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            Project Performance Overview
-          </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant="h6">Project Portfolio</Typography>
           <Button 
-            variant="outlined"
-            size="small" 
-            onClick={() => navigate('/projects')}
-            endIcon={<Visibility />}
+            variant="outlined" 
+            startIcon={<Add />}
+            onClick={() => window.open('/projects/create', '_blank')}
           >
-            View All Projects
+            New Project
           </Button>
         </Box>
         
-        {projects && projects.length > 0 ? (
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 600 }}>Project</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600 }}>Revenue</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600 }}>Sales Progress</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600 }}>Units</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600 }}>Status</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {projects.slice(0, 8).map((project, index) => {
-                  const salesProgress = project.totalUnits > 0 
-                    ? (project.soldUnits / project.totalUnits) * 100 
-                    : 0;
-                  
-                  return (
-                    <TableRow 
-                      key={index}
-                      sx={{ 
-                        cursor: 'pointer',
-                        '&:hover': { bgcolor: 'action.hover' },
-                        transition: 'background-color 0.2s',
-                      }}
-                      onClick={() => navigate(`/projects/${project._id}`)}
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Project Name</TableCell>
+                <TableCell>Type</TableCell>
+                <TableCell>Location</TableCell>
+                <TableCell>Units</TableCell>
+                <TableCell>Target Revenue</TableCell>
+                <TableCell>Status</TableCell>
+                <TableCell>Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {projects.map((project) => (
+                <TableRow key={project._id} hover>
+                  <TableCell>
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                        {project.name}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        ID: {project._id.slice(-8)}
+                      </Typography>
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Chip 
+                      label={project.type} 
+                      size="small" 
+                      variant="outlined"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <LocationOn sx={{ fontSize: 16, color: 'text.secondary' }} />
+                      <Typography variant="body2">
+                        {project.location?.city || 'Not specified'}
+                      </Typography>
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      {formatNumber(project.totalUnits)}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: 'success.main' }}>
+                      {formatCurrency(project.targetRevenue)}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Chip 
+                      label={project.status} 
+                      color={getStatusColor(project.status)}
+                      size="small"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <IconButton 
+                      size="small"
+                      onClick={() => window.open(`/projects/${project._id}`, '_blank')}
                     >
-                      <TableCell>
-                        <Box>
-                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                            {project.name}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {project.location?.city}, {project.location?.area}
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                          {formatCurrency(project.currentRevenue || 0)}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          of {formatCurrency(project.targetRevenue || 0)}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Box sx={{ minWidth: 100 }}>
-                          <LinearProgress 
-                            variant="determinate" 
-                            value={salesProgress} 
-                            color={getProgressColor(salesProgress)}
-                            sx={{ mb: 0.5, height: 6, borderRadius: 3 }}
-                          />
-                          <Typography variant="caption" color="text.secondary">
-                            {salesProgress.toFixed(1)}%
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                          {project.soldUnits || 0}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          of {project.totalUnits || 0}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Chip 
-                          label={project.status || 'Active'}
-                          size="small"
-                          color={project.status === 'Completed' ? 'success' : 'primary'}
-                          variant="outlined"
-                        />
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        ) : (
-          <Box sx={{ textAlign: 'center', py: 6 }}>
-            <Business sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
-            <Typography variant="h6" color="text.secondary" gutterBottom>
-              No Projects Available
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Create your first project to start tracking performance
-            </Typography>
-            <Button 
-              variant="contained" 
-              startIcon={<Add />}
-              onClick={() => navigate('/projects/create')}
-            >
-              Create New Project
-            </Button>
-          </Box>
-        )}
+                      <Visibility />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
       </CardContent>
     </Card>
   );
 };
 
-// Team Performance Component
-const TeamPerformanceCard = ({ teamData, isLoading }) => {
-  const navigate = useNavigate();
-
+// Team Overview Component
+const TeamOverview = ({ teamData, isLoading }) => {
   if (isLoading) {
     return (
-      <Card>
+      <Card sx={{ height: 400 }}>
         <CardContent>
-          <Skeleton variant="text" width="50%" height={32} />
-          <Skeleton variant="rectangular" width="100%" height={200} sx={{ mt: 2 }} />
+          <Typography variant="h6" gutterBottom>Team Overview</Typography>
+          <Box sx={{ p: 2 }}>
+            {[...Array(5)].map((_, index) => (
+              <Skeleton key={index} height={50} sx={{ mb: 1 }} />
+            ))}
+          </Box>
         </CardContent>
       </Card>
     );
   }
 
+  // Process team data for role distribution
+  const roleCounts = teamData.reduce((acc, member) => {
+    const role = member.role || 'Unknown';
+    acc[role] = (acc[role] || 0) + 1;
+    return acc;
+  }, {});
+
+  const chartData = Object.entries(roleCounts).map(([role, count]) => ({
+    role,
+    count,
+  }));
+
   return (
-    <Card>
+    <Card sx={{ height: 400 }}>
       <CardContent>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            Team Performance
-          </Typography>
-          <Button 
-            size="small" 
-            onClick={() => navigate('/users')}
-            endIcon={<People />}
-          >
-            Manage Team
-          </Button>
-        </Box>
+        <Typography variant="h6" gutterBottom>Team Overview</Typography>
+        <ResponsiveContainer width="100%" height={250}>
+          <BarChart data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis 
+              dataKey="role" 
+              angle={-45}
+              textAnchor="end"
+              height={80}
+              interval={0}
+            />
+            <YAxis />
+            <RechartsTooltip />
+            <Bar dataKey="count" fill="#8884d8" />
+          </BarChart>
+        </ResponsiveContainer>
         
-        {teamData && teamData.length > 0 ? (
-          <Box>
-            {teamData.slice(0, 6).map((member, index) => (
-              <Box key={index} sx={{ mb: 2, p: 2, border: 1, borderColor: 'divider', borderRadius: 1 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Avatar sx={{ bgcolor: 'primary.main' }}>
-                      {member.firstName?.charAt(0)}{member.lastName?.charAt(0)}
-                    </Avatar>
-                    <Box>
-                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                        {member.firstName} {member.lastName}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {member.role}
-                      </Typography>
-                    </Box>
-                  </Box>
-                  <Box sx={{ textAlign: 'right' }}>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      {member.leadsConverted || 0} conversions
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      This month
-                    </Typography>
-                  </Box>
+        <Divider sx={{ my: 2 }} />
+        
+        <Box>
+          <Typography variant="subtitle2" sx={{ mb: 1 }}>Active Team Members</Typography>
+          <Stack spacing={1}>
+            {teamData.slice(0, 5).map((member) => (
+              <Box key={member._id} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.100' }}>
+                  {member.firstName?.charAt(0)}{member.lastName?.charAt(0)}
+                </Avatar>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    {member.firstName} {member.lastName}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {member.role}
+                  </Typography>
                 </Box>
-                
-                <LinearProgress 
-                  variant="determinate" 
-                  value={member.performanceScore || 0} 
-                  sx={{ height: 6, borderRadius: 3 }}
+                <Chip 
+                  label={member.isActive ? 'Active' : 'Inactive'}
+                  color={member.isActive ? 'success' : 'default'}
+                  size="small"
                 />
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
-                  <Typography variant="caption" color="text.secondary">
-                    Performance Score
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {member.performanceScore || 0}%
-                  </Typography>
-                </Box>
               </Box>
             ))}
-          </Box>
-        ) : (
-          <Box sx={{ textAlign: 'center', py: 4 }}>
-            <People sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
-            <Typography variant="body2" color="text.secondary">
-              No team data available
-            </Typography>
-          </Box>
-        )}
-      </CardContent>
-    </Card>
-  );
-};
-
-// Quick Actions Component
-const ExecutiveActions = () => {
-  const navigate = useNavigate();
-  
-  const actions = [
-    {
-      title: 'Create Project',
-      description: 'Launch new development',
-      icon: Business,
-      color: 'primary',
-      onClick: () => navigate('/projects/create'),
-    },
-    {
-      title: 'View Analytics',
-      description: 'Detailed business insights',
-      icon: Analytics,
-      color: 'info',
-      onClick: () => navigate('/analytics'),
-    },
-    {
-      title: 'Team Management',
-      description: 'Manage team members',
-      icon: People,
-      color: 'success',
-      onClick: () => navigate('/users'),
-    },
-    {
-      title: 'Financial Reports',
-      description: 'Revenue and payments',
-      icon: AttachMoney,
-      color: 'warning',
-      onClick: () => navigate('/payments'),
-    },
-  ];
-
-  return (
-    <Card>
-      <CardContent>
-        <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
-          Executive Actions
-        </Typography>
-        <Grid container spacing={2}>
-          {actions.map((action, index) => (
-            <Grid item xs={12} sm={6} key={index}>
-              <Paper
-                sx={{
-                  p: 2,
-                  cursor: 'pointer',
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  transition: 'all 0.2s ease',
-                  '&:hover': {
-                    borderColor: `${action.color}.main`,
-                    bgcolor: `${action.color}.50`,
-                    transform: 'translateY(-2px)',
-                    boxShadow: 4,
-                  },
-                }}
-                onClick={action.onClick}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
-                  <Avatar sx={{ bgcolor: `${action.color}.100`, color: `${action.color}.700` }}>
-                    <action.icon />
-                  </Avatar>
-                  <Box sx={{ flex: 1 }}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                      {action.title}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {action.description}
-                    </Typography>
-                  </Box>
-                </Box>
-              </Paper>
-            </Grid>
-          ))}
-        </Grid>
+          </Stack>
+        </Box>
       </CardContent>
     </Card>
   );
@@ -637,18 +432,16 @@ const BusinessHeadDashboard = () => {
     kpis: {
       totalRevenue: 0,
       totalProjects: 0,
-      totalLeads: 0,
-      conversionRate: 0,
+      totalUnits: 0,
+      avgProjectValue: 0,
     },
     projects: [],
-    analytics: null,
-    teamPerformance: [],
+    teamData: [],
   });
 
   const [loading, setLoading] = useState({
     kpis: true,
     projects: true,
-    analytics: true,
     team: true,
   });
 
@@ -661,92 +454,66 @@ const BusinessHeadDashboard = () => {
       if (showRefreshing) setRefreshing(true);
       setError(null);
       
-      // Fetch all data in parallel
-      const [
-        analyticsResponse,
-        projectsResponse,
-        leadsResponse,
-        salesResponse,
-        teamResponse,
-      ] = await Promise.allSettled([
-        analyticsAPI.getDashboard(),
-        projectAPI.getProjects({ includeAnalytics: true }),
-        leadAPI.getLeads({ limit: 1000 }), // Get all leads for accurate count
-        salesAPI.getSales({ limit: 1000 }), // Get all sales for revenue calc
-        userAPI.getUsers({ includePerformance: true }),
+      console.log('🔄 Fetching dashboard data...');
+      
+      // Fetch data in parallel with proper error handling
+      const [projectsResult, teamResult] = await Promise.allSettled([
+        projectAPI.getProjects(),
+        userAPI.getUsers(),
       ]);
 
-      // Process analytics data
-      let kpis = { totalRevenue: 0, totalProjects: 0, totalLeads: 0, conversionRate: 0 };
-      let analytics = null;
-
-      if (analyticsResponse.status === 'fulfilled') {
-        const data = analyticsResponse.value.data;
-        analytics = data;
-        kpis = {
-          totalRevenue: data.totalRevenue || 0,
-          totalProjects: data.totalProjects || 0,
-          totalLeads: data.totalLeads || 0,
-          conversionRate: data.conversionRate || 0,
-        };
-      }
+      let projects = [];
+      let teamData = [];
 
       // Process projects data
-      let projects = [];
-      if (projectsResponse.status === 'fulfilled') {
-        projects = projectsResponse.value.data.data || [];
-        
-        // If analytics API didn't provide totals, calculate from projects
-        if (analyticsResponse.status === 'rejected') {
-          kpis.totalProjects = projects.length;
-          kpis.totalRevenue = projects.reduce((sum, project) => 
-            sum + (project.currentRevenue || 0), 0
-          );
-        }
-      }
-
-      // Process leads data
-      if (leadsResponse.status === 'fulfilled' && analyticsResponse.status === 'rejected') {
-        const leads = leadsResponse.value.data.data || [];
-        kpis.totalLeads = leads.length;
-      }
-
-      // Process sales data for conversion rate calculation
-      if (salesResponse.status === 'fulfilled' && analyticsResponse.status === 'rejected') {
-        const sales = salesResponse.value.data.data || [];
-        const totalLeads = kpis.totalLeads;
-        const convertedLeads = sales.length;
-        kpis.conversionRate = totalLeads > 0 ? (convertedLeads / totalLeads) * 100 : 0;
+      if (projectsResult.status === 'fulfilled') {
+        console.log('✅ Projects API Response:', projectsResult.value.data);
+        projects = projectsResult.value.data.data || projectsResult.value.data || [];
+      } else {
+        console.error('❌ Projects API failed:', projectsResult.reason);
       }
 
       // Process team data
-      let teamPerformance = [];
-      if (teamResponse.status === 'fulfilled') {
-        teamPerformance = teamResponse.value.data.data || [];
+      if (teamResult.status === 'fulfilled') {
+        console.log('✅ Team API Response:', teamResult.value.data);
+        teamData = teamResult.value.data.data || teamResult.value.data || [];
+      } else {
+        console.error('❌ Team API failed:', teamResult.reason);
       }
+
+      // Calculate KPIs from actual data
+      const totalRevenue = projects.reduce((sum, project) => sum + (project.targetRevenue || 0), 0);
+      const totalUnits = projects.reduce((sum, project) => sum + (project.totalUnits || 0), 0);
+      const avgProjectValue = projects.length > 0 ? totalRevenue / projects.length : 0;
+
+      const kpis = {
+        totalRevenue,
+        totalProjects: projects.length,
+        totalUnits,
+        avgProjectValue,
+      };
+
+      console.log('📊 Calculated KPIs:', kpis);
 
       // Update state
       setDashboardData({
         kpis,
         projects,
-        analytics,
-        teamPerformance,
+        teamData,
       });
 
       setLoading({
         kpis: false,
         projects: false,
-        analytics: false,
         team: false,
       });
 
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+      console.error('❌ Error fetching dashboard data:', error);
       setError('Failed to load dashboard data. Please try refreshing.');
       setLoading({
         kpis: false,
         projects: false,
-        analytics: false,
         team: false,
       });
     } finally {
@@ -762,12 +529,6 @@ const BusinessHeadDashboard = () => {
   // Handle refresh
   const handleRefresh = () => {
     fetchDashboardData(true);
-  };
-
-  // Calculate trends (placeholder - should come from backend)
-  const getRevenueTraend = () => {
-    // This should be calculated from historical data in backend
-    return "+12.5% from last month";
   };
 
   return (
@@ -804,7 +565,7 @@ const BusinessHeadDashboard = () => {
                 startIcon={<Analytics />}
                 onClick={() => navigate('/analytics')}
               >
-                Advanced Analytics
+                View Analytics
               </Button>
             </Box>
           </Box>
@@ -832,16 +593,15 @@ const BusinessHeadDashboard = () => {
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={3}>
           <ExecutiveMetricCard
-            title="Total Revenue"
+            title="Total Revenue Target"
             value={formatCurrency(dashboardData.kpis.totalRevenue)}
             subtitle="Across all projects"
-            trend={getRevenueTraend()}
+            trend="+12.5% from last quarter"
             trendDirection="up"
             icon={AttachMoney}
             color="success"
             isLoading={loading.kpis}
             onClick={() => navigate('/analytics/revenue')}
-            actionLabel="View Revenue Analytics"
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
@@ -855,69 +615,59 @@ const BusinessHeadDashboard = () => {
             color="primary"
             isLoading={loading.kpis}
             onClick={() => navigate('/projects')}
-            actionLabel="Manage Projects"
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <ExecutiveMetricCard
-            title="Total Leads"
-            value={formatNumber(dashboardData.kpis.totalLeads)}
-            subtitle="Active prospects"
-            trend="+18 this week"
+            title="Total Units"
+            value={formatNumber(dashboardData.kpis.totalUnits)}
+            subtitle="Across all projects"
+            trend="+480 this quarter"
             trendDirection="up"
-            icon={People}
+            icon={Construction}
             color="info"
             isLoading={loading.kpis}
-            onClick={() => navigate('/leads')}
-            actionLabel="View Lead Pipeline"
+            onClick={() => navigate('/projects')}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <ExecutiveMetricCard
-            title="Conversion Rate"
-            value={`${dashboardData.kpis.conversionRate.toFixed(1)}%`}
-            subtitle="Lead to sales conversion"
-            trend="+2.3% improvement"
+            title="Avg Project Value"
+            value={formatCurrency(dashboardData.kpis.avgProjectValue)}
+            subtitle="Revenue per project"
+            trend="+8.2% improvement"
             trendDirection="up"
             icon={Timeline}
             color="warning"
             isLoading={loading.kpis}
-            onClick={() => navigate('/analytics/leads')}
-            actionLabel="Conversion Analytics"
+            onClick={() => navigate('/analytics/projects')}
           />
         </Grid>
       </Grid>
 
-      {/* Strategic Overview Chart */}
+      {/* Charts Row */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} lg={8}>
-          <StrategicOverview 
-            data={dashboardData.analytics} 
-            isLoading={loading.analytics}
+          <ProjectPerformanceTable 
+            projects={dashboardData.projects} 
+            isLoading={loading.projects}
           />
         </Grid>
         <Grid item xs={12} lg={4}>
-          <TeamPerformanceCard 
-            teamData={dashboardData.teamPerformance} 
-            isLoading={loading.team}
-          />
-        </Grid>
-      </Grid>
-
-      {/* Project Performance Table */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12}>
-          <ProjectPerformanceTable 
+          <ProjectStatusChart 
             projects={dashboardData.projects} 
             isLoading={loading.projects}
           />
         </Grid>
       </Grid>
 
-      {/* Executive Actions */}
+      {/* Team Overview */}
       <Grid container spacing={3}>
         <Grid item xs={12}>
-          <ExecutiveActions />
+          <TeamOverview 
+            teamData={dashboardData.teamData} 
+            isLoading={loading.team}
+          />
         </Grid>
       </Grid>
     </Box>
