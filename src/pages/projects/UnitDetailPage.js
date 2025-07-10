@@ -826,7 +826,7 @@ const UnitHistory = ({ unit }) => {
                   )}
                   <TableRow>
                     <TableCell>Organization ID</TableCell>
-                    <TableCell sx={{ fontFamily: 'monospace' }}>{unit?.organization}</TableCell>
+                    <TableCell sx={{ fontFamily: 'monospace' }}>{unit?.organization?.name}</TableCell>
                   </TableRow>
                   <TableRow>
                     <TableCell>Version</TableCell>
