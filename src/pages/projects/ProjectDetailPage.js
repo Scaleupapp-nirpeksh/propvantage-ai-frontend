@@ -1,6 +1,6 @@
 // File: src/pages/projects/ProjectDetailPage.js
-// Description: Updated project detail page supporting Villa, Tower, and Hybrid projects with complete hierarchical navigation
-// Version: 2.0 - Enhanced to support villa projects and hybrid (villa + tower) projects
+// Description: FIXED project detail page with proper ID handling to prevent [object Object] errors
+// Version: 2.1 - Enhanced with proper ID extraction for all navigation
 // Location: src/pages/projects/ProjectDetailPage.js
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -65,6 +65,39 @@ import {
 
 import { useAuth } from '../../context/AuthContext';
 import { projectAPI, towerAPI, unitAPI } from '../../services/api';
+
+// Utility function to safely extract ID from object or string with debugging
+const extractId = (value, context = 'unknown') => {
+  console.log(`🔍 extractId called for ${context}:`, { value, type: typeof value });
+  
+  if (!value) {
+    console.log(`❌ ${context}: value is null/undefined`);
+    return null;
+  }
+  
+  if (typeof value === 'string') {
+    console.log(`✅ ${context}: returning string value:`, value);
+    return value;
+  }
+  
+  if (typeof value === 'object') {
+    const id = value._id || value.id;
+    console.log(`🔄 ${context}: extracted from object:`, id);
+    if (id && typeof id === 'string') {
+      return id;
+    }
+    if (id && typeof id === 'object') {
+      console.error(`❌ ${context}: nested object detected:`, id);
+      return String(id);
+    }
+    console.error(`❌ ${context}: no valid ID found in object:`, value);
+    return null;
+  }
+  
+  const stringValue = String(value);
+  console.log(`🔄 ${context}: converted to string:`, stringValue);
+  return stringValue;
+};
 
 // Utility functions
 const formatCurrency = (amount) => {
@@ -255,7 +288,7 @@ const ProjectMetrics = ({ project, towers, allUnits, villaUnits, isLoading }) =>
   
   const totalRevenue = allUnits
     .filter(unit => unit.status === 'sold')
-    .reduce((sum, unit) => sum + (unit.currentPrice || 0), 0);
+    .reduce((sum, unit) => sum + (unit.currentPrice || unit.basePrice || 0), 0);
   
   const salesPercentage = totalUnits > 0 ? Math.round((soldUnits / totalUnits) * 100) : 0;
   const revenuePercentage = project.targetRevenue > 0 ? Math.round((totalRevenue / project.targetRevenue) * 100) : 0;
@@ -346,15 +379,21 @@ const ProjectMetrics = ({ project, towers, allUnits, villaUnits, isLoading }) =>
   );
 };
 
-// Villa Unit Card Component
-const VillaUnitCard = ({ unit, onViewDetails }) => {
+// Villa Unit Card Component  
+const VillaUnitCard = ({ unit, projectId }) => {
   const navigate = useNavigate();
 
   const handleClick = () => {
-    // FIX: Ensure proper ID extraction
-    const projectIdString = unit.project || unit.projectId;
-    const unitIdString = unit._id || unit.id;
-    navigate(`/projects/${projectIdString}/units/${unitIdString}`);
+    const validProjectId = extractId(projectId);
+    const validUnitId = extractId(unit._id || unit.id);
+    
+    console.log('🔗 Villa navigation:', { projectId: validProjectId, unitId: validUnitId });
+    
+    if (validProjectId && validUnitId) {
+      navigate(`/projects/${validProjectId}/units/${validUnitId}`);
+    } else {
+      console.error('❌ Invalid villa unit navigation IDs:', { projectId: validProjectId, unitId: validUnitId });
+    }
   };
 
   return (
@@ -412,7 +451,7 @@ const VillaUnitCard = ({ unit, onViewDetails }) => {
         {/* Price */}
         <Box sx={{ mt: 'auto' }}>
           <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.main' }}>
-            {formatCurrency(unit.currentPrice)}
+            {formatCurrency(unit.currentPrice || unit.basePrice)}
           </Typography>
           {unit.customerName && (
             <Typography variant="body2" color="text.secondary">
@@ -425,8 +464,8 @@ const VillaUnitCard = ({ unit, onViewDetails }) => {
   );
 };
 
-// Tower Card Component (Updated)
-const TowerCard = ({ tower, onViewDetails }) => {
+// FIXED Tower Card Component
+const TowerCard = ({ tower, projectId }) => {
   const navigate = useNavigate();
   const [towerUnits, setTowerUnits] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -437,12 +476,48 @@ const TowerCard = ({ tower, onViewDetails }) => {
 
   const fetchTowerUnits = async () => {
     try {
-      const response = await unitAPI.getUnits({ tower: tower._id });
+      const towerId = extractId(tower._id || tower.id);
+      const response = await unitAPI.getUnits({ tower: towerId });
       setTowerUnits(response.data.data || []);
     } catch (error) {
       console.error('Error fetching tower units:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleClick = () => {
+    // Debug the inputs
+    console.log('🔗 TowerCard click - Raw inputs:', { 
+      projectId, 
+      projectIdType: typeof projectId,
+      towerId: tower._id,
+      towerIdType: typeof tower._id,
+      towerObject: tower
+    });
+    
+    // CRITICAL: Use projectId from props, NOT from tower object
+    const validProjectId = extractId(projectId, 'TowerCard projectId');
+    const validTowerId = extractId(tower._id || tower.id, 'TowerCard towerId');
+    
+    console.log('🔗 TowerCard click - Extracted IDs:', { 
+      validProjectId, 
+      validTowerId 
+    });
+    
+    if (validProjectId && validTowerId) {
+      // Use template literal to ensure proper string concatenation
+      const url = `/projects/${String(validProjectId)}/towers/${String(validTowerId)}`;
+      console.log('🔗 Navigating to URL:', url);
+      navigate(url);
+    } else {
+      console.error('❌ Invalid IDs for tower navigation:', { 
+        validProjectId, 
+        validTowerId,
+        originalProjectId: projectId,
+        originalTowerId: tower._id
+      });
+      alert('Navigation error: Invalid project or tower ID');
     }
   };
 
@@ -462,12 +537,7 @@ const TowerCard = ({ tower, onViewDetails }) => {
           transform: 'translateY(-2px)',
         },
       }}
-      onClick={() => {
-        // FIX: Ensure proper ID extraction
-        const projectIdString = tower.project || tower.projectId;
-        const towerIdString = tower._id || tower.id;
-        navigate(`/projects/${projectIdString}/towers/${towerIdString}`);
-      }}
+      onClick={handleClick}
     >
       <CardContent>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
@@ -537,7 +607,7 @@ const TowerCard = ({ tower, onViewDetails }) => {
 };
 
 // Villa Units Section Component
-const VillaUnitsSection = ({ villaUnits, isLoading, onAddVilla, projectType }) => {
+const VillaUnitsSection = ({ villaUnits, isLoading, onAddVilla, projectType, projectId }) => {
   const { canAccess } = useAuth();
 
   if (isLoading) {
@@ -576,7 +646,7 @@ const VillaUnitsSection = ({ villaUnits, isLoading, onAddVilla, projectType }) =
         <Grid container spacing={3}>
           {villaUnits.map((villa) => (
             <Grid item xs={12} md={6} lg={4} key={villa._id}>
-              <VillaUnitCard villa={villa} />
+              <VillaUnitCard villa={villa} projectId={projectId} />
             </Grid>
           ))}
         </Grid>
@@ -604,9 +674,15 @@ const VillaUnitsSection = ({ villaUnits, isLoading, onAddVilla, projectType }) =
   );
 };
 
-// Towers Section Component (Updated)
-const TowersSection = ({ towers, isLoading, onAddTower }) => {
+// FIXED Towers Section Component
+const TowersSection = ({ towers, isLoading, onAddTower, projectId }) => {
   const { canAccess } = useAuth();
+
+  // DEBUG: Log what projectId we receive
+  console.log('🔍 TowersSection - received projectId:', { 
+    projectId, 
+    type: typeof projectId 
+  });
 
   if (isLoading) {
     return (
@@ -642,11 +718,18 @@ const TowersSection = ({ towers, isLoading, onAddTower }) => {
 
       {towers.length > 0 ? (
         <Grid container spacing={3}>
-          {towers.map((tower) => (
-            <Grid item xs={12} md={6} lg={4} key={tower._id}>
-              <TowerCard tower={tower} />
-            </Grid>
-          ))}
+          {towers.map((tower) => {
+            console.log('🔍 TowersSection - rendering TowerCard with:', { 
+              towerId: tower._id, 
+              projectId, 
+              projectIdType: typeof projectId 
+            });
+            return (
+              <Grid item xs={12} md={6} lg={4} key={tower._id}>
+                <TowerCard tower={tower} projectId={projectId} />
+              </Grid>
+            );
+          })}
         </Grid>
       ) : (
         <Box sx={{ textAlign: 'center', py: 8 }}>
@@ -674,11 +757,11 @@ const TowersSection = ({ towers, isLoading, onAddTower }) => {
 
 // Main Project Detail Page Component
 const ProjectDetailPage = () => {
-  const { projectId } = useParams();
+  const params = useParams();
   const navigate = useNavigate();
   const { canAccess } = useAuth();
 
-  // State management
+  // State management - MUST come before any conditional returns
   const [project, setProject] = useState(null);
   const [towers, setTowers] = useState([]);
   const [allUnits, setAllUnits] = useState([]);
@@ -686,6 +769,16 @@ const ProjectDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState(0);
+
+  // CRITICAL: Ensure projectId is always a string
+  const projectId = extractId(params.projectId, 'useParams projectId');
+
+  // DEBUG: Log the projectId from useParams
+  console.log('🔍 ProjectDetailPage - params and projectId:', { 
+    params,
+    projectId, 
+    type: typeof projectId 
+  });
 
   // Fetch project data
   useEffect(() => {
@@ -699,7 +792,7 @@ const ProjectDetailPage = () => {
       setLoading(true);
       setError(null);
 
-      console.log('🔄 Fetching project data for ID:', projectId);
+      console.log('🔄 Fetching project data for validated ID:', projectId);
 
       // Fetch project details
       const projectResponse = await projectAPI.getProject(projectId);
@@ -717,10 +810,12 @@ const ProjectDetailPage = () => {
       const villaUnitsData = allUnitsData.filter(unit => !unit.tower);
       const towerUnitsData = allUnitsData.filter(unit => unit.tower);
 
-      console.log('✅ Project data:', projectData);
-      console.log('✅ Towers data:', towersData);
-      console.log('✅ All units data:', allUnitsData);
-      console.log('✅ Villa units data:', villaUnitsData);
+      console.log('✅ Project data loaded:', {
+        project: projectData.name,
+        towers: towersData.length,
+        totalUnits: allUnitsData.length,
+        villaUnits: villaUnitsData.length
+      });
 
       setProject(projectData);
       setTowers(towersData);
@@ -740,20 +835,26 @@ const ProjectDetailPage = () => {
   };
 
   const handleAddTower = () => {
-    // FIX: Ensure we use projectId string, not project object
-    const projectIdString = typeof projectId === 'string' ? projectId : project?._id;
-    navigate(`/projects/${projectIdString}/towers/create`);
+    navigate(`/projects/${projectId}/towers/create`);
   };
   
   const handleAddVilla = () => {
-    // FIX: Ensure we use projectId string, not project object  
-    const projectIdString = typeof projectId === 'string' ? projectId : project?._id;
-    navigate(`/projects/${projectIdString}/units/create`);
-  }
+    navigate(`/projects/${projectId}/units/create`);
+  };
 
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
   };
+
+  // Validate projectId - after hooks but before render
+  if (!projectId) {
+    console.error('❌ No valid projectId found in URL params:', params);
+    return (
+      <Alert severity="error">
+        Invalid project ID in URL. Please check the URL and try again.
+      </Alert>
+    );
+  }
 
   if (loading) {
     return (
@@ -850,6 +951,7 @@ const ProjectDetailPage = () => {
           isLoading={false}
           onAddVilla={handleAddVilla}
           projectType={projectType}
+          projectId={projectId}
         />
       )}
 
@@ -858,6 +960,7 @@ const ProjectDetailPage = () => {
           towers={towers}
           isLoading={false}
           onAddTower={handleAddTower}
+          projectId={projectId}
         />
       )}
 
@@ -868,6 +971,7 @@ const ProjectDetailPage = () => {
               towers={towers}
               isLoading={false}
               onAddTower={handleAddTower}
+              projectId={projectId}
             />
           )}
           {activeTab === 1 && (
@@ -876,6 +980,7 @@ const ProjectDetailPage = () => {
               isLoading={false}
               onAddVilla={handleAddVilla}
               projectType={projectType}
+              projectId={projectId}
             />
           )}
         </>
