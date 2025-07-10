@@ -1,6 +1,6 @@
 // File: src/App.js
 // Description: Main App component with routing, theme, and authentication setup for PropVantage AI
-// Version: 1.2 - Complete app setup with Villa, Tower, and Hybrid project support
+// Version: 1.3 - Complete app setup with Villa, Tower, Hybrid project support + Edit/Delete functionality
 // Location: src/App.js
 
 import React, { Suspense } from 'react';
@@ -38,6 +38,11 @@ const UnitDetailPage = React.lazy(() => import('./pages/projects/UnitDetailPage'
 const CreateProjectPage = React.lazy(() => import('./pages/projects/CreateProjectPage'));
 const CreateTowerPage = React.lazy(() => import('./pages/projects/CreateTowerPage'));
 const CreateUnitPage = React.lazy(() => import('./pages/projects/CreateUnitPage'));
+
+// Edit Pages - Complete Edit/Delete Functionality
+const EditProjectPage = React.lazy(() => import('./pages/projects/EditProjectPage'));
+const EditTowerPage = React.lazy(() => import('./pages/projects/EditTowerPage'));
+const EditUnitPage = React.lazy(() => import('./pages/projects/EditUnitPage'));
 
 // Lead Management Pages
 const LeadsListPage = React.lazy(() => import('./pages/leads/LeadsListPage'));
@@ -234,6 +239,55 @@ const AppRoutes = () => {
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback />}>
               <ProjectDetailPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* ========================================= */}
+      {/* EDIT FUNCTIONALITY ROUTES */}
+      {/* Complete Edit/Delete for Project Hierarchy */}
+      {/* ========================================= */}
+
+      {/* Edit Project */}
+      <Route path="/projects/:projectId/edit" element={
+        <ProtectedRoute requiredPermission="MANAGEMENT">
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading project editor..." />}>
+              <EditProjectPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* Edit Tower */}
+      <Route path="/projects/:projectId/towers/:towerId/edit" element={
+        <ProtectedRoute requiredPermission="MANAGEMENT">
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading tower editor..." />}>
+              <EditTowerPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* Edit Unit in Tower */}
+      <Route path="/projects/:projectId/towers/:towerId/units/:unitId/edit" element={
+        <ProtectedRoute requiredPermission="MANAGEMENT">
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading unit editor..." />}>
+              <EditUnitPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* Edit Villa Unit (no tower) */}
+      <Route path="/projects/:projectId/units/:unitId/edit" element={
+        <ProtectedRoute requiredPermission="MANAGEMENT">
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading villa editor..." />}>
+              <EditUnitPage />
             </Suspense>
           </DashboardLayout>
         </ProtectedRoute>
@@ -541,13 +595,22 @@ Projects → Project Detail → (Towers Tab + Villas Tab)
 ├── Towers → Tower Detail → Units → Unit Detail
 └── Villas → Villa Unit Detail
 
+EDIT/DELETE FUNCTIONALITY:
+✅ Edit Project: /projects/:projectId/edit
+✅ Edit Tower: /projects/:projectId/towers/:towerId/edit
+✅ Edit Tower Unit: /projects/:projectId/towers/:towerId/units/:unitId/edit
+✅ Edit Villa Unit: /projects/:projectId/units/:unitId/edit
+
 SUPPORTED OPERATIONS:
-✅ Villa Projects: Create/View villa units directly under project
-✅ Tower Projects: Create/View towers and their units
+✅ Villa Projects: Create/View/Edit villa units directly under project
+✅ Tower Projects: Create/View/Edit towers and their units
 ✅ Hybrid Projects: Both villa and tower units in same project
 ✅ Universal CreateUnitPage: Adapts based on towerId presence
+✅ Universal EditUnitPage: Adapts based on towerId presence
 ✅ Smart navigation: Breadcrumbs adapt to project type
 ✅ Role-based access: Proper permissions throughout
+✅ Safety validations: Cannot delete sold units or towers with units
+✅ Confirmation dialogs: Must type exact name to confirm deletion
 
 ROUTE PROTECTION LEVELS:
 - View Access: viewAllProjects() function
@@ -557,8 +620,24 @@ ROUTE PROTECTION LEVELS:
 - Admin Access: "ADMIN" string
 
 CRITICAL ROUTE ORDER:
-1. /projects/:projectId/towers/create (BEFORE tower detail)
-2. /projects/:projectId/units/create (Villa units)
-3. /projects/:projectId/towers/:towerId/units/create (Tower units)
-4. All specific routes BEFORE dynamic routes
+1. /projects/:projectId/edit (Project editing)
+2. /projects/:projectId/towers/create (BEFORE tower detail)
+3. /projects/:projectId/towers/:towerId/edit (Tower editing)
+4. /projects/:projectId/units/create (Villa units)
+5. /projects/:projectId/units/:unitId/edit (Villa unit editing)
+6. /projects/:projectId/towers/:towerId/units/create (Tower units)
+7. /projects/:projectId/towers/:towerId/units/:unitId/edit (Tower unit editing)
+8. All specific routes BEFORE dynamic routes
+
+EDIT FUNCTIONALITY FEATURES:
+✅ Complete form validation with business logic
+✅ Confirmation dialogs with name verification
+✅ Impact warnings (sold units, towers with units)
+✅ Real-time calculations (capacity, price per sq ft)
+✅ Professional stepper forms for complex data
+✅ Accordion sections for organized editing
+✅ Success feedback with auto-redirect
+✅ Breadcrumb navigation throughout hierarchy
+✅ Loading states and error handling
+✅ Backend integration with all CRUD operations
 */
