@@ -1,6 +1,6 @@
 // File: src/pages/sales/SalesListPage.js
-// Description: Comprehensive sales management page with filtering, search, analytics, and actions
-// Version: 1.0 - Production-grade sales management interface with complete backend integration
+// Description: Complete sales list page with full pagination, search, and filtering
+// Version: 3.0 - Production-ready with comprehensive features and proper API integration
 // Location: src/pages/sales/SalesListPage.js
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -50,6 +50,7 @@ import {
   AccordionDetails,
   LinearProgress,
   Fab,
+  Snackbar,
 } from '@mui/material';
 import {
   Add,
@@ -81,6 +82,9 @@ import {
   Assessment,
   AccountBalance,
   CreditCard,
+  Sort,
+  ArrowUpward,
+  ArrowDownward,
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -109,54 +113,75 @@ const PAYMENT_STATUSES = [
   { value: 'pending', label: 'Pending', color: 'default' },
 ];
 
-// Helper function to safely extract display values from objects
-const getDisplayValue = (value, fallback = '-') => {
-  if (!value) return fallback;
-  if (typeof value === 'string') return value;
-  if (typeof value === 'object') {
-    // Try common display properties
-    return value.name || value.title || value.unitNumber || value.displayName || fallback;
-  }
-  return String(value);
-};
+const SORT_OPTIONS = [
+  { value: 'bookingDate', label: 'Booking Date' },
+  { value: 'salePrice', label: 'Sale Amount' },
+  { value: 'status', label: 'Status' },
+  { value: 'createdAt', label: 'Created Date' },
+];
 
-// Helper function to get customer name from lead object
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+
+// Helper functions for populated data
 const getCustomerName = (sale) => {
-  if (sale.customerName) return sale.customerName;
+  if (!sale.lead) return 'Unknown Customer';
   
-  if (sale.lead) {
-    if (typeof sale.lead === 'string') return sale.lead;
-    if (typeof sale.lead === 'object') {
-      const firstName = sale.lead.firstName || '';
-      const lastName = sale.lead.lastName || '';
-      const fullName = `${firstName} ${lastName}`.trim();
-      return fullName || sale.lead.name || sale.lead.email || 'Unknown Customer';
+  if (typeof sale.lead === 'object') {
+    const { firstName, lastName, email, phone } = sale.lead;
+    if (firstName && lastName) {
+      return `${firstName} ${lastName}`;
     }
+    if (firstName) return firstName;
+    if (lastName) return lastName;
+    if (email) return email;
+    if (phone) return phone;
   }
   
   return 'Unknown Customer';
 };
 
-// Helper function to get unit display name
 const getUnitDisplayName = (sale) => {
-  if (sale.unitDetails?.unitNumber) return sale.unitDetails.unitNumber;
+  if (!sale.unit) return 'Unknown Unit';
   
-  if (sale.unit) {
-    if (typeof sale.unit === 'string') return sale.unit;
-    if (typeof sale.unit === 'object') {
-      return sale.unit.unitNumber || sale.unit.name || 'Unit details';
-    }
+  if (typeof sale.unit === 'object') {
+    const { unitNumber, fullAddress } = sale.unit;
+    return unitNumber || fullAddress || 'Unknown Unit';
   }
   
-  return 'Unit details';
+  return 'Unknown Unit';
 };
 
-// Helper function to get status configuration
+const getProjectName = (sale) => {
+  if (!sale.project) return 'Unknown Project';
+  
+  if (typeof sale.project === 'object') {
+    return sale.project.name || 'Unknown Project';
+  }
+  
+  return 'Unknown Project';
+};
+
+const getSalespersonName = (sale) => {
+  if (!sale.salesPerson) return 'Unassigned';
+  
+  if (typeof sale.salesPerson === 'object') {
+    const { firstName, lastName, email } = sale.salesPerson;
+    if (firstName && lastName) {
+      return `${firstName} ${lastName}`;
+    }
+    if (firstName) return firstName;
+    if (lastName) return lastName;
+    if (email) return email;
+  }
+  
+  return 'Unassigned';
+};
+
 const getStatusConfig = (status, statusArray) => {
   return statusArray.find(s => s.value === status) || { label: status, color: 'default' };
 };
 
-// Quick stats cards component
+// Enhanced Stats Cards Component
 const SalesStatsCards = ({ stats, loading, onRefresh }) => {
   const navigate = useNavigate();
 
@@ -182,7 +207,7 @@ const SalesStatsCards = ({ stats, loading, onRefresh }) => {
       value: stats?.monthlyStats?.count || 0,
       icon: CalendarToday,
       color: 'info',
-      subtitle: `₹${formatCurrency(stats?.monthlyStats?.revenue || 0)}`,
+      subtitle: `${formatCurrency(stats?.monthlyStats?.revenue || 0)}`,
       onClick: () => {},
     },
     {
@@ -254,8 +279,8 @@ const SalesStatsCards = ({ stats, loading, onRefresh }) => {
   );
 };
 
-// Sales table row component
-const SalesTableRow = ({ sale, onAction, projects, users }) => {
+// Enhanced Sales Table Row Component
+const SalesTableRow = ({ sale, onAction, index }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const theme = useTheme();
 
@@ -272,13 +297,15 @@ const SalesTableRow = ({ sale, onAction, projects, users }) => {
     handleMenuClose();
   };
 
-  // Get project and user details with safety checks
-  const project = projects.find(p => p._id === (typeof sale.project === 'object' ? sale.project._id : sale.project)) || {};
-  const salesperson = users.find(u => u._id === (typeof sale.salesperson === 'object' ? sale.salesperson._id : sale.salesperson)) || {};
+  const customerName = getCustomerName(sale);
+  const unitName = getUnitDisplayName(sale);
+  const projectName = getProjectName(sale);
+  const salespersonName = getSalespersonName(sale);
+  const salespersonInitials = salespersonName.split(' ').map(n => n[0]).join('').toUpperCase();
 
   return (
     <>
-      <TableRow hover>
+      <TableRow hover sx={{ '&:nth-of-type(odd)': { backgroundColor: theme.palette.action.hover } }}>
         {/* Sale ID and Customer */}
         <TableCell>
           <Box>
@@ -286,7 +313,7 @@ const SalesTableRow = ({ sale, onAction, projects, users }) => {
               #{sale.saleNumber || sale._id?.slice(-6)?.toUpperCase()}
             </Typography>
             <Typography variant="body2" color="textSecondary">
-              {getCustomerName(sale)}
+              {customerName}
             </Typography>
           </Box>
         </TableCell>
@@ -295,10 +322,10 @@ const SalesTableRow = ({ sale, onAction, projects, users }) => {
         <TableCell>
           <Box>
             <Typography variant="body2" fontWeight="medium">
-              {project.name || 'Unknown Project'}
+              {projectName}
             </Typography>
             <Typography variant="body2" color="textSecondary">
-              {getUnitDisplayName(sale)}
+              {unitName}
             </Typography>
           </Box>
         </TableCell>
@@ -306,7 +333,7 @@ const SalesTableRow = ({ sale, onAction, projects, users }) => {
         {/* Sale Amount */}
         <TableCell>
           <Typography variant="body2" fontWeight="bold" color="primary">
-            {formatCurrency(sale.salePrice || sale.totalAmount || sale.amount || 0)}
+            {formatCurrency(sale.salePrice || 0)}
           </Typography>
           {(sale.discountAmount || 0) > 0 && (
             <Typography variant="caption" color="success.main">
@@ -338,12 +365,10 @@ const SalesTableRow = ({ sale, onAction, projects, users }) => {
         <TableCell>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <Avatar sx={{ width: 28, height: 28, mr: 1, fontSize: '0.75rem' }}>
-              {salesperson.firstName?.[0] || salesperson.name?.[0] || 'U'}
+              {salespersonInitials || 'U'}
             </Avatar>
             <Typography variant="body2">
-              {salesperson.firstName && salesperson.lastName 
-                ? `${salesperson.firstName} ${salesperson.lastName}`
-                : salesperson.name || 'Unassigned'}
+              {salespersonName}
             </Typography>
           </Box>
         </TableCell>
@@ -351,7 +376,7 @@ const SalesTableRow = ({ sale, onAction, projects, users }) => {
         {/* Sale Date */}
         <TableCell>
           <Typography variant="body2">
-            {formatDate(sale.saleDate || sale.createdAt || sale.bookingDate)}
+            {formatDate(sale.bookingDate || sale.createdAt)}
           </Typography>
         </TableCell>
 
@@ -422,11 +447,14 @@ const SalesListPage = () => {
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [totalCount, setTotalCount] = useState(0);
-  
-  // Pagination
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(25);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 25,
+    total: 0,
+    totalPages: 0,
+    hasNext: false,
+    hasPrev: false
+  });
   
   // Filters and search
   const [filters, setFilters] = useState({
@@ -437,24 +465,58 @@ const SalesListPage = () => {
     salesperson: searchParams.get('salesperson') || 'all',
     dateFrom: searchParams.get('dateFrom') ? new Date(searchParams.get('dateFrom')) : null,
     dateTo: searchParams.get('dateTo') ? new Date(searchParams.get('dateTo')) : null,
+    sortBy: searchParams.get('sortBy') || 'bookingDate',
+    sortOrder: searchParams.get('sortOrder') || 'desc',
   });
 
   // UI states
   const [refreshing, setRefreshing] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [cancelDialog, setCancelDialog] = useState({ open: false, sale: null });
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
-  // Memoized filtered data count
+  // Debounced search
+  const [searchInput, setSearchInput] = useState(filters.search);
+  const [searchTimeout, setSearchTimeout] = useState(null);
+
+  // Handle search input with debounce
+  const handleSearchInput = (value) => {
+    setSearchInput(value);
+    
+    // Clear existing timeout
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+    
+    // Set new timeout
+    const timeout = setTimeout(() => {
+      setFilters(prev => ({ ...prev, search: value }));
+      setPagination(prev => ({ ...prev, page: 1 }));
+    }, 500);
+    
+    setSearchTimeout(timeout);
+  };
+
+  // Cleanup search timeout
+  useEffect(() => {
+    return () => {
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+    };
+  }, [searchTimeout]);
+
+  // Memoized filtered data info
   const filteredDataInfo = useMemo(() => {
     return {
-      total: totalCount,
-      showing: Math.min(rowsPerPage, totalCount - page * rowsPerPage),
-      start: page * rowsPerPage + 1,
-      end: Math.min((page + 1) * rowsPerPage, totalCount)
+      total: pagination.total,
+      showing: sales.length,
+      start: (pagination.page - 1) * pagination.limit + 1,
+      end: Math.min(pagination.page * pagination.limit, pagination.total)
     };
-  }, [totalCount, page, rowsPerPage]);
+  }, [pagination, sales]);
 
-  // Fetch all data
+  // Fetch all data with comprehensive error handling
   const fetchAllData = useCallback(async (showRefreshing = false) => {
     try {
       if (showRefreshing) setRefreshing(true);
@@ -464,8 +526,8 @@ const SalesListPage = () => {
       
       // Build query parameters
       const queryParams = {
-        page: page + 1, // Backend uses 1-based pagination
-        limit: rowsPerPage,
+        page: pagination.page,
+        limit: pagination.limit,
         search: filters.search || undefined,
         status: filters.status !== 'all' ? filters.status : undefined,
         paymentStatus: filters.paymentStatus !== 'all' ? filters.paymentStatus : undefined,
@@ -473,6 +535,8 @@ const SalesListPage = () => {
         salesperson: filters.salesperson !== 'all' ? filters.salesperson : undefined,
         dateFrom: filters.dateFrom ? filters.dateFrom.toISOString() : undefined,
         dateTo: filters.dateTo ? filters.dateTo.toISOString() : undefined,
+        sortBy: filters.sortBy,
+        sortOrder: filters.sortOrder,
       };
 
       // Remove undefined values
@@ -480,38 +544,40 @@ const SalesListPage = () => {
         queryParams[key] === undefined && delete queryParams[key]
       );
 
+      console.log('📋 Query params:', queryParams);
+
       // Fetch data in parallel
       const [salesResult, projectsResult, usersResult] = await Promise.allSettled([
         salesAPI.getSales(queryParams),
         projectAPI.getProjects(),
-        canAccess.userManagement() ? userAPI.getUsers() : Promise.resolve({ data: [] }),
+        canAccess.userManagement() ? userAPI.getUsers() : Promise.resolve({ data: { data: [] } }),
       ]);
 
       // Process sales data
       if (salesResult.status === 'fulfilled') {
         console.log('✅ Sales API Response:', salesResult.value.data);
-        const salesData = salesResult.value.data;
+        const response = salesResult.value.data;
         
-        // Handle different response structures
-        if (salesData.data && Array.isArray(salesData.data)) {
-          setSales(salesData.data);
-          setTotalCount(salesData.total || salesData.data.length);
-          setStats(salesData.stats || {});
-        } else if (Array.isArray(salesData)) {
-          setSales(salesData);
-          setTotalCount(salesData.length);
+        if (response.success) {
+          setSales(response.data || []);
+          setPagination(response.pagination || { page: 1, limit: 25, total: 0, totalPages: 0, hasNext: false, hasPrev: false });
+          setStats(response.stats || {});
         } else {
-          setSales([]);
-          setTotalCount(0);
+          // Fallback for different response structure
+          setSales(response.data || response || []);
+          setPagination(prev => ({ ...prev, total: response.count || 0 }));
         }
       } else {
         console.error('❌ Sales API failed:', salesResult.reason);
         setSales([]);
+        setPagination(prev => ({ ...prev, total: 0 }));
+        setError('Failed to load sales data. Please try again.');
       }
 
       // Process projects data
       if (projectsResult.status === 'fulfilled') {
-        const projectsData = projectsResult.value.data.data || projectsResult.value.data || [];
+        const response = projectsResult.value.data;
+        const projectsData = response.data || response || [];
         setProjects(Array.isArray(projectsData) ? projectsData : []);
       } else {
         console.error('❌ Projects API failed:', projectsResult.reason);
@@ -520,7 +586,8 @@ const SalesListPage = () => {
 
       // Process users data
       if (usersResult.status === 'fulfilled') {
-        const usersData = usersResult.value.data.data || usersResult.value.data || [];
+        const response = usersResult.value.data;
+        const usersData = response.data || response || [];
         setUsers(Array.isArray(usersData) ? usersData : []);
       } else {
         console.error('❌ Users API failed:', usersResult.reason);
@@ -534,10 +601,11 @@ const SalesListPage = () => {
       setError('Failed to load sales data. Please try refreshing.');
       setLoading(false);
       setSales([]);
+      setSnackbar({ open: true, message: 'Failed to load sales data', severity: 'error' });
     } finally {
       if (showRefreshing) setRefreshing(false);
     }
-  }, [page, rowsPerPage, filters, canAccess]);
+  }, [pagination.page, pagination.limit, filters, canAccess]);
 
   // Initial data load
   useEffect(() => {
@@ -566,48 +634,67 @@ const SalesListPage = () => {
       ...prev,
       [field]: value,
     }));
-    setPage(0); // Reset to first page when filtering
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
+  // Handle sorting
+  const handleSortChange = (field) => {
+    const newOrder = filters.sortBy === field && filters.sortOrder === 'desc' ? 'asc' : 'desc';
+    setFilters(prev => ({
+      ...prev,
+      sortBy: field,
+      sortOrder: newOrder,
+    }));
+    setPagination(prev => ({ ...prev, page: 1 }));
   };
 
   // Handle pagination
   const handlePageChange = (event, newPage) => {
-    setPage(newPage);
+    setPagination(prev => ({ ...prev, page: newPage + 1 }));
   };
 
   const handleRowsPerPageChange = (event) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
+    const newLimit = parseInt(event.target.value, 10);
+    setPagination(prev => ({ ...prev, page: 1, limit: newLimit }));
   };
 
   // Handle actions
-  const handleSaleAction = (action, sale) => {
-    switch (action) {
-      case 'view':
-        navigate(`/sales/${sale._id}`);
-        break;
-      case 'edit':
-        navigate(`/sales/${sale._id}/edit`);
-        break;
-      case 'payment':
-        navigate(`/payments/plans/${sale._id}`);
-        break;
-      case 'receipt':
-        // TODO: Generate receipt
-        console.log('Generate receipt for sale:', sale._id);
-        break;
-      case 'contact':
-        // TODO: Open contact modal
-        console.log('Contact customer for sale:', sale._id);
-        break;
-      case 'email':
-        // TODO: Open email modal
-        console.log('Send email for sale:', sale._id);
-        break;
-      case 'cancel':
-        setCancelDialog({ open: true, sale });
-        break;
-      default:
-        console.log('Unknown action:', action);
+  const handleSaleAction = async (action, sale) => {
+    try {
+      switch (action) {
+        case 'view':
+          navigate(`/sales/${sale._id}`);
+          break;
+        case 'edit':
+          navigate(`/sales/${sale._id}/edit`);
+          break;
+        case 'payment':
+          navigate(`/payments/plans/${sale._id}`);
+          break;
+        case 'receipt':
+          // Generate receipt
+          await salesAPI.generateSaleDocuments(sale._id);
+          setSnackbar({ open: true, message: 'Receipt generated successfully', severity: 'success' });
+          break;
+        case 'contact':
+          if (sale.lead?.phone) {
+            window.open(`tel:${sale.lead.phone}`, '_blank');
+          }
+          break;
+        case 'email':
+          if (sale.lead?.email) {
+            window.open(`mailto:${sale.lead.email}`, '_blank');
+          }
+          break;
+        case 'cancel':
+          setCancelDialog({ open: true, sale });
+          break;
+        default:
+          console.log('Unknown action:', action);
+      }
+    } catch (error) {
+      console.error('Error handling action:', error);
+      setSnackbar({ open: true, message: 'Action failed. Please try again.', severity: 'error' });
     }
   };
 
@@ -619,10 +706,11 @@ const SalesListPage = () => {
         cancelledBy: user._id,
       });
       setCancelDialog({ open: false, sale: null });
+      setSnackbar({ open: true, message: 'Sale cancelled successfully', severity: 'success' });
       fetchAllData(true);
     } catch (error) {
       console.error('Error cancelling sale:', error);
-      setError('Failed to cancel sale. Please try again.');
+      setSnackbar({ open: true, message: 'Failed to cancel sale', severity: 'error' });
     }
   };
 
@@ -636,13 +724,26 @@ const SalesListPage = () => {
       salesperson: 'all',
       dateFrom: null,
       dateTo: null,
+      sortBy: 'bookingDate',
+      sortOrder: 'desc',
     });
-    setPage(0);
+    setSearchInput('');
+    setPagination(prev => ({ ...prev, page: 1 }));
   };
 
   // Refresh data
   const refreshData = () => {
     fetchAllData(true);
+  };
+
+  // Export data
+  const exportData = async () => {
+    try {
+      // This would typically call an export API
+      setSnackbar({ open: true, message: 'Export feature coming soon', severity: 'info' });
+    } catch (error) {
+      setSnackbar({ open: true, message: 'Export failed', severity: 'error' });
+    }
   };
 
   if (loading && !refreshing) {
@@ -668,6 +769,15 @@ const SalesListPage = () => {
           </Box>
           
           <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              variant="outlined"
+              startIcon={<FileDownload />}
+              onClick={exportData}
+              disabled={sales.length === 0}
+            >
+              Export
+            </Button>
+            
             <Button
               variant="outlined"
               startIcon={<Refresh />}
@@ -733,8 +843,8 @@ const SalesListPage = () => {
             <TextField
               fullWidth
               placeholder="Search by customer name, sale number, unit number..."
-              value={filters.search}
-              onChange={handleFilterChange('search')}
+              value={searchInput}
+              onChange={(e) => handleSearchInput(e.target.value)}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -826,6 +936,39 @@ const SalesListPage = () => {
                       </FormControl>
                     </Grid>
 
+                    {/* Sort Options */}
+                    <Grid item xs={12} sm={6} md={3}>
+                      <FormControl fullWidth size="small">
+                        <InputLabel>Sort By</InputLabel>
+                        <Select
+                          value={filters.sortBy}
+                          label="Sort By"
+                          onChange={handleFilterChange('sortBy')}
+                        >
+                          {SORT_OPTIONS.map((option) => (
+                            <MenuItem key={option.value} value={option.value}>
+                              {option.label}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Grid>
+
+                    {/* Sort Order */}
+                    <Grid item xs={12} sm={6} md={3}>
+                      <FormControl fullWidth size="small">
+                        <InputLabel>Sort Order</InputLabel>
+                        <Select
+                          value={filters.sortOrder}
+                          label="Sort Order"
+                          onChange={handleFilterChange('sortOrder')}
+                        >
+                          <MenuItem value="desc">Descending</MenuItem>
+                          <MenuItem value="asc">Ascending</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+
                     {/* Date Range Filters */}
                     <Grid item xs={12} sm={6} md={3}>
                       <DatePicker
@@ -854,27 +997,80 @@ const SalesListPage = () => {
         {/* Sales Table */}
         <Card>
           <CardContent sx={{ p: 0 }}>
-            {/* Table Header with count */}
+            {/* Table Header with count and pagination info */}
             <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-              <Typography variant="h6">
-                Sales List ({totalCount.toLocaleString()})
-              </Typography>
-              <Typography variant="body2" color="textSecondary">
-                Showing {filteredDataInfo.start}-{filteredDataInfo.end} of {filteredDataInfo.total} sales
-              </Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Box>
+                  <Typography variant="h6">
+                    Sales List ({pagination.total?.toLocaleString() || 0})
+                  </Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    Showing {filteredDataInfo.start}-{filteredDataInfo.end} of {filteredDataInfo.total} sales
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography variant="body2" color="textSecondary">
+                    Page {pagination.page} of {pagination.totalPages}
+                  </Typography>
+                </Box>
+              </Box>
             </Box>
 
             <TableContainer>
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell>Sale ID / Customer</TableCell>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        Sale ID / Customer
+                        <IconButton size="small" onClick={() => handleSortChange('createdAt')}>
+                          {filters.sortBy === 'createdAt' ? (
+                            filters.sortOrder === 'desc' ? <ArrowDownward fontSize="small" /> : <ArrowUpward fontSize="small" />
+                          ) : (
+                            <Sort fontSize="small" />
+                          )}
+                        </IconButton>
+                      </Box>
+                    </TableCell>
                     <TableCell>Project / Unit</TableCell>
-                    <TableCell>Sale Amount</TableCell>
-                    <TableCell>Sale Status</TableCell>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        Sale Amount
+                        <IconButton size="small" onClick={() => handleSortChange('salePrice')}>
+                          {filters.sortBy === 'salePrice' ? (
+                            filters.sortOrder === 'desc' ? <ArrowDownward fontSize="small" /> : <ArrowUpward fontSize="small" />
+                          ) : (
+                            <Sort fontSize="small" />
+                          )}
+                        </IconButton>
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        Sale Status
+                        <IconButton size="small" onClick={() => handleSortChange('status')}>
+                          {filters.sortBy === 'status' ? (
+                            filters.sortOrder === 'desc' ? <ArrowDownward fontSize="small" /> : <ArrowUpward fontSize="small" />
+                          ) : (
+                            <Sort fontSize="small" />
+                          )}
+                        </IconButton>
+                      </Box>
+                    </TableCell>
                     <TableCell>Payment Status</TableCell>
                     <TableCell>Salesperson</TableCell>
-                    <TableCell>Sale Date</TableCell>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        Sale Date
+                        <IconButton size="small" onClick={() => handleSortChange('bookingDate')}>
+                          {filters.sortBy === 'bookingDate' ? (
+                            filters.sortOrder === 'desc' ? <ArrowDownward fontSize="small" /> : <ArrowUpward fontSize="small" />
+                          ) : (
+                            <Sort fontSize="small" />
+                          )}
+                        </IconButton>
+                      </Box>
+                    </TableCell>
                     <TableCell>Actions</TableCell>
                   </TableRow>
                 </TableHead>
@@ -900,13 +1096,12 @@ const SalesListPage = () => {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    sales.map((sale) => (
+                    sales.map((sale, index) => (
                       <SalesTableRow
                         key={sale._id}
                         sale={sale}
                         onAction={handleSaleAction}
-                        projects={projects}
-                        users={users}
+                        index={index}
                       />
                     ))
                   )}
@@ -914,17 +1109,24 @@ const SalesListPage = () => {
               </Table>
             </TableContainer>
 
-            {/* Pagination */}
-            {totalCount > 0 && (
-              <TablePagination
-                rowsPerPageOptions={[10, 25, 50, 100]}
-                component="div"
-                count={totalCount}
-                rowsPerPage={rowsPerPage}
-                page={page}
-                onPageChange={handlePageChange}
-                onRowsPerPageChange={handleRowsPerPageChange}
-              />
+            {/* Enhanced Pagination */}
+            {pagination.total > 0 && (
+              <Box sx={{ borderTop: 1, borderColor: 'divider' }}>
+                <TablePagination
+                  rowsPerPageOptions={PAGE_SIZE_OPTIONS}
+                  component="div"
+                  count={pagination.total}
+                  rowsPerPage={pagination.limit}
+                  page={pagination.page - 1}
+                  onPageChange={handlePageChange}
+                  onRowsPerPageChange={handleRowsPerPageChange}
+                  showFirstButton
+                  showLastButton
+                  labelDisplayedRows={({ from, to, count }) => 
+                    `${from}-${to} of ${count !== -1 ? count : `more than ${to}`}`
+                  }
+                />
+              </Box>
             )}
           </CardContent>
         </Card>
@@ -957,7 +1159,7 @@ const SalesListPage = () => {
                   <br /><br />
                   <strong>Sale ID:</strong> #{cancelDialog.sale.saleNumber || cancelDialog.sale._id?.slice(-6)?.toUpperCase() || 'Unknown'}<br />
                   <strong>Customer:</strong> {getCustomerName(cancelDialog.sale)}<br />
-                  <strong>Amount:</strong> {formatCurrency(cancelDialog.sale.salePrice || cancelDialog.sale.totalAmount || cancelDialog.sale.amount || 0)}
+                  <strong>Amount:</strong> {formatCurrency(cancelDialog.sale.salePrice || 0)}
                 </>
               )}
             </DialogContentText>
@@ -971,6 +1173,22 @@ const SalesListPage = () => {
             </Button>
           </DialogActions>
         </Dialog>
+
+        {/* Snackbar for notifications */}
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={6000}
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        >
+          <Alert
+            onClose={() => setSnackbar({ ...snackbar, open: false })}
+            severity={snackbar.severity}
+            sx={{ width: '100%' }}
+          >
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
       </Box>
     </LocalizationProvider>
   );

@@ -239,30 +239,33 @@ export const leadAPI = {
 // 7. SALES MANAGEMENT SERVICES (/api/sales)
 // =============================================================================
 export const salesAPI = {
-  // Get all sales
-  getSales: (params = {}) => api.get('/sales', { params }),
+    // Get all sales
+    getSales: (params = {}) => api.get('/sales', { params }),
   
-  // Get sale by ID
-  getSale: (id) => api.get(`/sales/${id}`),
+    // Get sale by ID
+    getSale: (id) => api.get(`/sales/${id}`),
   
-  // Create new sale (booking)
-  createSale: (saleData) => api.post('/sales', saleData),
+    // Create new sale (booking)
+    createSale: (saleData) => api.post('/sales', saleData),
   
-  // Update sale
-  updateSale: (id, saleData) => api.put(`/sales/${id}`, saleData),
+    // Update sale
+    updateSale: (id, saleData) => api.put(`/sales/${id}`, saleData),
   
-  // Cancel sale
-  cancelSale: (id, cancelData) => api.put(`/sales/${id}/cancel`, cancelData),
+    // Cancel sale (alternative endpoint for cancellation, often with a request body)
+    cancelSale: (id, cancelData) => api.put(`/sales/${id}/cancel`, cancelData),
   
-  // Get sales analytics
-  getSalesAnalytics: (params = {}) => api.get('/sales/analytics', { params }),
+    // Delete sale (maps to the DELETE /api/sales/:id route for cancellation)
+    deleteSale: (id) => api.delete(`/sales/${id}`),
   
-  // Get sales pipeline
-  getSalesPipeline: (params = {}) => api.get('/sales/pipeline', { params }),
+    // Get sales analytics
+    getSalesAnalytics: (params = {}) => api.get('/sales/analytics', { params }),
   
-  // Generate sale documents
-  generateSaleDocuments: (id) => api.post(`/sales/${id}/documents`),
-};
+    // Get sales pipeline
+    getSalesPipeline: (params = {}) => api.get('/sales/pipeline', { params }),
+  
+    // Generate sale documents
+    generateSaleDocuments: (id) => api.post(`/sales/${id}/documents`),
+  };
 
 // =============================================================================
 // 8. PRICING SERVICES (/api/pricing)
