@@ -1,6 +1,6 @@
 // File: src/pages/leads/LeadDetailPage.js
 // Description: Comprehensive lead detail page with complete management functionality
-// Version: 1.0 - Production-grade lead view with AI insights, interactions, and management tools
+// Version: 1.1 - PRODUCTION-READY with AI insights and interactions fixes
 // Location: src/pages/leads/LeadDetailPage.js
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -99,7 +99,10 @@ import { useSnackbar } from 'notistack';
 import { useAuth } from '../../context/AuthContext';
 import { leadAPI, aiAPI } from '../../services/api';
 
-// Utility functions
+// =============================================================================
+// UTILITY FUNCTIONS
+// =============================================================================
+
 const formatCurrency = (amount) => {
   if (!amount) return '₹0';
   if (amount >= 10000000) {
@@ -181,7 +184,10 @@ const getScoreLabel = (score) => {
   return 'Cold Lead';
 };
 
-// Lead Header Component
+// =============================================================================
+// LEAD HEADER COMPONENT
+// =============================================================================
+
 const LeadHeader = ({ lead, onEdit, onRefresh, isLoading }) => {
   const { canAccess } = useAuth();
   const [anchorEl, setAnchorEl] = useState(null);
@@ -373,7 +379,10 @@ const LeadHeader = ({ lead, onEdit, onRefresh, isLoading }) => {
   );
 };
 
-// Lead Overview Component
+// =============================================================================
+// LEAD OVERVIEW COMPONENT
+// =============================================================================
+
 const LeadOverview = ({ lead }) => {
   return (
     <Grid container spacing={3}>
@@ -576,7 +585,10 @@ const LeadOverview = ({ lead }) => {
   );
 };
 
-// AI Insights Component
+// =============================================================================
+// AI INSIGHTS COMPONENT - FIXED VERSION
+// =============================================================================
+
 const AIInsights = ({ lead }) => {
   const [insights, setInsights] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -586,15 +598,110 @@ const AIInsights = ({ lead }) => {
     try {
       setLoading(true);
       setError(null);
+      
+      console.log('🔄 Fetching AI insights for lead:', lead._id);
+      
       const response = await aiAPI.getLeadInsights(lead._id);
-      setInsights(response.data);
+      console.log('✅ AI insights response:', response.data);
+      
+      // FIXED: Handle different response structures
+      let insightsData = null;
+      if (response.data.insights) {
+        insightsData = response.data.insights;
+      } else if (response.data.data) {
+        insightsData = response.data.data;
+      } else {
+        insightsData = response.data;
+      }
+      
+      // FIXED: Validate insights structure and provide fallbacks
+      if (insightsData && typeof insightsData === 'object') {
+        setInsights(insightsData);
+      } else {
+        // If AI insights are not properly formatted, create mock insights based on lead data
+        setInsights(generateFallbackInsights(lead));
+      }
+      
     } catch (error) {
-      console.error('Error fetching AI insights:', error);
-      setError('Failed to load AI insights');
+      console.error('❌ Error fetching AI insights:', error);
+      
+      // FIXED: Better error handling with specific messages
+      let errorMessage = 'Failed to load AI insights';
+      
+      if (error.response?.status === 404) {
+        errorMessage = 'AI insights not available for this lead yet';
+      } else if (error.response?.status === 503) {
+        errorMessage = 'AI service temporarily unavailable';
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message.includes('Network')) {
+        errorMessage = 'Network error - check your connection';
+      }
+      
+      setError(errorMessage);
+      
+      // FIXED: Provide fallback insights even when AI fails
+      setInsights(generateFallbackInsights(lead));
+      
     } finally {
       setLoading(false);
     }
   }, [lead._id]);
+
+  // FIXED: Generate fallback insights based on lead data
+  const generateFallbackInsights = (leadData) => {
+    const fallbackInsights = {
+      talkingPoints: [],
+      objectionHandling: [],
+      nextBestActions: []
+    };
+
+    // Generate talking points based on lead data
+    if (leadData.requirements?.budgetRange) {
+      fallbackInsights.talkingPoints.push(`Discuss properties within their ${leadData.requirements.budgetRange} budget range`);
+    }
+    
+    if (leadData.requirements?.propertyTypes?.length > 0) {
+      fallbackInsights.talkingPoints.push(`Focus on their preferred property types: ${leadData.requirements.propertyTypes.join(', ')}`);
+    }
+    
+    if (leadData.requirements?.preferredLocation) {
+      fallbackInsights.talkingPoints.push(`Highlight properties in their preferred location: ${leadData.requirements.preferredLocation}`);
+    }
+    
+    if (leadData.source) {
+      fallbackInsights.talkingPoints.push(`Reference their interest from ${leadData.source} when discussing the project`);
+    }
+
+    // Generate objection handling based on lead status
+    if (leadData.status === 'New' || leadData.status === 'Contacted') {
+      fallbackInsights.objectionHandling.push('Address any concerns about location and connectivity');
+      fallbackInsights.objectionHandling.push('Provide detailed information about project amenities');
+      fallbackInsights.objectionHandling.push('Offer virtual or physical site visit to build confidence');
+    }
+    
+    if (leadData.priority === 'Low') {
+      fallbackInsights.objectionHandling.push('Create urgency by highlighting limited inventory');
+      fallbackInsights.objectionHandling.push('Offer attractive payment plans or incentives');
+    }
+
+    // Generate next best actions based on lead score and status
+    if (leadData.score >= 75) {
+      fallbackInsights.nextBestActions.push('Schedule immediate site visit');
+      fallbackInsights.nextBestActions.push('Prepare cost sheet with attractive payment options');
+      fallbackInsights.nextBestActions.push('Follow up within 24 hours with project brochure');
+    } else if (leadData.score >= 50) {
+      fallbackInsights.nextBestActions.push('Send detailed project information');
+      fallbackInsights.nextBestActions.push('Schedule phone call to understand requirements better');
+      fallbackInsights.nextBestActions.push('Invite to upcoming project presentation');
+    } else {
+      fallbackInsights.nextBestActions.push('Send weekly newsletter to maintain engagement');
+      fallbackInsights.nextBestActions.push('Invite to upcoming events or webinars');
+      fallbackInsights.nextBestActions.push('Schedule follow-up call in 2 weeks');
+    }
+
+    return fallbackInsights;
+  };
 
   useEffect(() => {
     if (lead._id) {
@@ -613,26 +720,6 @@ const AIInsights = ({ lead }) => {
     );
   }
 
-  if (error) {
-    return (
-      <Alert severity="warning" action={
-        <Button color="inherit" size="small" onClick={fetchInsights}>
-          Retry
-        </Button>
-      }>
-        {error}
-      </Alert>
-    );
-  }
-
-  if (!insights) {
-    return (
-      <Alert severity="info">
-        AI insights will be generated automatically. Please check back later.
-      </Alert>
-    );
-  }
-
   return (
     <Grid container spacing={3}>
       <Grid item xs={12}>
@@ -641,12 +728,36 @@ const AIInsights = ({ lead }) => {
             <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
               <Psychology color="primary" />
               AI-Powered Sales Insights
+              {error && (
+                <Chip 
+                  label="Fallback Mode" 
+                  color="warning" 
+                  size="small" 
+                  variant="outlined"
+                />
+              )}
             </Typography>
             
+            {/* FIXED: Show error but still display fallback insights */}
+            {error && (
+              <Alert 
+                severity="warning" 
+                sx={{ mb: 2 }}
+                action={
+                  <Button color="inherit" size="small" onClick={fetchInsights}>
+                    Retry AI
+                  </Button>
+                }
+              >
+                {error} • Showing generated insights based on lead data.
+              </Alert>
+            )}
+            
             {/* Talking Points */}
-            {insights.talkingPoints && (
+            {insights?.talkingPoints && insights.talkingPoints.length > 0 && (
               <Box sx={{ mb: 3 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Star color="primary" fontSize="small" />
                   Recommended Talking Points
                 </Typography>
                 <List dense>
@@ -663,9 +774,10 @@ const AIInsights = ({ lead }) => {
             )}
 
             {/* Objection Handling */}
-            {insights.objectionHandling && (
+            {insights?.objectionHandling && insights.objectionHandling.length > 0 && (
               <Box sx={{ mb: 3 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <CheckCircle color="success" fontSize="small" />
                   Objection Handling Strategies
                 </Typography>
                 <List dense>
@@ -682,9 +794,10 @@ const AIInsights = ({ lead }) => {
             )}
 
             {/* Next Best Actions */}
-            {insights.nextBestActions && (
-              <Box>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+            {insights?.nextBestActions && insights.nextBestActions.length > 0 && (
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <TrendingUp color="warning" fontSize="small" />
                   Recommended Next Actions
                 </Typography>
                 <List dense>
@@ -699,6 +812,36 @@ const AIInsights = ({ lead }) => {
                 </List>
               </Box>
             )}
+
+            {/* FIXED: Show message if no insights available */}
+            {(!insights || (
+              (!insights.talkingPoints || insights.talkingPoints.length === 0) &&
+              (!insights.objectionHandling || insights.objectionHandling.length === 0) &&
+              (!insights.nextBestActions || insights.nextBestActions.length === 0)
+            )) && !loading && (
+              <Alert severity="info">
+                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                  No AI insights available yet
+                </Typography>
+                <Typography variant="body2">
+                  AI insights are generated based on lead interactions and behavior patterns. 
+                  Once this lead has more activity, personalized insights will be available.
+                </Typography>
+              </Alert>
+            )}
+
+            {/* FIXED: Add manual refresh button */}
+            <Box sx={{ mt: 2, textAlign: 'center' }}>
+              <Button
+                variant="outlined"
+                startIcon={<Refresh />}
+                onClick={fetchInsights}
+                disabled={loading}
+                size="small"
+              >
+                {loading ? 'Generating...' : 'Refresh Insights'}
+              </Button>
+            </Box>
           </CardContent>
         </Card>
       </Grid>
@@ -706,24 +849,58 @@ const AIInsights = ({ lead }) => {
   );
 };
 
-// Interactions Component
+// =============================================================================
+// INTERACTIONS COMPONENT - FIXED VERSION
+// =============================================================================
+
 const Interactions = ({ lead }) => {
   const [interactions, setInteractions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [addingInteraction, setAddingInteraction] = useState(false);
   const [newInteraction, setNewInteraction] = useState({
     type: 'Call',
-    notes: '',
+    content: '', // FIXED: Changed from 'notes' to 'content'
     outcome: '',
   });
 
   const fetchInteractions = useCallback(async () => {
     try {
       setLoading(true);
+      console.log('🔄 Fetching interactions for lead:', lead._id);
+      
       const response = await leadAPI.getInteractions(lead._id);
-      setInteractions(response.data.data || response.data || []);
+      console.log('✅ Interactions response:', response.data);
+      
+      // FIXED: Handle different response structures
+      let interactionData = [];
+      if (response.data.success && response.data.data) {
+        // Backend returns { success: true, data: { interactions: [...] } }
+        interactionData = response.data.data.interactions || response.data.data || [];
+      } else if (response.data.data) {
+        // Backend returns { data: [...] }
+        interactionData = response.data.data;
+      } else if (Array.isArray(response.data)) {
+        // Backend returns [...] directly
+        interactionData = response.data;
+      }
+      
+      setInteractions(interactionData);
+      console.log('✅ Loaded interactions:', interactionData.length);
+      
     } catch (error) {
-      console.error('Error fetching interactions:', error);
+      console.error('❌ Error fetching interactions:', error);
+      
+      // FIXED: Better error handling with user-friendly messages
+      if (error.response?.status === 404) {
+        console.log('ℹ️ No interactions found for this lead');
+        setInteractions([]);
+      } else if (error.response?.status === 403) {
+        console.error('🚫 Access denied to interactions');
+        setInteractions([]);
+      } else {
+        console.error('💥 Network or server error:', error.message);
+        setInteractions([]);
+      }
     } finally {
       setLoading(false);
     }
@@ -736,11 +913,45 @@ const Interactions = ({ lead }) => {
   const handleAddInteraction = async () => {
     try {
       setAddingInteraction(true);
-      await leadAPI.addInteraction(lead._id, newInteraction);
-      setNewInteraction({ type: 'Call', notes: '', outcome: '' });
+      
+      // FIXED: Validate required fields before sending
+      if (!newInteraction.content.trim()) {
+        alert('Please enter interaction details');
+        return;
+      }
+      
+      console.log('🔄 Adding interaction:', newInteraction);
+      
+      // FIXED: Send correct field names to backend
+      const interactionPayload = {
+        type: newInteraction.type,
+        content: newInteraction.content.trim(), // Backend expects 'content', not 'notes'
+        outcome: newInteraction.outcome.trim(),
+        direction: 'Outbound', // Add default direction
+      };
+      
+      const response = await leadAPI.addInteraction(lead._id, interactionPayload);
+      console.log('✅ Interaction added:', response.data);
+      
+      // FIXED: Reset form properly
+      setNewInteraction({ 
+        type: 'Call', 
+        content: '', // FIXED: Reset content field
+        outcome: '' 
+      });
+      
+      // Refresh interactions list
       fetchInteractions();
+      
     } catch (error) {
-      console.error('Error adding interaction:', error);
+      console.error('❌ Error adding interaction:', error);
+      
+      // FIXED: Better error handling
+      if (error.response?.data?.message) {
+        alert(`Failed to add interaction: ${error.response.data.message}`);
+      } else {
+        alert('Failed to add interaction. Please try again.');
+      }
     } finally {
       setAddingInteraction(false);
     }
@@ -775,11 +986,11 @@ const Interactions = ({ lead }) => {
                     onChange={(e) => setNewInteraction(prev => ({ ...prev, type: e.target.value }))}
                     label="Type"
                   >
-                    <MenuItem value="Call">Phone Call</MenuItem>
-                    <MenuItem value="Email">Email</MenuItem>
-                    <MenuItem value="WhatsApp">WhatsApp</MenuItem>
-                    <MenuItem value="Meeting">Meeting</MenuItem>
-                    <MenuItem value="Site Visit">Site Visit</MenuItem>
+<MenuItem value="call">Phone Call</MenuItem>
+<MenuItem value="email">Email</MenuItem>
+<MenuItem value="whatsapp">WhatsApp</MenuItem>
+<MenuItem value="site_visit">Site Visit</MenuItem>
+<MenuItem value="meeting">In-person Meeting</MenuItem>
                   </Select>
                 </FormControl>
               </Grid>
@@ -787,10 +998,10 @@ const Interactions = ({ lead }) => {
                 <TextField
                   fullWidth
                   size="small"
-                  label="Notes"
+                  label="Interaction Details" // FIXED: Updated label
                   placeholder="What was discussed?"
-                  value={newInteraction.notes}
-                  onChange={(e) => setNewInteraction(prev => ({ ...prev, notes: e.target.value }))}
+                  value={newInteraction.content} // FIXED: Use 'content' field
+                  onChange={(e) => setNewInteraction(prev => ({ ...prev, content: e.target.value }))}
                 />
               </Grid>
               <Grid item xs={12} md={3}>
@@ -808,7 +1019,7 @@ const Interactions = ({ lead }) => {
                   fullWidth
                   variant="contained"
                   onClick={handleAddInteraction}
-                  disabled={addingInteraction || !newInteraction.notes}
+                  disabled={addingInteraction || !newInteraction.content.trim()} // FIXED: Check content field
                   startIcon={addingInteraction ? <CircularProgress size={16} /> : <Add />}
                 >
                   Add
@@ -825,16 +1036,19 @@ const Interactions = ({ lead }) => {
           <CardContent>
             <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
               <History color="primary" />
-              Interaction History
+              Interaction History ({interactions.length})
             </Typography>
             
             {loading ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
                 <CircularProgress />
+                <Typography variant="body2" sx={{ ml: 2 }}>
+                  Loading interactions...
+                </Typography>
               </Box>
             ) : interactions.length === 0 ? (
               <Alert severity="info">
-                No interactions recorded yet. Add the first interaction above.
+                No interactions recorded yet. Add the first interaction above to start tracking communication with this lead.
               </Alert>
             ) : (
               <List>
@@ -848,20 +1062,42 @@ const Interactions = ({ lead }) => {
                       </ListItemAvatar>
                       <ListItemText
                         primary={
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                             <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
                               {interaction.type}
                             </Typography>
-                            <Chip label={interaction.outcome || 'No outcome'} size="small" color="info" />
+                            {interaction.outcome && (
+                              <Chip 
+                                label={interaction.outcome} 
+                                size="small" 
+                                color="info" 
+                                variant="outlined" 
+                              />
+                            )}
+                            {interaction.direction && (
+                              <Chip 
+                                label={interaction.direction} 
+                                size="small" 
+                                color={interaction.direction === 'Inbound' ? 'success' : 'default'} 
+                                variant="outlined" 
+                              />
+                            )}
                           </Box>
                         }
                         secondary={
                           <Box>
                             <Typography variant="body2" sx={{ mb: 0.5 }}>
-                              {interaction.notes}
+                              {/* FIXED: Handle both 'content' and 'notes' fields */}
+                              {interaction.content || interaction.notes || 'No details provided'}
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
-                              {formatDate(interaction.createdAt)} • By {interaction.createdBy?.firstName || 'Unknown'}
+                              {formatDate(interaction.createdAt)} • By {
+                                interaction.user?.firstName 
+                                  ? `${interaction.user.firstName} ${interaction.user.lastName || ''}`
+                                  : interaction.createdBy?.firstName 
+                                    ? `${interaction.createdBy.firstName} ${interaction.createdBy.lastName || ''}`
+                                    : 'Unknown'
+                              }
                             </Typography>
                           </Box>
                         }
@@ -879,7 +1115,10 @@ const Interactions = ({ lead }) => {
   );
 };
 
-// Follow-up Management Component
+// =============================================================================
+// FOLLOW-UP MANAGEMENT COMPONENT
+// =============================================================================
+
 const FollowUpManagement = ({ lead, onRefresh }) => {
   const [followUpDialog, setFollowUpDialog] = useState(false);
   const [newFollowUp, setNewFollowUp] = useState({
@@ -975,11 +1214,11 @@ const FollowUpManagement = ({ lead, onRefresh }) => {
                   onChange={(e) => setNewFollowUp(prev => ({ ...prev, type: e.target.value }))}
                   label="Follow-up Type"
                 >
-                  <MenuItem value="Call">Phone Call</MenuItem>
-                  <MenuItem value="Email">Email</MenuItem>
-                  <MenuItem value="WhatsApp">WhatsApp</MenuItem>
-                  <MenuItem value="Site Visit">Site Visit</MenuItem>
-                  <MenuItem value="Meeting">In-person Meeting</MenuItem>
+                  <MenuItem value="call">Phone Call</MenuItem>
+<MenuItem value="email">Email</MenuItem>
+<MenuItem value="whatsapp">WhatsApp</MenuItem>
+<MenuItem value="site_visit">Site Visit</MenuItem>
+<MenuItem value="meeting">In-person Meeting</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -1005,7 +1244,10 @@ const FollowUpManagement = ({ lead, onRefresh }) => {
   );
 };
 
-// Main Lead Detail Page Component
+// =============================================================================
+// MAIN LEAD DETAIL PAGE COMPONENT
+// =============================================================================
+
 const LeadDetailPage = () => {
   const { leadId } = useParams();
   const navigate = useNavigate();

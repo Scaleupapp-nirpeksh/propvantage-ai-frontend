@@ -1,6 +1,6 @@
 // File: src/App.js
 // Description: Main App component with routing, theme, and authentication setup for PropVantage AI
-// Version: 1.3 - Complete app setup with Villa, Tower, Hybrid project support + Edit/Delete functionality
+// Version: 1.4 - Added EditLeadPage route for complete lead management
 // Location: src/App.js
 
 import React, { Suspense } from 'react';
@@ -48,6 +48,7 @@ const EditUnitPage = React.lazy(() => import('./pages/projects/EditUnitPage'));
 const LeadsListPage = React.lazy(() => import('./pages/leads/LeadsListPage'));
 const LeadDetailPage = React.lazy(() => import('./pages/leads/LeadDetailPage'));
 const CreateLeadPage = React.lazy(() => import('./pages/leads/CreateLeadPage'));
+const EditLeadPage = React.lazy(() => import('./pages/leads/EditLeadPage')); // Added EditLeadPage
 const LeadsPipelinePage = React.lazy(() => import('./pages/leads/LeadsPipelinePage'));
 
 // Sales Management Pages
@@ -210,10 +211,8 @@ const AppRoutes = () => {
 
       {/* ========================================= */}
       {/* PROJECT MANAGEMENT ROUTES */}
-      {/* Supporting Villa, Tower, and Hybrid Projects */}
       {/* ========================================= */}
 
-      {/* Core Project Routes */}
       <Route path="/projects" element={
         <ProtectedRoute requiredPermission={(canAccess) => canAccess.viewAllProjects()}>
           <DashboardLayout>
@@ -244,12 +243,6 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
 
-      {/* ========================================= */}
-      {/* EDIT FUNCTIONALITY ROUTES */}
-      {/* Complete Edit/Delete for Project Hierarchy */}
-      {/* ========================================= */}
-
-      {/* Edit Project */}
       <Route path="/projects/:projectId/edit" element={
         <ProtectedRoute requiredPermission="MANAGEMENT">
           <DashboardLayout>
@@ -260,7 +253,6 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
 
-      {/* Edit Tower */}
       <Route path="/projects/:projectId/towers/:towerId/edit" element={
         <ProtectedRoute requiredPermission="MANAGEMENT">
           <DashboardLayout>
@@ -271,7 +263,6 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
 
-      {/* Edit Unit in Tower */}
       <Route path="/projects/:projectId/towers/:towerId/units/:unitId/edit" element={
         <ProtectedRoute requiredPermission="MANAGEMENT">
           <DashboardLayout>
@@ -282,7 +273,6 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
 
-      {/* Edit Villa Unit (no tower) */}
       <Route path="/projects/:projectId/units/:unitId/edit" element={
         <ProtectedRoute requiredPermission="MANAGEMENT">
           <DashboardLayout>
@@ -293,12 +283,6 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
 
-      {/* ========================================= */}
-      {/* VILLA PROJECT ROUTES */}
-      {/* Direct project → units (no towers) */}
-      {/* ========================================= */}
-
-      {/* Create Villa Unit - Direct under project */}
       <Route path="/projects/:projectId/units/create" element={
         <ProtectedRoute requiredPermission="MANAGEMENT">
           <DashboardLayout>
@@ -309,7 +293,6 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
 
-      {/* View Villa Unit - Direct under project */}
       <Route path="/projects/:projectId/units/:unitId" element={
         <ProtectedRoute requiredPermission={(canAccess) => canAccess.viewAllProjects()}>
           <DashboardLayout>
@@ -320,12 +303,6 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
 
-      {/* ========================================= */}
-      {/* TOWER PROJECT ROUTES */}
-      {/* Project → towers → units */}
-      {/* ========================================= */}
-
-      {/* Create Tower - MUST come BEFORE tower detail route */}
       <Route path="/projects/:projectId/towers/create" element={
         <ProtectedRoute requiredPermission="MANAGEMENT">
           <DashboardLayout>
@@ -336,7 +313,6 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
 
-      {/* View Tower Details */}
       <Route path="/projects/:projectId/towers/:towerId" element={
         <ProtectedRoute requiredPermission={(canAccess) => canAccess.viewAllProjects()}>
           <DashboardLayout>
@@ -347,7 +323,6 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
 
-      {/* Create Tower Unit */}
       <Route path="/projects/:projectId/towers/:towerId/units/create" element={
         <ProtectedRoute requiredPermission="MANAGEMENT">
           <DashboardLayout>
@@ -358,7 +333,6 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
 
-      {/* View Tower Unit */}
       <Route path="/projects/:projectId/towers/:towerId/units/:unitId" element={
         <ProtectedRoute requiredPermission={(canAccess) => canAccess.viewAllProjects()}>
           <DashboardLayout>
@@ -398,6 +372,17 @@ const AppRoutes = () => {
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback />}>
               <LeadDetailPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      {/* ADDED: Edit Lead Page Route */}
+      <Route path="/leads/:leadId/edit" element={
+        <ProtectedRoute requiredPermission="SALES">
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading lead editor..." />}>
+              <EditLeadPage />
             </Suspense>
           </DashboardLayout>
         </ProtectedRoute>
@@ -576,68 +561,3 @@ const App = () => {
 };
 
 export default App;
-
-/* 
-========================================
-ROUTING ARCHITECTURE SUMMARY
-========================================
-
-VILLA PROJECT FLOW:
-Projects → Project Detail → Villa Units → Villa Unit Detail
-URL: /projects/:id/units/:unitId
-
-TOWER PROJECT FLOW:  
-Projects → Project Detail → Towers → Tower Detail → Units → Unit Detail
-URL: /projects/:id/towers/:towerId/units/:unitId
-
-HYBRID PROJECT FLOW:
-Projects → Project Detail → (Towers Tab + Villas Tab)
-├── Towers → Tower Detail → Units → Unit Detail
-└── Villas → Villa Unit Detail
-
-EDIT/DELETE FUNCTIONALITY:
-✅ Edit Project: /projects/:projectId/edit
-✅ Edit Tower: /projects/:projectId/towers/:towerId/edit
-✅ Edit Tower Unit: /projects/:projectId/towers/:towerId/units/:unitId/edit
-✅ Edit Villa Unit: /projects/:projectId/units/:unitId/edit
-
-SUPPORTED OPERATIONS:
-✅ Villa Projects: Create/View/Edit villa units directly under project
-✅ Tower Projects: Create/View/Edit towers and their units
-✅ Hybrid Projects: Both villa and tower units in same project
-✅ Universal CreateUnitPage: Adapts based on towerId presence
-✅ Universal EditUnitPage: Adapts based on towerId presence
-✅ Smart navigation: Breadcrumbs adapt to project type
-✅ Role-based access: Proper permissions throughout
-✅ Safety validations: Cannot delete sold units or towers with units
-✅ Confirmation dialogs: Must type exact name to confirm deletion
-
-ROUTE PROTECTION LEVELS:
-- View Access: viewAllProjects() function
-- Management Access: "MANAGEMENT" string  
-- Sales Access: "SALES" string
-- Finance Access: "FINANCE" string
-- Admin Access: "ADMIN" string
-
-CRITICAL ROUTE ORDER:
-1. /projects/:projectId/edit (Project editing)
-2. /projects/:projectId/towers/create (BEFORE tower detail)
-3. /projects/:projectId/towers/:towerId/edit (Tower editing)
-4. /projects/:projectId/units/create (Villa units)
-5. /projects/:projectId/units/:unitId/edit (Villa unit editing)
-6. /projects/:projectId/towers/:towerId/units/create (Tower units)
-7. /projects/:projectId/towers/:towerId/units/:unitId/edit (Tower unit editing)
-8. All specific routes BEFORE dynamic routes
-
-EDIT FUNCTIONALITY FEATURES:
-✅ Complete form validation with business logic
-✅ Confirmation dialogs with name verification
-✅ Impact warnings (sold units, towers with units)
-✅ Real-time calculations (capacity, price per sq ft)
-✅ Professional stepper forms for complex data
-✅ Accordion sections for organized editing
-✅ Success feedback with auto-redirect
-✅ Breadcrumb navigation throughout hierarchy
-✅ Loading states and error handling
-✅ Backend integration with all CRUD operations
-*/

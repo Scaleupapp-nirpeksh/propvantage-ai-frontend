@@ -1,10 +1,10 @@
-// File: src/pages/leads/CreateLeadPage.js
-// Description: Production-grade lead creation page with model-aligned data capture
-// Version: 1.1 - COMPLETE FIXED VERSION with proper Lead Model alignment
-// Location: src/pages/leads/CreateLeadPage.js
+// File: src/pages/leads/EditLeadPage.js
+// Description: Complete lead editing page with model-aligned data structure
+// Version: 1.0 - Production-grade lead editing with pre-population and validation
+// Location: src/pages/leads/EditLeadPage.js
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
   Grid,
@@ -24,20 +24,19 @@ import {
   Chip,
   FormControlLabel,
   Switch,
-  RadioGroup,
-  Radio,
   InputAdornment,
   Alert,
   Paper,
-  Divider,
   IconButton,
-  Tooltip,
   CircularProgress,
   Autocomplete,
-  Stack,
   Avatar,
   Breadcrumbs,
   Link,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
   useTheme,
   useMediaQuery,
 } from '@mui/material';
@@ -50,19 +49,17 @@ import {
   LocationOn,
   AttachMoney,
   Schedule,
-  Star,
   Save,
-  Send,
   CheckCircle,
-  Info,
-  Warning,
   NavigateNext,
   Home,
   Assignment,
   ContactPhone,
   PriorityHigh,
   Source,
-  Psychology,
+  Delete,
+  Warning,
+  Edit,
 } from '@mui/icons-material';
 import { useSnackbar } from 'notistack';
 
@@ -70,69 +67,31 @@ import { useAuth } from '../../context/AuthContext';
 import { leadAPI, projectAPI } from '../../services/api';
 
 // =============================================================================
-// CONSTANTS - ALIGNED WITH LEAD MODEL
+// CONSTANTS - SAME AS CREATE PAGE
 // =============================================================================
 
 const LEAD_SOURCES = [
-  'Website',
-  'Property Portal', 
-  'Referral',
-  'Walk-in',
-  'Social Media',
-  'Advertisement',
-  'Cold Call',
-  'Other'
+  'Website', 'Property Portal', 'Referral', 'Walk-in', 'Social Media',
+  'Advertisement', 'Cold Call', 'Other'
 ];
 
-const LEAD_PRIORITIES = [
-  'Critical',
-  'High', 
-  'Medium',
-  'Low',
-  'Very Low'
-];
+const LEAD_PRIORITIES = ['Critical', 'High', 'Medium', 'Low', 'Very Low'];
 
 const LEAD_STATUSES = [
-  'New',
-  'Contacted',
-  'Qualified',
-  'Site Visit Scheduled',
-  'Site Visit Completed',
-  'Negotiating',
-  'Booked',
-  'Lost',
-  'Unqualified'
+  'New', 'Contacted', 'Qualified', 'Site Visit Scheduled', 'Site Visit Completed',
+  'Negotiating', 'Booked', 'Lost', 'Unqualified'
 ];
 
 const PROPERTY_TYPES = [
-  '1 BHK',
-  '2 BHK', 
-  '3 BHK',
-  '4 BHK',
-  '5+ BHK',
-  'Studio',
-  'Penthouse',
-  'Villa',
-  'Plot',
-  'Commercial',
-  'Office Space',
-  'Retail',
-  'Warehouse'
+  '1 BHK', '2 BHK', '3 BHK', '4 BHK', '5+ BHK', 'Studio', 'Penthouse',
+  'Villa', 'Plot', 'Commercial', 'Office Space', 'Retail', 'Warehouse'
 ];
 
 const BUDGET_RANGES = [
-  'Under ₹25L',
-  '₹25L - ₹50L',
-  '₹50L - ₹75L', 
-  '₹75L - ₹1Cr',
-  '₹1Cr - ₹1.5Cr',
-  '₹1.5Cr - ₹2Cr',
-  '₹2Cr - ₹3Cr',
-  '₹3Cr - ₹5Cr',
-  'Above ₹5Cr'
+  'Under ₹25L', '₹25L - ₹50L', '₹50L - ₹75L', '₹75L - ₹1Cr',
+  '₹1Cr - ₹1.5Cr', '₹1.5Cr - ₹2Cr', '₹2Cr - ₹3Cr', '₹3Cr - ₹5Cr', 'Above ₹5Cr'
 ];
 
-// Timeline options matching model enum exactly
 const TIMELINE_OPTIONS = [
   { value: 'immediate', label: 'Immediate (Within 1 month)' },
   { value: '1-3_months', label: '1-3 Months' },
@@ -141,7 +100,6 @@ const TIMELINE_OPTIONS = [
   { value: '12+_months', label: 'More than 12 Months' }
 ];
 
-// Floor preferences matching model
 const FLOOR_PREFERENCES = [
   { value: 'any', label: 'Any Floor' },
   { value: 'low', label: 'Lower Floors (1-5)' },
@@ -149,20 +107,17 @@ const FLOOR_PREFERENCES = [
   { value: 'high', label: 'Higher Floors (15+)' }
 ];
 
-// Facing directions matching model
 const FACING_DIRECTIONS = [
   'Any', 'North', 'South', 'East', 'West', 
   'North-East', 'North-West', 'South-East', 'South-West'
 ];
 
-// Common amenities
 const COMMON_AMENITIES = [
   'Swimming Pool', 'Gymnasium', 'Clubhouse', 'Children\'s Play Area',
   'Landscaped Gardens', 'Security', 'Power Backup', 'Elevator',
   'Parking', 'Intercom', 'Maintenance', 'Water Supply'
 ];
 
-// Budget source options matching model
 const BUDGET_SOURCES = [
   { value: 'self_reported', label: 'Self Reported' },
   { value: 'pre_approved', label: 'Pre-approved by Bank' },
@@ -170,35 +125,17 @@ const BUDGET_SOURCES = [
   { value: 'verified', label: 'Verified by Documents' }
 ];
 
-// Form steps configuration
 const STEPS = [
-  {
-    label: 'Contact Information',
-    description: 'Basic contact details and source',
-    icon: <Person />,
-  },
-  {
-    label: 'Requirements',
-    description: 'Property preferences and budget',
-    icon: <Home />,
-  },
-  {
-    label: 'Lead Details',
-    description: 'Priority, project assignment, and notes',
-    icon: <Assignment />,
-  },
-  {
-    label: 'Follow-up & Confirmation',
-    description: 'Schedule and finalize lead creation',
-    icon: <Schedule />,
-  },
+  { label: 'Contact Information', description: 'Basic contact details and source', icon: <Person /> },
+  { label: 'Requirements', description: 'Property preferences and budget', icon: <Home /> },
+  { label: 'Lead Details', description: 'Priority, project assignment, and notes', icon: <Assignment /> },
+  { label: 'Follow-up & Save', description: 'Update follow-up and save changes', icon: <Schedule /> },
 ];
 
 // =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
 
-// Extract budget numbers from range string
 const extractBudgetNumbers = (range) => {
   const ranges = {
     'Under ₹25L': { min: 0, max: 2500000 },
@@ -211,178 +148,126 @@ const extractBudgetNumbers = (range) => {
     '₹3Cr - ₹5Cr': { min: 30000000, max: 50000000 },
     'Above ₹5Cr': { min: 50000000, max: 100000000 }
   };
-  
   return ranges[range] || { min: '', max: '' };
 };
 
-// Determine qualification status based on form data
-const determineQualificationStatus = (data) => {
-  if (data.budget.min && data.requirements.timeline && data.requirements.unitType) {
-    return 'Qualified';
-  } else if (data.budget.budgetSource !== 'self_reported') {
-    return 'In Progress';
-  }
-  return 'Not Qualified';
+const getBudgetRangeFromNumbers = (min, max) => {
+  if (!min && !max) return '';
+  
+  const minNum = parseInt(min) || 0;
+  const maxNum = parseInt(max) || 0;
+  
+  if (maxNum <= 2500000) return 'Under ₹25L';
+  if (minNum >= 2500000 && maxNum <= 5000000) return '₹25L - ₹50L';
+  if (minNum >= 5000000 && maxNum <= 7500000) return '₹50L - ₹75L';
+  if (minNum >= 7500000 && maxNum <= 10000000) return '₹75L - ₹1Cr';
+  if (minNum >= 10000000 && maxNum <= 15000000) return '₹1Cr - ₹1.5Cr';
+  if (minNum >= 15000000 && maxNum <= 20000000) return '₹1.5Cr - ₹2Cr';
+  if (minNum >= 20000000 && maxNum <= 30000000) return '₹2Cr - ₹3Cr';
+  if (minNum >= 30000000 && maxNum <= 50000000) return '₹3Cr - ₹5Cr';
+  if (minNum >= 50000000) return 'Above ₹5Cr';
+  
+  return 'Custom Range';
 };
 
-// Validation functions
 const validateContactInfo = (data) => {
   const errors = {};
-
-  if (!data.firstName?.trim()) {
-    errors.firstName = 'First name is required';
-  }
-
-  if (!data.lastName?.trim()) {
-    errors.lastName = 'Last name is required';
-  }
-
-  if (!data.phone?.trim()) {
-    errors.phone = 'Phone number is required';
-  } else if (!/^[+]?[\d\s\-\(\)]{10,}$/.test(data.phone.trim())) {
-    errors.phone = 'Please enter a valid phone number';
-  }
-
+  if (!data.firstName?.trim()) errors.firstName = 'First name is required';
+  if (!data.lastName?.trim()) errors.lastName = 'Last name is required';
+  if (!data.phone?.trim()) errors.phone = 'Phone number is required';
   if (data.email && !/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(data.email)) {
     errors.email = 'Please enter a valid email address';
   }
-
-  if (!data.source) {
-    errors.source = 'Lead source is required';
-  }
-
-  return {
-    isValid: Object.keys(errors).length === 0,
-    errors,
-  };
+  if (!data.source) errors.source = 'Lead source is required';
+  return { isValid: Object.keys(errors).length === 0, errors };
 };
 
 const validateRequirements = (data) => {
   const errors = {};
-
   if (!data.interestedPropertyTypes?.length) {
     errors.interestedPropertyTypes = 'Please select at least one property type';
   }
-
-  if (!data.budgetRange) {
-    errors.budgetRange = 'Budget range is required';
-  }
-
-  return {
-    isValid: Object.keys(errors).length === 0,
-    errors,
-  };
+  return { isValid: Object.keys(errors).length === 0, errors };
 };
 
 const validateLeadDetails = (data) => {
   const errors = {};
-
-  if (!data.priority) {
-    errors.priority = 'Priority is required';
-  }
-
-  if (!data.status) {
-    errors.status = 'Initial status is required';
-  }
-
-  if (!data.project) {
-    errors.project = 'Primary project interest is required';
-  }
-
-  return {
-    isValid: Object.keys(errors).length === 0,
-    errors,
-  };
+  if (!data.priority) errors.priority = 'Priority is required';
+  if (!data.status) errors.status = 'Status is required';
+  if (!data.project) errors.project = 'Primary project interest is required';
+  return { isValid: Object.keys(errors).length === 0, errors };
 };
 
 // =============================================================================
 // MAIN COMPONENT
 // =============================================================================
 
-const CreateLeadPage = () => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+const EditLeadPage = () => {
+  const { leadId } = useParams();
   const navigate = useNavigate();
   const { user, canAccess } = useAuth();
   const { enqueueSnackbar } = useSnackbar();
+  const theme = useTheme();
 
   // Component state
   const [activeStep, setActiveStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [errors, setErrors] = useState({});
   const [projects, setProjects] = useState([]);
   const [salesTeam, setSalesTeam] = useState([]);
-  const [loadingData, setLoadingData] = useState(true);
+  const [originalLead, setOriginalLead] = useState(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-  // Form data - ALIGNED WITH LEAD MODEL
+  // Form data - initialized empty, will be populated from API
   const [formData, setFormData] = useState({
-    // Contact Information
-    firstName: '',
-    lastName: '',
-    phone: '',
-    email: '',
-    source: '',
-    sourceDetails: '',
-    
-    // Budget Structure - matching model exactly
-    budgetRange: '', // For display purposes
-    budget: {
-      min: '',
-      max: '',
-      budgetSource: 'self_reported',
-      currency: 'INR'
-    },
-    
-    // Requirements Structure - matching model exactly
+    firstName: '', lastName: '', phone: '', email: '', source: '', sourceDetails: '',
+    budgetRange: '',
+    budget: { min: '', max: '', budgetSource: 'self_reported', currency: 'INR' },
     requirements: {
-      timeline: '', // enum: ['immediate', '1-3_months', '3-6_months', '6-12_months', '12+_months']
-      unitType: '', // Primary unit type they're interested in
-      floor: {
-        preference: 'any', // enum: ['low', 'medium', 'high', 'any']
-        specific: '' // specific floor number if any
-      },
-      facing: 'Any', // enum values from model
-      amenities: [], // array of preferred amenities
-      specialRequirements: '' // any special requirements
+      timeline: '', unitType: '',
+      floor: { preference: 'any', specific: '' },
+      facing: 'Any', amenities: [], specialRequirements: ''
     },
-    
-    // Additional fields for better capture
-    interestedPropertyTypes: [], // For UI purposes - will map to unitType
-    preferredLocation: '',
-    interestedProjects: [],
-    
-    // Lead Details
-    priority: 'Medium',
-    status: 'New',
-    assignedTo: user?.id || '',
-    project: '', // Required by backend
-    notes: '',
-    
-    // Follow-up with correct enum values
-    scheduleFollowUp: false,
-    followUpDate: null,
-    followUpType: 'call', // lowercase enum value
-    followUpNotes: '',
+    interestedPropertyTypes: [], preferredLocation: '', interestedProjects: [],
+    priority: 'Medium', status: 'New', assignedTo: '', project: '', notes: '',
+    scheduleFollowUp: false, followUpDate: null, followUpType: 'call', followUpNotes: '',
   });
 
-  // Load initial data
+  // Load initial data and lead details
   useEffect(() => {
     loadInitialData();
-  }, []);
+  }, [leadId]);
 
   const loadInitialData = async () => {
     try {
-      setLoadingData(true);
+      setInitialLoading(true);
       
-      const [projectsResponse] = await Promise.allSettled([
-        projectAPI.getProjects()
+      // Load projects and lead data in parallel
+      const [projectsResponse, leadResponse] = await Promise.allSettled([
+        projectAPI.getProjects(),
+        leadAPI.getLead(leadId)
       ]);
 
+      // Handle projects
       if (projectsResponse.status === 'fulfilled') {
         const projectsData = projectsResponse.value.data;
         setProjects(projectsData.data || projectsData || []);
       }
 
+      // Handle lead data
+      if (leadResponse.status === 'fulfilled') {
+        const leadData = leadResponse.value.data;
+        const lead = leadData.data || leadData;
+        
+        console.log('📥 Loaded lead for editing:', lead);
+        setOriginalLead(lead);
+        populateFormFromLead(lead);
+      } else {
+        throw new Error('Failed to load lead data');
+      }
+
+      // Set sales team (placeholder)
       setSalesTeam([
         {
           _id: user?.id || user?._id,
@@ -393,64 +278,109 @@ const CreateLeadPage = () => {
       ]);
 
     } catch (error) {
-      console.error('Error loading initial data:', error);
-      enqueueSnackbar('Failed to load form data. Please refresh the page.', {
-        variant: 'error',
-      });
+      console.error('❌ Error loading initial data:', error);
+      enqueueSnackbar('Failed to load lead data. Please try again.', { variant: 'error' });
+      navigate('/leads');
     } finally {
-      setLoadingData(false);
+      setInitialLoading(false);
     }
+  };
+
+  // Populate form from loaded lead data
+  const populateFormFromLead = (lead) => {
+    console.log('🔄 Populating form with lead data:', lead);
+    
+    // Extract interested property types from requirements or other fields
+    const propertyTypes = lead.requirements?.propertyTypes || 
+                         (lead.requirements?.unitType ? [lead.requirements.unitType] : []);
+    
+    // Determine budget range from min/max values
+    const budgetRange = getBudgetRangeFromNumbers(
+      lead.budget?.min, 
+      lead.budget?.max
+    );
+
+    setFormData({
+      // Contact Information
+      firstName: lead.firstName || '',
+      lastName: lead.lastName || '',
+      phone: lead.phone || '',
+      email: lead.email || '',
+      source: lead.source || '',
+      sourceDetails: lead.sourceDetails || '',
+      
+      // Budget
+      budgetRange: budgetRange,
+      budget: {
+        min: lead.budget?.min || '',
+        max: lead.budget?.max || '',
+        budgetSource: lead.budget?.budgetSource || 'self_reported',
+        currency: lead.budget?.currency || 'INR'
+      },
+      
+      // Requirements
+      requirements: {
+        timeline: lead.requirements?.timeline || '',
+        unitType: lead.requirements?.unitType || '',
+        floor: {
+          preference: lead.requirements?.floor?.preference || 'any',
+          specific: lead.requirements?.floor?.specific || ''
+        },
+        facing: lead.requirements?.facing || 'Any',
+        amenities: lead.requirements?.amenities || [],
+        specialRequirements: lead.requirements?.specialRequirements || ''
+      },
+      
+      // Additional fields
+      interestedPropertyTypes: propertyTypes,
+      preferredLocation: lead.preferredLocation || '',
+      interestedProjects: lead.interestedProjects || [],
+      
+      // Lead Details
+      priority: lead.priority || 'Medium',
+      status: lead.status || 'New',
+      assignedTo: lead.assignedTo?._id || lead.assignedTo || '',
+      project: lead.project?._id || lead.project || '',
+      notes: lead.notes || '',
+      
+      // Follow-up
+      scheduleFollowUp: !!lead.followUpSchedule?.nextFollowUpDate,
+      followUpDate: lead.followUpSchedule?.nextFollowUpDate ? 
+        new Date(lead.followUpSchedule.nextFollowUpDate) : null,
+      followUpType: lead.followUpSchedule?.followUpType || 'call',
+      followUpNotes: lead.followUpSchedule?.notes || '',
+    });
   };
 
   // Handle input changes
   const handleInputChange = (field) => (event) => {
     let value;
-    
     if (event?.target) {
       value = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
     } else {
       value = event;
     }
 
-    setFormData(prev => ({
-      ...prev,
-      [field]: value,
-    }));
+    setFormData(prev => ({ ...prev, [field]: value }));
     
     if (errors[field]) {
-      setErrors(prev => ({
-        ...prev,
-        [field]: '',
-      }));
+      setErrors(prev => ({ ...prev, [field]: '' }));
     }
   };
 
-  // Handle array field changes
   const handleArrayFieldChange = (field, values) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: values,
-    }));
-    
+    setFormData(prev => ({ ...prev, [field]: values }));
     if (errors[field]) {
-      setErrors(prev => ({
-        ...prev,
-        [field]: '',
-      }));
+      setErrors(prev => ({ ...prev, [field]: '' }));
     }
   };
 
   // Navigation handlers
   const handleNext = () => {
     let validation;
-    
-    if (activeStep === 0) {
-      validation = validateContactInfo(formData);
-    } else if (activeStep === 1) {
-      validation = validateRequirements(formData);
-    } else if (activeStep === 2) {
-      validation = validateLeadDetails(formData);
-    }
+    if (activeStep === 0) validation = validateContactInfo(formData);
+    else if (activeStep === 1) validation = validateRequirements(formData);
+    else if (activeStep === 2) validation = validateLeadDetails(formData);
 
     if (validation && !validation.isValid) {
       setErrors(validation.errors);
@@ -466,21 +396,18 @@ const CreateLeadPage = () => {
     setErrors({});
   };
 
-  // Form submission - ALIGNED WITH LEAD MODEL
-  const handleSubmit = async () => {
+  // Update lead
+  const handleUpdate = async () => {
     setIsLoading(true);
     setErrors({});
 
     try {
-      // Prepare lead data matching model structure exactly
-      const leadData = {
-        // Required fields
-        project: formData.project,
-        firstName: formData.firstName.trim(),
-        phone: formData.phone.trim(),
-        
+      // Prepare updated lead data
+      const updateData = {
         // Contact Information
+        firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
+        phone: formData.phone.trim(),
         email: formData.email.trim() || undefined,
         source: formData.source,
         sourceDetails: formData.sourceDetails.trim() || undefined,
@@ -489,19 +416,19 @@ const CreateLeadPage = () => {
         priority: formData.priority,
         status: formData.status,
         assignedTo: formData.assignedTo || undefined,
+        project: formData.project,
         
-        // Budget structure matching model exactly
+        // Budget structure
         budget: {
           min: formData.budget.min ? parseInt(formData.budget.min) : undefined,
           max: formData.budget.max ? parseInt(formData.budget.max) : undefined,
           budgetSource: formData.budget.budgetSource,
           currency: formData.budget.currency,
-          isValidated: false,
           lastUpdated: new Date(),
           updatedBy: user?.id || user?._id || undefined
         },
         
-        // Requirements structure matching model exactly
+        // Requirements structure
         requirements: {
           timeline: formData.requirements.timeline || undefined,
           unitType: formData.requirements.unitType || undefined,
@@ -515,70 +442,56 @@ const CreateLeadPage = () => {
           specialRequirements: formData.requirements.specialRequirements.trim() || undefined
         },
         
-        // Additional notes
+        // Notes
         notes: formData.notes.trim() || undefined,
         
-        // Follow-up with correct enum values
+        // Follow-up schedule
         followUpSchedule: formData.scheduleFollowUp ? {
           nextFollowUpDate: formData.followUpDate,
           followUpType: formData.followUpType,
           notes: formData.followUpNotes.trim() || undefined,
           isOverdue: false,
-          overdueBy: 0,
-          remindersSent: 0
+          overdueBy: 0
         } : undefined,
-        
-        // Set qualification status based on data completeness
-        qualificationStatus: determineQualificationStatus(formData),
-        
-        // Initialize engagement metrics
-        engagementMetrics: {
-          totalInteractions: 0,
-          responseRate: 0,
-          preferredContactMethod: 'phone'
-        }
       };
 
-      console.log('🚀 Creating lead with model-aligned data:', leadData);
+      console.log('🔄 Updating lead with data:', updateData);
 
-      const response = await leadAPI.createLead(leadData);
+      const response = await leadAPI.updateLead(leadId, updateData);
       
-      console.log('✅ Lead created successfully:', response.data);
+      console.log('✅ Lead updated successfully:', response.data);
 
-      enqueueSnackbar('Lead created successfully!', {
-        variant: 'success',
-        autoHideDuration: 5000,
-      });
-
-      const createdLead = response.data.data || response.data;
-      navigate(`/leads/${createdLead._id || createdLead.id}`);
+      enqueueSnackbar('Lead updated successfully!', { variant: 'success' });
+      navigate(`/leads/${leadId}`);
 
     } catch (error) {
-      console.error('❌ Error creating lead:', error);
+      console.error('❌ Error updating lead:', error);
       
-      let errorMessage = 'Failed to create lead. Please try again.';
-      
+      let errorMessage = 'Failed to update lead. Please try again.';
       if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       }
       
-      if (error.response?.data?.errors) {
-        setErrors(error.response.data.errors);
-      }
-      
-      enqueueSnackbar(errorMessage, {
-        variant: 'error',
-        autoHideDuration: 6000,
-      });
+      enqueueSnackbar(errorMessage, { variant: 'error' });
     } finally {
       setIsLoading(false);
     }
   };
 
-  // =============================================================================
-  // RENDER FUNCTIONS
-  // =============================================================================
+  // Delete lead
+  const handleDelete = async () => {
+    try {
+      await leadAPI.deleteLead(leadId);
+      enqueueSnackbar('Lead deleted successfully!', { variant: 'success' });
+      navigate('/leads');
+    } catch (error) {
+      console.error('❌ Error deleting lead:', error);
+      enqueueSnackbar('Failed to delete lead. Please try again.', { variant: 'error' });
+    }
+    setDeleteDialogOpen(false);
+  };
 
+  // Render functions (same as CreateLeadPage but with pre-populated data)
   const renderContactInformation = () => (
     <Grid container spacing={3}>
       <Grid item xs={12}>
@@ -706,7 +619,7 @@ const CreateLeadPage = () => {
         </Typography>
       </Grid>
 
-      {/* Property Types Selection */}
+      {/* Property Types */}
       <Grid item xs={12}>
         <FormControl fullWidth error={!!errors.interestedPropertyTypes}>
           <Autocomplete
@@ -715,26 +628,17 @@ const CreateLeadPage = () => {
             value={formData.interestedPropertyTypes}
             onChange={(event, newValue) => {
               handleArrayFieldChange('interestedPropertyTypes', newValue);
-              // Auto-set primary unitType from first selection
               if (newValue.length > 0 && !formData.requirements.unitType) {
                 setFormData(prev => ({
                   ...prev,
-                  requirements: {
-                    ...prev.requirements,
-                    unitType: newValue[0]
-                  }
+                  requirements: { ...prev.requirements, unitType: newValue[0] }
                 }));
               }
             }}
             disabled={isLoading}
             renderTags={(value, getTagProps) =>
               value.map((option, index) => (
-                <Chip
-                  variant="outlined"
-                  label={option}
-                  {...getTagProps({ index })}
-                  key={option}
-                />
+                <Chip variant="outlined" label={option} {...getTagProps({ index })} key={option} />
               ))
             }
             renderInput={(params) => (
@@ -750,7 +654,7 @@ const CreateLeadPage = () => {
         </FormControl>
       </Grid>
 
-      {/* Primary Unit Type Selection */}
+      {/* Primary Unit Type */}
       <Grid item xs={12} sm={6}>
         <FormControl fullWidth>
           <InputLabel>Primary Unit Type</InputLabel>
@@ -758,91 +662,60 @@ const CreateLeadPage = () => {
             value={formData.requirements.unitType}
             onChange={(e) => setFormData(prev => ({
               ...prev,
-              requirements: {
-                ...prev.requirements,
-                unitType: e.target.value
-              }
+              requirements: { ...prev.requirements, unitType: e.target.value }
             }))}
             label="Primary Unit Type"
             disabled={isLoading}
           >
             {formData.interestedPropertyTypes.map(type => (
-              <MenuItem key={type} value={type}>
-                {type}
-              </MenuItem>
+              <MenuItem key={type} value={type}>{type}</MenuItem>
             ))}
           </Select>
-          <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, ml: 2 }}>
-            Select the main unit type they're most interested in
-          </Typography>
         </FormControl>
       </Grid>
 
-      {/* Timeline Selection with Model Enums */}
+      {/* Timeline */}
       <Grid item xs={12} sm={6}>
-        <FormControl fullWidth error={!!errors.timeline}>
+        <FormControl fullWidth>
           <InputLabel>Occupancy Timeline</InputLabel>
           <Select
             value={formData.requirements.timeline}
             onChange={(e) => setFormData(prev => ({
               ...prev,
-              requirements: {
-                ...prev.requirements,
-                timeline: e.target.value
-              }
+              requirements: { ...prev.requirements, timeline: e.target.value }
             }))}
             label="Occupancy Timeline"
             disabled={isLoading}
           >
             {TIMELINE_OPTIONS.map(option => (
-              <MenuItem key={option.value} value={option.value}>
-                {option.label}
-              </MenuItem>
+              <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>
             ))}
           </Select>
-          {errors.timeline && (
-            <Typography variant="caption" color="error" sx={{ ml: 2, mt: 0.5 }}>
-              {errors.timeline}
-            </Typography>
-          )}
         </FormControl>
       </Grid>
 
-      {/* Budget Range Selection */}
+      {/* Budget Range */}
       <Grid item xs={12} sm={6}>
-        <FormControl fullWidth error={!!errors.budgetRange}>
+        <FormControl fullWidth>
           <InputLabel>Budget Range</InputLabel>
           <Select
             value={formData.budgetRange}
             onChange={(e) => {
               const range = e.target.value;
               handleInputChange('budgetRange')(e);
-              
-              // Auto-extract min/max from range
               const budgetNumbers = extractBudgetNumbers(range);
               setFormData(prev => ({
                 ...prev,
-                budget: {
-                  ...prev.budget,
-                  min: budgetNumbers.min,
-                  max: budgetNumbers.max
-                }
+                budget: { ...prev.budget, min: budgetNumbers.min, max: budgetNumbers.max }
               }));
             }}
             label="Budget Range"
             disabled={isLoading}
           >
             {BUDGET_RANGES.map(range => (
-              <MenuItem key={range} value={range}>
-                {range}
-              </MenuItem>
+              <MenuItem key={range} value={range}>{range}</MenuItem>
             ))}
           </Select>
-          {errors.budgetRange && (
-            <Typography variant="caption" color="error" sx={{ ml: 2, mt: 0.5 }}>
-              {errors.budgetRange}
-            </Typography>
-          )}
         </FormControl>
       </Grid>
 
@@ -854,42 +727,31 @@ const CreateLeadPage = () => {
             value={formData.budget.budgetSource}
             onChange={(e) => setFormData(prev => ({
               ...prev,
-              budget: {
-                ...prev.budget,
-                budgetSource: e.target.value
-              }
+              budget: { ...prev.budget, budgetSource: e.target.value }
             }))}
             label="Budget Source"
             disabled={isLoading}
           >
             {BUDGET_SOURCES.map(source => (
-              <MenuItem key={source.value} value={source.value}>
-                {source.label}
-              </MenuItem>
+              <MenuItem key={source.value} value={source.value}>{source.label}</MenuItem>
             ))}
           </Select>
         </FormControl>
       </Grid>
 
-      {/* Specific Budget Min/Max */}
+      {/* Budget Min/Max */}
       <Grid item xs={12} sm={6}>
         <TextField
           fullWidth
           label="Minimum Budget"
-          placeholder="Enter minimum budget"
           value={formData.budget.min}
           onChange={(e) => setFormData(prev => ({
             ...prev,
-            budget: {
-              ...prev.budget,
-              min: e.target.value
-            }
+            budget: { ...prev.budget, min: e.target.value }
           }))}
           disabled={isLoading}
           type="number"
-          InputProps={{
-            startAdornment: <InputAdornment position="start">₹</InputAdornment>,
-          }}
+          InputProps={{ startAdornment: <InputAdornment position="start">₹</InputAdornment> }}
         />
       </Grid>
 
@@ -897,24 +759,18 @@ const CreateLeadPage = () => {
         <TextField
           fullWidth
           label="Maximum Budget"
-          placeholder="Enter maximum budget"
           value={formData.budget.max}
           onChange={(e) => setFormData(prev => ({
             ...prev,
-            budget: {
-              ...prev.budget,
-              max: e.target.value
-            }
+            budget: { ...prev.budget, max: e.target.value }
           }))}
           disabled={isLoading}
           type="number"
-          InputProps={{
-            startAdornment: <InputAdornment position="start">₹</InputAdornment>,
-          }}
+          InputProps={{ startAdornment: <InputAdornment position="start">₹</InputAdornment> }}
         />
       </Grid>
 
-      {/* Floor Preferences */}
+      {/* Floor Preference */}
       <Grid item xs={12} sm={6}>
         <FormControl fullWidth>
           <InputLabel>Floor Preference</InputLabel>
@@ -924,44 +780,34 @@ const CreateLeadPage = () => {
               ...prev,
               requirements: {
                 ...prev.requirements,
-                floor: {
-                  ...prev.requirements.floor,
-                  preference: e.target.value
-                }
+                floor: { ...prev.requirements.floor, preference: e.target.value }
               }
             }))}
             label="Floor Preference"
             disabled={isLoading}
           >
             {FLOOR_PREFERENCES.map(option => (
-              <MenuItem key={option.value} value={option.value}>
-                {option.label}
-              </MenuItem>
+              <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>
             ))}
           </Select>
         </FormControl>
       </Grid>
 
-      {/* Specific Floor Number */}
+      {/* Specific Floor */}
       <Grid item xs={12} sm={6}>
         <TextField
           fullWidth
           label="Specific Floor (Optional)"
-          placeholder="Enter specific floor number"
           value={formData.requirements.floor.specific}
           onChange={(e) => setFormData(prev => ({
             ...prev,
             requirements: {
               ...prev.requirements,
-              floor: {
-                ...prev.requirements.floor,
-                specific: e.target.value
-              }
+              floor: { ...prev.requirements.floor, specific: e.target.value }
             }
           }))}
           disabled={isLoading}
           type="number"
-          helperText="Leave empty if no specific floor preference"
         />
       </Grid>
 
@@ -973,18 +819,13 @@ const CreateLeadPage = () => {
             value={formData.requirements.facing}
             onChange={(e) => setFormData(prev => ({
               ...prev,
-              requirements: {
-                ...prev.requirements,
-                facing: e.target.value
-              }
+              requirements: { ...prev.requirements, facing: e.target.value }
             }))}
             label="Facing Direction"
             disabled={isLoading}
           >
             {FACING_DIRECTIONS.map(direction => (
-              <MenuItem key={direction} value={direction}>
-                {direction}
-              </MenuItem>
+              <MenuItem key={direction} value={direction}>{direction}</MenuItem>
             ))}
           </Select>
         </FormControl>
@@ -995,21 +836,13 @@ const CreateLeadPage = () => {
         <TextField
           fullWidth
           label="Preferred Location"
-          placeholder="Enter preferred location"
           value={formData.preferredLocation}
           onChange={handleInputChange('preferredLocation')}
           disabled={isLoading}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <LocationOn color="action" />
-              </InputAdornment>
-            ),
-          }}
         />
       </Grid>
 
-      {/* Preferred Amenities */}
+      {/* Amenities */}
       <Grid item xs={12}>
         <FormControl fullWidth>
           <Autocomplete
@@ -1018,21 +851,12 @@ const CreateLeadPage = () => {
             value={formData.requirements.amenities}
             onChange={(event, newValue) => setFormData(prev => ({
               ...prev,
-              requirements: {
-                ...prev.requirements,
-                amenities: newValue
-              }
+              requirements: { ...prev.requirements, amenities: newValue }
             }))}
             disabled={isLoading}
             renderTags={(value, getTagProps) =>
               value.map((option, index) => (
-                <Chip
-                  variant="outlined"
-                  label={option}
-                  {...getTagProps({ index })}
-                  key={option}
-                  size="small"
-                />
+                <Chip variant="outlined" label={option} {...getTagProps({ index })} key={option} size="small" />
               ))
             }
             renderInput={(params) => (
@@ -1040,7 +864,6 @@ const CreateLeadPage = () => {
                 {...params}
                 label="Preferred Amenities (Optional)"
                 placeholder="Select preferred amenities"
-                helperText="Select amenities that are important to the lead"
               />
             )}
           />
@@ -1052,52 +875,15 @@ const CreateLeadPage = () => {
         <TextField
           fullWidth
           label="Special Requirements"
-          placeholder="Any special requirements or preferences..."
           value={formData.requirements.specialRequirements}
           onChange={(e) => setFormData(prev => ({
             ...prev,
-            requirements: {
-              ...prev.requirements,
-              specialRequirements: e.target.value
-            }
+            requirements: { ...prev.requirements, specialRequirements: e.target.value }
           }))}
           disabled={isLoading}
           multiline
           rows={2}
-          helperText="e.g., Pet-friendly, Vastu compliant, Near Metro, etc."
         />
-      </Grid>
-
-      {/* Additional Interested Projects */}
-      <Grid item xs={12}>
-        <FormControl fullWidth>
-          <Autocomplete
-            multiple
-            options={projects}
-            value={formData.interestedProjects}
-            onChange={(event, newValue) => handleArrayFieldChange('interestedProjects', newValue)}
-            getOptionLabel={(option) => option.name || ''}
-            disabled={isLoading || loadingData}
-            renderTags={(value, getTagProps) =>
-              value.map((option, index) => (
-                <Chip
-                  variant="outlined"
-                  label={option.name}
-                  {...getTagProps({ index })}
-                  key={option._id}
-                />
-              ))
-            }
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Additional Interested Projects (Optional)"
-                placeholder="Select other projects they've shown interest in"
-                helperText="Besides the primary project, what other projects are they considering?"
-              />
-            )}
-          />
-        </FormControl>
       </Grid>
     </Grid>
   );
@@ -1108,11 +894,6 @@ const CreateLeadPage = () => {
         <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: 'primary.main' }}>
           Lead Management Details
         </Typography>
-        <Alert severity="info" sx={{ mb: 3 }}>
-          <Typography variant="body2">
-            Select the primary project this lead is most interested in. This is required for lead tracking and assignment.
-          </Typography>
-        </Alert>
       </Grid>
 
       <Grid item xs={12} sm={6}>
@@ -1125,39 +906,25 @@ const CreateLeadPage = () => {
             disabled={isLoading}
           >
             {LEAD_PRIORITIES.map(priority => (
-              <MenuItem key={priority} value={priority}>
-                {priority}
-              </MenuItem>
+              <MenuItem key={priority} value={priority}>{priority}</MenuItem>
             ))}
           </Select>
-          {errors.priority && (
-            <Typography variant="caption" color="error" sx={{ ml: 2, mt: 0.5 }}>
-              {errors.priority}
-            </Typography>
-          )}
         </FormControl>
       </Grid>
 
       <Grid item xs={12} sm={6}>
         <FormControl fullWidth error={!!errors.status}>
-          <InputLabel>Initial Status</InputLabel>
+          <InputLabel>Status</InputLabel>
           <Select
             value={formData.status}
             onChange={handleInputChange('status')}
-            label="Initial Status"
+            label="Status"
             disabled={isLoading}
           >
             {LEAD_STATUSES.map(status => (
-              <MenuItem key={status} value={status}>
-                {status}
-              </MenuItem>
+              <MenuItem key={status} value={status}>{status}</MenuItem>
             ))}
           </Select>
-          {errors.status && (
-            <Typography variant="caption" color="error" sx={{ ml: 2, mt: 0.5 }}>
-              {errors.status}
-            </Typography>
-          )}
         </FormControl>
       </Grid>
 
@@ -1168,67 +935,14 @@ const CreateLeadPage = () => {
             value={projects.find(project => project._id === formData.project) || null}
             onChange={(event, newValue) => handleInputChange('project')(newValue?._id || '')}
             getOptionLabel={(option) => option.name || ''}
-            disabled={isLoading || loadingData}
+            disabled={isLoading}
             renderInput={(params) => (
               <TextField
                 {...params}
                 label="🏢 Primary Project Interest"
-                placeholder="Select the main project they're interested in"
                 error={!!errors.project}
-                helperText={errors.project || 'Select the primary project this lead is interested in (required)'}
+                helperText={errors.project || 'Primary project this lead is interested in'}
               />
-            )}
-            renderOption={(props, option) => (
-              <Box component="li" {...props}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
-                  <Avatar sx={{ bgcolor: 'primary.main' }}>
-                    <Business />
-                  </Avatar>
-                  <Box sx={{ flex: 1 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                      {option.name}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {option.location?.city}, {option.location?.state}
-                    </Typography>
-                  </Box>
-                </Box>
-              </Box>
-            )}
-          />
-        </FormControl>
-      </Grid>
-
-      <Grid item xs={12}>
-        <FormControl fullWidth>
-          <Autocomplete
-            options={salesTeam}
-            value={salesTeam.find(member => member._id === formData.assignedTo) || null}
-            onChange={(event, newValue) => handleInputChange('assignedTo')(newValue?._id || '')}
-            getOptionLabel={(option) => `${option.firstName} ${option.lastName} (${option.role})`}
-            disabled={isLoading || loadingData}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Assign To"
-                placeholder="Select sales team member (optional)"
-                helperText="Assign this lead to a sales team member"
-              />
-            )}
-            renderOption={(props, option) => (
-              <Box component="li" {...props}>
-                <Avatar sx={{ width: 32, height: 32, mr: 2 }}>
-                  {option.firstName?.charAt(0)}{option.lastName?.charAt(0)}
-                </Avatar>
-                <Box>
-                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                    {option.firstName} {option.lastName}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {option.role}
-                  </Typography>
-                </Box>
-              </Box>
             )}
           />
         </FormControl>
@@ -1238,13 +952,11 @@ const CreateLeadPage = () => {
         <TextField
           fullWidth
           label="Notes"
-          placeholder="Add any additional notes about this lead..."
           value={formData.notes}
           onChange={handleInputChange('notes')}
           disabled={isLoading}
           multiline
           rows={4}
-          helperText="Include any relevant information about the lead's preferences, conversation details, etc."
         />
       </Grid>
     </Grid>
@@ -1254,7 +966,7 @@ const CreateLeadPage = () => {
     <Grid container spacing={3}>
       <Grid item xs={12}>
         <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: 'primary.main' }}>
-          Follow-up & Confirmation
+          Follow-up & Save Changes
         </Typography>
       </Grid>
 
@@ -1267,7 +979,7 @@ const CreateLeadPage = () => {
               disabled={isLoading}
             />
           }
-          label="Schedule immediate follow-up"
+          label="Update follow-up schedule"
         />
       </Grid>
 
@@ -1284,10 +996,7 @@ const CreateLeadPage = () => {
               }
               onChange={(e) => handleInputChange('followUpDate')(e.target.value ? new Date(e.target.value) : null)}
               disabled={isLoading}
-              helperText="When should the follow-up be done?"
-              InputLabelProps={{
-                shrink: true,
-              }}
+              InputLabelProps={{ shrink: true }}
             />
           </Grid>
 
@@ -1313,7 +1022,6 @@ const CreateLeadPage = () => {
             <TextField
               fullWidth
               label="Follow-up Notes"
-              placeholder="Add notes for the follow-up..."
               value={formData.followUpNotes}
               onChange={handleInputChange('followUpNotes')}
               disabled={isLoading}
@@ -1324,69 +1032,36 @@ const CreateLeadPage = () => {
         </>
       )}
 
+      {/* Summary */}
       <Grid item xs={12}>
-        <Paper sx={{ p: 3, bgcolor: 'primary.50', border: '1px solid', borderColor: 'primary.200' }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: 'primary.main' }}>
-            <CheckCircle sx={{ mr: 1, verticalAlign: 'middle' }} />
-            Lead Summary
+        <Paper sx={{ p: 3, bgcolor: 'warning.50', border: '1px solid', borderColor: 'warning.200' }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: 'warning.main' }}>
+            <Edit sx={{ mr: 1, verticalAlign: 'middle' }} />
+            Changes Summary
           </Typography>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
-              <Typography variant="body2" color="text.secondary">Contact:</Typography>
-              <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                {formData.firstName} {formData.lastName}
-              </Typography>
-              <Typography variant="body2">
-                {formData.phone} {formData.email && `• ${formData.email}`}
-              </Typography>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Typography variant="body2" color="text.secondary">Requirements:</Typography>
-              <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                {formData.budgetRange}
-              </Typography>
-              <Typography variant="body2">
-                {formData.interestedPropertyTypes.join(', ')}
-              </Typography>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Typography variant="body2" color="text.secondary">Primary Project:</Typography>
-              <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                {projects.find(p => p._id === formData.project)?.name || 'Not selected'}
-              </Typography>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Typography variant="body2" color="text.secondary">Source & Priority:</Typography>
-              <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                {formData.source} • {formData.priority} Priority
-              </Typography>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Typography variant="body2" color="text.secondary">Assigned To:</Typography>
-              <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                {salesTeam.find(member => member._id === formData.assignedTo)?.firstName || 'Unassigned'} {salesTeam.find(member => member._id === formData.assignedTo)?.lastName || ''}
-              </Typography>
-            </Grid>
-          </Grid>
+          <Typography variant="body2">
+            You are about to update lead: <strong>{formData.firstName} {formData.lastName}</strong>
+          </Typography>
+          <Typography variant="body2" sx={{ mt: 1 }}>
+            Status: <strong>{formData.status}</strong> • Priority: <strong>{formData.priority}</strong>
+          </Typography>
         </Paper>
       </Grid>
     </Grid>
   );
 
-  if (loadingData) {
+  if (initialLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
         <CircularProgress size={50} />
-        <Typography variant="h6" sx={{ ml: 2 }}>
-          Loading form data...
-        </Typography>
+        <Typography variant="h6" sx={{ ml: 2 }}>Loading lead data...</Typography>
       </Box>
     );
   }
 
   return (
     <Box sx={{ p: 3 }}>
-      {/* Breadcrumb Navigation */}
+      {/* Breadcrumb */}
       <Breadcrumbs separator={<NavigateNext fontSize="small" />} sx={{ mb: 3 }}>
         <Link
           underline="hover"
@@ -1397,34 +1072,54 @@ const CreateLeadPage = () => {
           <Person fontSize="small" />
           Leads
         </Link>
-        <Typography color="text.primary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+        <Link
+          underline="hover"
+          color="inherit"
+          sx={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 0.5 }}
+          onClick={() => navigate(`/leads/${leadId}`)}
+        >
           <ContactPhone fontSize="small" />
-          Create New Lead
+          {originalLead?.firstName} {originalLead?.lastName}
+        </Link>
+        <Typography color="text.primary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Edit fontSize="small" />
+          Edit Lead
         </Typography>
       </Breadcrumbs>
 
       {/* Header */}
       <Box sx={{ mb: 4 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-          <IconButton
-            onClick={() => navigate('/leads')}
-            sx={{ bgcolor: 'action.hover' }}
-          >
-            <ArrowBack />
-          </IconButton>
-          <Box>
-            <Typography variant="h4" sx={{ fontWeight: 700 }}>
-              Create New Lead
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              Capture and manage new leads with comprehensive details
-            </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <IconButton onClick={() => navigate(`/leads/${leadId}`)} sx={{ bgcolor: 'action.hover' }}>
+              <ArrowBack />
+            </IconButton>
+            <Box>
+              <Typography variant="h4" sx={{ fontWeight: 700 }}>
+                Edit Lead: {originalLead?.firstName} {originalLead?.lastName}
+              </Typography>
+              <Typography variant="body1" color="text.secondary">
+                Update lead information and requirements
+              </Typography>
+            </Box>
           </Box>
+
+          {/* Delete Button */}
+          {canAccess.leadManagement() && (
+            <Button
+              variant="outlined"
+              color="error"
+              startIcon={<Delete />}
+              onClick={() => setDeleteDialogOpen(true)}
+            >
+              Delete Lead
+            </Button>
+          )}
         </Box>
       </Box>
 
       <Grid container spacing={3}>
-        {/* Progress Stepper */}
+        {/* Stepper */}
         <Grid item xs={12} md={3}>
           <Card sx={{ position: 'sticky', top: 24 }}>
             <CardContent>
@@ -1432,11 +1127,9 @@ const CreateLeadPage = () => {
                 {STEPS.map((step, index) => (
                   <Step key={step.label}>
                     <StepLabel
-                      optional={
-                        index === activeStep ? (
-                          <Typography variant="caption">{step.description}</Typography>
-                        ) : null
-                      }
+                      optional={index === activeStep ? (
+                        <Typography variant="caption">{step.description}</Typography>
+                      ) : null}
                     >
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         {step.icon}
@@ -1461,7 +1154,6 @@ const CreateLeadPage = () => {
         <Grid item xs={12} md={9}>
           <Card>
             <CardContent sx={{ p: 4 }}>
-              {/* Error Alert */}
               {Object.keys(errors).length > 0 && (
                 <Alert severity="error" sx={{ mb: 3 }}>
                   Please fix the errors below before proceeding.
@@ -1497,12 +1189,12 @@ const CreateLeadPage = () => {
                   ) : (
                     <Button
                       variant="contained"
-                      onClick={handleSubmit}
+                      onClick={handleUpdate}
                       disabled={isLoading}
                       startIcon={isLoading ? <CircularProgress size={20} /> : <Save />}
                       size="large"
                     >
-                      {isLoading ? 'Creating Lead...' : 'Create Lead'}
+                      {isLoading ? 'Updating Lead...' : 'Update Lead'}
                     </Button>
                   )}
                 </Box>
@@ -1511,8 +1203,30 @@ const CreateLeadPage = () => {
           </Card>
         </Grid>
       </Grid>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Warning color="error" />
+          Delete Lead
+        </DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete this lead? This action cannot be undone.
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            Lead: <strong>{originalLead?.firstName} {originalLead?.lastName}</strong>
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleDelete} color="error" variant="contained">
+            Delete Lead
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
 
-export default CreateLeadPage;
+export default EditLeadPage;
