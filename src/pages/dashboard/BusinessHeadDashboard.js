@@ -596,8 +596,7 @@ const BusinessHeadDashboard = () => {
             title="Total Revenue Target"
             value={formatCurrency(dashboardData.kpis.totalRevenue)}
             subtitle="Across all projects"
-            trend="+12.5% from last quarter"
-            trendDirection="up"
+           
             icon={AttachMoney}
             color="success"
             isLoading={loading.kpis}
@@ -609,8 +608,7 @@ const BusinessHeadDashboard = () => {
             title="Active Projects"
             value={dashboardData.kpis.totalProjects}
             subtitle="In development pipeline"
-            trend="+2 new this quarter"
-            trendDirection="up"
+            
             icon={Business}
             color="primary"
             isLoading={loading.kpis}
@@ -622,8 +620,7 @@ const BusinessHeadDashboard = () => {
             title="Total Units"
             value={formatNumber(dashboardData.kpis.totalUnits)}
             subtitle="Across all projects"
-            trend="+480 this quarter"
-            trendDirection="up"
+            
             icon={Construction}
             color="info"
             isLoading={loading.kpis}
@@ -635,8 +632,7 @@ const BusinessHeadDashboard = () => {
             title="Avg Project Value"
             value={formatCurrency(dashboardData.kpis.avgProjectValue)}
             subtitle="Revenue per project"
-            trend="+8.2% improvement"
-            trendDirection="up"
+            
             icon={Timeline}
             color="warning"
             isLoading={loading.kpis}
