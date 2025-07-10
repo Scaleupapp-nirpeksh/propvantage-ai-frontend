@@ -1,6 +1,6 @@
 // File: src/App.js
 // Description: Main App component with routing, theme, and authentication setup for PropVantage AI
-// Version: 1.0 - Complete app setup with role-based routing and Material-UI integration
+// Version: 1.2 - Complete app setup with Villa, Tower, and Hybrid project support
 // Location: src/App.js
 
 import React, { Suspense } from 'react';
@@ -36,6 +36,8 @@ const ProjectDetailPage = React.lazy(() => import('./pages/projects/ProjectDetai
 const TowerDetailPage = React.lazy(() => import('./pages/projects/TowerDetailPage'));
 const UnitDetailPage = React.lazy(() => import('./pages/projects/UnitDetailPage'));
 const CreateProjectPage = React.lazy(() => import('./pages/projects/CreateProjectPage'));
+const CreateTowerPage = React.lazy(() => import('./pages/projects/CreateTowerPage'));
+const CreateUnitPage = React.lazy(() => import('./pages/projects/CreateUnitPage'));
 
 // Lead Management Pages
 const LeadsListPage = React.lazy(() => import('./pages/leads/LeadsListPage'));
@@ -194,16 +196,25 @@ const AppRoutes = () => {
       <Route path="/dashboard" element={
         <ProtectedRoute>
           <DashboardLayout>
-            <DashboardRouter />
+            <Suspense fallback={<LoadingFallback />}>
+              <DashboardRouter />
+            </Suspense>
           </DashboardLayout>
         </ProtectedRoute>
       } />
 
-      {/* Project Management Routes */}
+      {/* ========================================= */}
+      {/* PROJECT MANAGEMENT ROUTES */}
+      {/* Supporting Villa, Tower, and Hybrid Projects */}
+      {/* ========================================= */}
+
+      {/* Core Project Routes */}
       <Route path="/projects" element={
         <ProtectedRoute requiredPermission={(canAccess) => canAccess.viewAllProjects()}>
           <DashboardLayout>
-            <ProjectsListPage />
+            <Suspense fallback={<LoadingFallback />}>
+              <ProjectsListPage />
+            </Suspense>
           </DashboardLayout>
         </ProtectedRoute>
       } />
@@ -211,7 +222,9 @@ const AppRoutes = () => {
       <Route path="/projects/create" element={
         <ProtectedRoute requiredPermission="MANAGEMENT">
           <DashboardLayout>
-            <CreateProjectPage />
+            <Suspense fallback={<LoadingFallback />}>
+              <CreateProjectPage />
+            </Suspense>
           </DashboardLayout>
         </ProtectedRoute>
       } />
@@ -219,32 +232,99 @@ const AppRoutes = () => {
       <Route path="/projects/:projectId" element={
         <ProtectedRoute requiredPermission={(canAccess) => canAccess.viewAllProjects()}>
           <DashboardLayout>
-            <ProjectDetailPage />
-          </DashboardLayout>
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/projects/:projectId/towers/:towerId" element={
-        <ProtectedRoute requiredPermission={(canAccess) => canAccess.viewAllProjects()}>
-          <DashboardLayout>
-            <TowerDetailPage />
-          </DashboardLayout>
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/projects/:projectId/towers/:towerId/units/:unitId" element={
-        <ProtectedRoute requiredPermission={(canAccess) => canAccess.viewAllProjects()}>
-          <DashboardLayout>
-            <UnitDetailPage />
+            <Suspense fallback={<LoadingFallback />}>
+              <ProjectDetailPage />
+            </Suspense>
           </DashboardLayout>
         </ProtectedRoute>
       } />
 
-      {/* Lead Management Routes */}
+      {/* ========================================= */}
+      {/* VILLA PROJECT ROUTES */}
+      {/* Direct project → units (no towers) */}
+      {/* ========================================= */}
+
+      {/* Create Villa Unit - Direct under project */}
+      <Route path="/projects/:projectId/units/create" element={
+        <ProtectedRoute requiredPermission="MANAGEMENT">
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback />}>
+              <CreateUnitPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* View Villa Unit - Direct under project */}
+      <Route path="/projects/:projectId/units/:unitId" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.viewAllProjects()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback />}>
+              <UnitDetailPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* ========================================= */}
+      {/* TOWER PROJECT ROUTES */}
+      {/* Project → towers → units */}
+      {/* ========================================= */}
+
+      {/* Create Tower - MUST come BEFORE tower detail route */}
+      <Route path="/projects/:projectId/towers/create" element={
+        <ProtectedRoute requiredPermission="MANAGEMENT">
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback />}>
+              <CreateTowerPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* View Tower Details */}
+      <Route path="/projects/:projectId/towers/:towerId" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.viewAllProjects()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback />}>
+              <TowerDetailPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* Create Tower Unit */}
+      <Route path="/projects/:projectId/towers/:towerId/units/create" element={
+        <ProtectedRoute requiredPermission="MANAGEMENT">
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback />}>
+              <CreateUnitPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* View Tower Unit */}
+      <Route path="/projects/:projectId/towers/:towerId/units/:unitId" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.viewAllProjects()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback />}>
+              <UnitDetailPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* ========================================= */}
+      {/* LEAD MANAGEMENT ROUTES */}
+      {/* ========================================= */}
+
       <Route path="/leads" element={
         <ProtectedRoute requiredPermission="SALES">
           <DashboardLayout>
-            <LeadsListPage />
+            <Suspense fallback={<LoadingFallback />}>
+              <LeadsListPage />
+            </Suspense>
           </DashboardLayout>
         </ProtectedRoute>
       } />
@@ -252,7 +332,9 @@ const AppRoutes = () => {
       <Route path="/leads/create" element={
         <ProtectedRoute requiredPermission="SALES">
           <DashboardLayout>
-            <CreateLeadPage />
+            <Suspense fallback={<LoadingFallback />}>
+              <CreateLeadPage />
+            </Suspense>
           </DashboardLayout>
         </ProtectedRoute>
       } />
@@ -260,7 +342,9 @@ const AppRoutes = () => {
       <Route path="/leads/:leadId" element={
         <ProtectedRoute requiredPermission="SALES">
           <DashboardLayout>
-            <LeadDetailPage />
+            <Suspense fallback={<LoadingFallback />}>
+              <LeadDetailPage />
+            </Suspense>
           </DashboardLayout>
         </ProtectedRoute>
       } />
@@ -268,16 +352,23 @@ const AppRoutes = () => {
       <Route path="/leads/pipeline" element={
         <ProtectedRoute requiredPermission="SALES">
           <DashboardLayout>
-            <LeadsPipelinePage />
+            <Suspense fallback={<LoadingFallback />}>
+              <LeadsPipelinePage />
+            </Suspense>
           </DashboardLayout>
         </ProtectedRoute>
       } />
 
-      {/* Sales Management Routes */}
+      {/* ========================================= */}
+      {/* SALES MANAGEMENT ROUTES */}
+      {/* ========================================= */}
+
       <Route path="/sales" element={
         <ProtectedRoute requiredPermission="SALES">
           <DashboardLayout>
-            <SalesListPage />
+            <Suspense fallback={<LoadingFallback />}>
+              <SalesListPage />
+            </Suspense>
           </DashboardLayout>
         </ProtectedRoute>
       } />
@@ -285,7 +376,9 @@ const AppRoutes = () => {
       <Route path="/sales/create" element={
         <ProtectedRoute requiredPermission="SALES">
           <DashboardLayout>
-            <CreateSalePage />
+            <Suspense fallback={<LoadingFallback />}>
+              <CreateSalePage />
+            </Suspense>
           </DashboardLayout>
         </ProtectedRoute>
       } />
@@ -293,16 +386,23 @@ const AppRoutes = () => {
       <Route path="/sales/:saleId" element={
         <ProtectedRoute requiredPermission="SALES">
           <DashboardLayout>
-            <SaleDetailPage />
+            <Suspense fallback={<LoadingFallback />}>
+              <SaleDetailPage />
+            </Suspense>
           </DashboardLayout>
         </ProtectedRoute>
       } />
 
-      {/* Analytics Routes */}
+      {/* ========================================= */}
+      {/* ANALYTICS ROUTES */}
+      {/* ========================================= */}
+
       <Route path="/analytics" element={
         <ProtectedRoute requiredPermission="MANAGEMENT">
           <DashboardLayout>
-            <AnalyticsDashboard />
+            <Suspense fallback={<LoadingFallback />}>
+              <AnalyticsDashboard />
+            </Suspense>
           </DashboardLayout>
         </ProtectedRoute>
       } />
@@ -310,7 +410,9 @@ const AppRoutes = () => {
       <Route path="/analytics/sales" element={
         <ProtectedRoute requiredPermission="MANAGEMENT">
           <DashboardLayout>
-            <SalesAnalytics />
+            <Suspense fallback={<LoadingFallback />}>
+              <SalesAnalytics />
+            </Suspense>
           </DashboardLayout>
         </ProtectedRoute>
       } />
@@ -318,7 +420,9 @@ const AppRoutes = () => {
       <Route path="/analytics/revenue" element={
         <ProtectedRoute requiredPermission="FINANCE">
           <DashboardLayout>
-            <RevenueAnalytics />
+            <Suspense fallback={<LoadingFallback />}>
+              <RevenueAnalytics />
+            </Suspense>
           </DashboardLayout>
         </ProtectedRoute>
       } />
@@ -326,16 +430,23 @@ const AppRoutes = () => {
       <Route path="/analytics/leads" element={
         <ProtectedRoute requiredPermission="SALES">
           <DashboardLayout>
-            <LeadAnalytics />
+            <Suspense fallback={<LoadingFallback />}>
+              <LeadAnalytics />
+            </Suspense>
           </DashboardLayout>
         </ProtectedRoute>
       } />
 
-      {/* Profile and Settings Routes */}
+      {/* ========================================= */}
+      {/* PROFILE AND SETTINGS ROUTES */}
+      {/* ========================================= */}
+
       <Route path="/profile" element={
         <ProtectedRoute>
           <DashboardLayout>
-            <ProfilePage />
+            <Suspense fallback={<LoadingFallback />}>
+              <ProfilePage />
+            </Suspense>
           </DashboardLayout>
         </ProtectedRoute>
       } />
@@ -343,7 +454,9 @@ const AppRoutes = () => {
       <Route path="/settings" element={
         <ProtectedRoute requiredPermission="MANAGEMENT">
           <DashboardLayout>
-            <SettingsPage />
+            <Suspense fallback={<LoadingFallback />}>
+              <SettingsPage />
+            </Suspense>
           </DashboardLayout>
         </ProtectedRoute>
       } />
@@ -351,16 +464,32 @@ const AppRoutes = () => {
       <Route path="/settings/users" element={
         <ProtectedRoute requiredPermission="ADMIN">
           <DashboardLayout>
-            <UserManagementPage />
+            <Suspense fallback={<LoadingFallback />}>
+              <UserManagementPage />
+            </Suspense>
           </DashboardLayout>
         </ProtectedRoute>
       } />
 
-      {/* Error Routes */}
-      <Route path="/unauthorized" element={<UnauthorizedPage />} />
-      <Route path="/404" element={<NotFoundPage />} />
+      {/* ========================================= */}
+      {/* ERROR ROUTES */}
+      {/* ========================================= */}
 
-      {/* Redirect routes */}
+      <Route path="/unauthorized" element={
+        <Suspense fallback={<LoadingFallback />}>
+          <UnauthorizedPage />
+        </Suspense>
+      } />
+      <Route path="/404" element={
+        <Suspense fallback={<LoadingFallback />}>
+          <NotFoundPage />
+        </Suspense>
+      } />
+
+      {/* ========================================= */}
+      {/* REDIRECT ROUTES */}
+      {/* ========================================= */}
+
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="*" element={<Navigate to="/404" replace />} />
     </Routes>
@@ -393,3 +522,43 @@ const App = () => {
 };
 
 export default App;
+
+/* 
+========================================
+ROUTING ARCHITECTURE SUMMARY
+========================================
+
+VILLA PROJECT FLOW:
+Projects → Project Detail → Villa Units → Villa Unit Detail
+URL: /projects/:id/units/:unitId
+
+TOWER PROJECT FLOW:  
+Projects → Project Detail → Towers → Tower Detail → Units → Unit Detail
+URL: /projects/:id/towers/:towerId/units/:unitId
+
+HYBRID PROJECT FLOW:
+Projects → Project Detail → (Towers Tab + Villas Tab)
+├── Towers → Tower Detail → Units → Unit Detail
+└── Villas → Villa Unit Detail
+
+SUPPORTED OPERATIONS:
+✅ Villa Projects: Create/View villa units directly under project
+✅ Tower Projects: Create/View towers and their units
+✅ Hybrid Projects: Both villa and tower units in same project
+✅ Universal CreateUnitPage: Adapts based on towerId presence
+✅ Smart navigation: Breadcrumbs adapt to project type
+✅ Role-based access: Proper permissions throughout
+
+ROUTE PROTECTION LEVELS:
+- View Access: viewAllProjects() function
+- Management Access: "MANAGEMENT" string  
+- Sales Access: "SALES" string
+- Finance Access: "FINANCE" string
+- Admin Access: "ADMIN" string
+
+CRITICAL ROUTE ORDER:
+1. /projects/:projectId/towers/create (BEFORE tower detail)
+2. /projects/:projectId/units/create (Villa units)
+3. /projects/:projectId/towers/:towerId/units/create (Tower units)
+4. All specific routes BEFORE dynamic routes
+*/
