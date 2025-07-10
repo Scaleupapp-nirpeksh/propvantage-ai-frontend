@@ -1,0 +1,395 @@
+// File: src/App.js
+// Description: Main App component with routing, theme, and authentication setup for PropVantage AI
+// Version: 1.0 - Complete app setup with role-based routing and Material-UI integration
+// Location: src/App.js
+
+import React, { Suspense } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { ThemeProvider } from '@mui/material/styles';
+import { CssBaseline, Box, CircularProgress, Typography } from '@mui/material';
+import { SnackbarProvider } from 'notistack';
+
+// Theme and Context Providers
+import theme from './theme';
+import { AuthProvider, useAuth } from './context/AuthContext';
+
+// Layout Components
+import AuthLayout from './components/layout/AuthLayout';
+import DashboardLayout from './components/layout/DashboardLayout';
+
+// Auth Pages
+import LoginPage from './pages/auth/LoginPage';
+import RegisterPage from './pages/auth/RegisterPage';
+import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
+import ResetPasswordPage from './pages/auth/ResetPasswordPage';
+
+// Dashboard Pages (Lazy loaded for performance)
+const BusinessHeadDashboard = React.lazy(() => import('./pages/dashboard/BusinessHeadDashboard'));
+const SalesExecutiveDashboard = React.lazy(() => import('./pages/dashboard/SalesExecutiveDashboard'));
+const SalesManagerDashboard = React.lazy(() => import('./pages/dashboard/SalesManagerDashboard'));
+const FinanceHeadDashboard = React.lazy(() => import('./pages/dashboard/FinanceHeadDashboard'));
+const ProjectDirectorDashboard = React.lazy(() => import('./pages/dashboard/ProjectDirectorDashboard'));
+
+// Project Management Pages
+const ProjectsListPage = React.lazy(() => import('./pages/projects/ProjectsListPage'));
+const ProjectDetailPage = React.lazy(() => import('./pages/projects/ProjectDetailPage'));
+const TowerDetailPage = React.lazy(() => import('./pages/projects/TowerDetailPage'));
+const UnitDetailPage = React.lazy(() => import('./pages/projects/UnitDetailPage'));
+const CreateProjectPage = React.lazy(() => import('./pages/projects/CreateProjectPage'));
+
+// Lead Management Pages
+const LeadsListPage = React.lazy(() => import('./pages/leads/LeadsListPage'));
+const LeadDetailPage = React.lazy(() => import('./pages/leads/LeadDetailPage'));
+const CreateLeadPage = React.lazy(() => import('./pages/leads/CreateLeadPage'));
+const LeadsPipelinePage = React.lazy(() => import('./pages/leads/LeadsPipelinePage'));
+
+// Sales Management Pages
+const SalesListPage = React.lazy(() => import('./pages/sales/SalesListPage'));
+const SaleDetailPage = React.lazy(() => import('./pages/sales/SaleDetailPage'));
+const CreateSalePage = React.lazy(() => import('./pages/sales/CreateSalePage'));
+
+// Analytics Pages
+const AnalyticsDashboard = React.lazy(() => import('./pages/analytics/AnalyticsDashboard'));
+const SalesAnalytics = React.lazy(() => import('./pages/analytics/SalesAnalytics'));
+const RevenueAnalytics = React.lazy(() => import('./pages/analytics/RevenueAnalytics'));
+const LeadAnalytics = React.lazy(() => import('./pages/analytics/LeadAnalytics'));
+
+// Settings and Profile Pages
+const ProfilePage = React.lazy(() => import('./pages/profile/ProfilePage'));
+const SettingsPage = React.lazy(() => import('./pages/settings/SettingsPage'));
+const UserManagementPage = React.lazy(() => import('./pages/settings/UserManagementPage'));
+
+// Error Pages
+const NotFoundPage = React.lazy(() => import('./pages/error/NotFoundPage'));
+const UnauthorizedPage = React.lazy(() => import('./pages/error/UnauthorizedPage'));
+
+// Loading Component
+const LoadingFallback = ({ message = 'Loading...' }) => (
+  <Box
+    sx={{
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'center',
+      alignItems: 'center',
+      height: '100vh',
+      gap: 2,
+    }}
+  >
+    <CircularProgress size={40} />
+    <Typography variant="body1" color="text.secondary">
+      {message}
+    </Typography>
+  </Box>
+);
+
+// Protected Route Component
+const ProtectedRoute = ({ children, requiredPermission, fallback = <UnauthorizedPage /> }) => {
+  const { isAuthenticated, isLoading, hasPermission, canAccess } = useAuth();
+
+  if (isLoading) {
+    return <LoadingFallback message="Authenticating..." />;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Check specific permission if provided
+  if (requiredPermission) {
+    if (typeof requiredPermission === 'string') {
+      if (!hasPermission(requiredPermission)) {
+        return fallback;
+      }
+    } else if (typeof requiredPermission === 'function') {
+      if (!requiredPermission(canAccess)) {
+        return fallback;
+      }
+    }
+  }
+
+  return children;
+};
+
+// Role-based Dashboard Router
+const DashboardRouter = () => {
+  const { user } = useAuth();
+  
+  // Route to appropriate dashboard based on user role
+  const getDashboardComponent = () => {
+    switch (user?.role) {
+      case 'Business Head':
+        return <BusinessHeadDashboard />;
+      case 'Project Director':
+        return <ProjectDirectorDashboard />;
+      case 'Sales Head':
+      case 'Sales Manager':
+        return <SalesManagerDashboard />;
+      case 'Finance Head':
+      case 'Finance Manager':
+        return <FinanceHeadDashboard />;
+      case 'Sales Executive':
+      case 'Channel Partner Agent':
+        return <SalesExecutiveDashboard />;
+      default:
+        return <SalesExecutiveDashboard />; // Default fallback
+    }
+  };
+
+  return getDashboardComponent();
+};
+
+// Public Route Component (redirects if already authenticated)
+const PublicRoute = ({ children }) => {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <LoadingFallback message="Checking authentication..." />;
+  }
+
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return children;
+};
+
+// Main App Routes Component
+const AppRoutes = () => {
+  return (
+    <Routes>
+      {/* Public Routes */}
+      <Route path="/login" element={
+        <PublicRoute>
+          <AuthLayout>
+            <LoginPage />
+          </AuthLayout>
+        </PublicRoute>
+      } />
+      
+      <Route path="/register" element={
+        <PublicRoute>
+          <AuthLayout>
+            <RegisterPage />
+          </AuthLayout>
+        </PublicRoute>
+      } />
+      
+      <Route path="/forgot-password" element={
+        <PublicRoute>
+          <AuthLayout>
+            <ForgotPasswordPage />
+          </AuthLayout>
+        </PublicRoute>
+      } />
+      
+      <Route path="/reset-password" element={
+        <PublicRoute>
+          <AuthLayout>
+            <ResetPasswordPage />
+          </AuthLayout>
+        </PublicRoute>
+      } />
+
+      {/* Protected Routes */}
+      <Route path="/dashboard" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <DashboardRouter />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* Project Management Routes */}
+      <Route path="/projects" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.viewAllProjects()}>
+          <DashboardLayout>
+            <ProjectsListPage />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/projects/create" element={
+        <ProtectedRoute requiredPermission="MANAGEMENT">
+          <DashboardLayout>
+            <CreateProjectPage />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/projects/:projectId" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.viewAllProjects()}>
+          <DashboardLayout>
+            <ProjectDetailPage />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/projects/:projectId/towers/:towerId" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.viewAllProjects()}>
+          <DashboardLayout>
+            <TowerDetailPage />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/projects/:projectId/towers/:towerId/units/:unitId" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.viewAllProjects()}>
+          <DashboardLayout>
+            <UnitDetailPage />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* Lead Management Routes */}
+      <Route path="/leads" element={
+        <ProtectedRoute requiredPermission="SALES">
+          <DashboardLayout>
+            <LeadsListPage />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/leads/create" element={
+        <ProtectedRoute requiredPermission="SALES">
+          <DashboardLayout>
+            <CreateLeadPage />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/leads/:leadId" element={
+        <ProtectedRoute requiredPermission="SALES">
+          <DashboardLayout>
+            <LeadDetailPage />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/leads/pipeline" element={
+        <ProtectedRoute requiredPermission="SALES">
+          <DashboardLayout>
+            <LeadsPipelinePage />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* Sales Management Routes */}
+      <Route path="/sales" element={
+        <ProtectedRoute requiredPermission="SALES">
+          <DashboardLayout>
+            <SalesListPage />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/sales/create" element={
+        <ProtectedRoute requiredPermission="SALES">
+          <DashboardLayout>
+            <CreateSalePage />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/sales/:saleId" element={
+        <ProtectedRoute requiredPermission="SALES">
+          <DashboardLayout>
+            <SaleDetailPage />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* Analytics Routes */}
+      <Route path="/analytics" element={
+        <ProtectedRoute requiredPermission="MANAGEMENT">
+          <DashboardLayout>
+            <AnalyticsDashboard />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/analytics/sales" element={
+        <ProtectedRoute requiredPermission="MANAGEMENT">
+          <DashboardLayout>
+            <SalesAnalytics />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/analytics/revenue" element={
+        <ProtectedRoute requiredPermission="FINANCE">
+          <DashboardLayout>
+            <RevenueAnalytics />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/analytics/leads" element={
+        <ProtectedRoute requiredPermission="SALES">
+          <DashboardLayout>
+            <LeadAnalytics />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* Profile and Settings Routes */}
+      <Route path="/profile" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <ProfilePage />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/settings" element={
+        <ProtectedRoute requiredPermission="MANAGEMENT">
+          <DashboardLayout>
+            <SettingsPage />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/settings/users" element={
+        <ProtectedRoute requiredPermission="ADMIN">
+          <DashboardLayout>
+            <UserManagementPage />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* Error Routes */}
+      <Route path="/unauthorized" element={<UnauthorizedPage />} />
+      <Route path="/404" element={<NotFoundPage />} />
+
+      {/* Redirect routes */}
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/404" replace />} />
+    </Routes>
+  );
+};
+
+// Main App Component
+const App = () => {
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <SnackbarProvider 
+        maxSnack={3}
+        anchorOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}
+        autoHideDuration={5000}
+      >
+        <AuthProvider>
+          <Router>
+            <Suspense fallback={<LoadingFallback message="Loading PropVantage AI..." />}>
+              <AppRoutes />
+            </Suspense>
+          </Router>
+        </AuthProvider>
+      </SnackbarProvider>
+    </ThemeProvider>
+  );
+};
+
+export default App;
