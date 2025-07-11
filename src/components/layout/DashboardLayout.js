@@ -1,6 +1,6 @@
 // File: src/components/layout/DashboardLayout.js
 // Description: Main dashboard layout component for PropVantage AI - Complete app shell with navigation
-// Version: 1.2 - Fixed infinite render loop by memoizing navigation items
+// Version: 1.3 - Added Payment Plan Management to Sales navigation
 // Location: src/components/layout/DashboardLayout.js
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -55,6 +55,10 @@ import {
   Construction,
   Description,
   Psychology,
+  AccountBalance,  // NEW: For payment plans
+  Receipt,         // NEW: For payment templates
+  Payment,         // NEW: For active payment plans
+  Assessment,      // NEW: For payment analytics
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 
@@ -145,6 +149,15 @@ const getNavigationItems = (userRole, canAccess) => {
           title: 'New Booking',
           icon: Assignment,
           path: '/sales/create',
+        },
+        // NEW: Payment Plan Management Section
+        {
+          id: 'payment-plans',
+          title: 'Payment Plans',
+          icon: AccountBalance,
+          path: '/sales/payment-plans',
+          requiredAccess: () => canAccess.salesPipeline(),
+          
         },
       ],
     },
@@ -263,6 +276,12 @@ const getNavigationItems = (userRole, canAccess) => {
     
     if (item.children) {
       item.children = item.children.filter(child => {
+        // Recursively filter nested children (for payment plans sub-menu)
+        if (child.children) {
+          child.children = child.children.filter(grandchild => {
+            return !grandchild.requiredAccess || grandchild.requiredAccess();
+          });
+        }
         return !child.requiredAccess || child.requiredAccess();
       });
     }
@@ -273,78 +292,106 @@ const getNavigationItems = (userRole, canAccess) => {
 
 /**
  * Renders a single navigation item, handling nesting and active states.
+ * UPDATED: Enhanced to handle 3-level nested menus (for payment plans)
  */
-const NavigationItem = ({ item, isActive, onNavigate, isOpen, onToggle, level = 0 }) => {
-    const theme = useTheme();
-    const hasChildren = item.children && item.children.length > 0;
-  
-    const handleClick = () => {
-      if (hasChildren) {
-        onToggle();
-      } else if (onNavigate) { // Ensure onNavigate is a function before calling
-        onNavigate(item.path);
-      }
-    };
-  
-    return (
-      <>
-        <ListItem disablePadding>
-          <ListItemButton
-            onClick={handleClick}
-            selected={isActive && !hasChildren}
-            sx={{
-              pl: 2 + level * 2,
-              borderRadius: 1,
-              mx: 1,
-              my: 0.5,
-              '&.Mui-selected': {
-                bgcolor: theme.palette.primary.main,
-                color: 'white',
-                '&:hover': {
-                  bgcolor: theme.palette.primary.dark,
-                },
-                '& .MuiListItemIcon-root': {
-                  color: 'white',
-                },
+const NavigationItem = ({ item, isActive, onNavigate, isOpen, onToggle, level = 0, openSubMenus = {}, onSubMenuToggle }) => {
+  const theme = useTheme();
+  const hasChildren = item.children && item.children.length > 0;
+
+  const handleClick = () => {
+    if (hasChildren) {
+      onToggle();
+    } else if (onNavigate) {
+      onNavigate(item.path);
+    }
+  };
+
+  return (
+    <>
+      <ListItem disablePadding>
+        <ListItemButton
+          onClick={handleClick}
+          selected={isActive && !hasChildren}
+          sx={{
+            pl: 2 + level * 2,
+            borderRadius: 1,
+            mx: 1,
+            my: 0.5,
+            '&.Mui-selected': {
+              bgcolor: theme.palette.primary.main,
+              color: 'white',
+              '&:hover': {
+                bgcolor: theme.palette.primary.dark,
               },
+              '& .MuiListItemIcon-root': {
+                color: 'white',
+              },
+            },
+          }}
+        >
+          <ListItemIcon sx={{ minWidth: 40 }}>
+            <item.icon />
+          </ListItemIcon>
+          <ListItemText 
+            primary={item.title}
+            primaryTypographyProps={{
+              fontSize: level === 0 ? '0.875rem' : '0.8rem',
+              fontWeight: isActive ? 600 : 500,
             }}
-          >
-            <ListItemIcon sx={{ minWidth: 40 }}>
-              <item.icon />
-            </ListItemIcon>
-            <ListItemText 
-              primary={item.title}
-              primaryTypographyProps={{
-                fontSize: '0.875rem',
-                fontWeight: isActive ? 600 : 500,
-              }}
-            />
-            {hasChildren && (isOpen ? <ExpandLess /> : <ExpandMore />)}
-          </ListItemButton>
-        </ListItem>
-        
-        {hasChildren && (
-          <Collapse in={isOpen} timeout="auto" unmountOnExit>
-            <List component="div" disablePadding>
-              {item.children.map((child) => (
-                <NavigationItem
-                  key={child.id}
-                  item={child}
-                  isActive={window.location.pathname === child.path}
-                  onNavigate={onNavigate}
-                  level={level + 1}
-                  // Note: `onToggle` is not passed to child items as they don't have their own sub-menus in this design
-                />
-              ))}
-            </List>
-          </Collapse>
-        )}
-      </>
-    );
+          />
+          {hasChildren && (isOpen ? <ExpandLess /> : <ExpandMore />)}
+        </ListItemButton>
+      </ListItem>
+      
+      {hasChildren && (
+        <Collapse in={isOpen} timeout="auto" unmountOnExit>
+          <List component="div" disablePadding>
+            {item.children.map((child) => {
+              const childHasChildren = child.children && child.children.length > 0;
+              const childIsOpen = openSubMenus && openSubMenus[child.id];
+              
+              return (
+                <React.Fragment key={child.id}>
+                  <NavigationItem
+                    item={child}
+                    isActive={window.location.pathname === child.path}
+                    onNavigate={onNavigate}
+                    isOpen={childIsOpen}
+                    onToggle={childHasChildren ? () => onSubMenuToggle && onSubMenuToggle(child.id) : undefined}
+                    level={level + 1}
+                    openSubMenus={openSubMenus}
+                    onSubMenuToggle={onSubMenuToggle}
+                  />
+                  
+                  {/* Handle third-level menu (payment plan sub-items) */}
+                  {childHasChildren && childIsOpen && (
+                    <Collapse in={childIsOpen} timeout="auto" unmountOnExit>
+                      <List component="div" disablePadding>
+                        {child.children.map((grandchild) => (
+                          <NavigationItem
+                            key={grandchild.id}
+                            item={grandchild}
+                            isActive={window.location.pathname === grandchild.path}
+                            onNavigate={onNavigate}
+                            level={level + 2}
+                          />
+                        ))}
+                      </List>
+                    </Collapse>
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </List>
+        </Collapse>
+      )}
+    </>
+  );
 };
 
 /**
  * Renders the breadcrumb navigation based on the current URL path.
+ * UPDATED: Enhanced to handle payment plan routes
  */
 const DashboardBreadcrumbs = () => {
   const location = useLocation();
@@ -365,9 +412,17 @@ const DashboardBreadcrumbs = () => {
       let label = segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, ' ');
       
       const labelMap = {
-        'projects': 'Projects', 'leads': 'Leads', 'sales': 'Sales',
-        'analytics': 'Analytics', 'settings': 'Settings', 'create': 'Create New',
-        'pipeline': 'Pipeline', 'ai-insights': 'AI Insights',
+        'projects': 'Projects', 
+        'leads': 'Leads', 
+        'sales': 'Sales',
+        'analytics': 'Analytics', 
+        'settings': 'Settings', 
+        'create': 'Create New',
+        'pipeline': 'Pipeline', 
+        'ai-insights': 'AI Insights',
+        'payment-plans': 'Payment Plans',  // NEW
+        'templates': 'Templates',          // NEW
+        'active': 'Active Plans',          // NEW
       };
       
       label = labelMap[segment] || label;
@@ -493,19 +548,33 @@ const DashboardLayout = ({ children }) => {
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openMenus, setOpenMenus] = useState({});
+  const [openSubMenus, setOpenSubMenus] = useState({}); // NEW: For handling 3-level menus
 
   // FIX: Memoize navigationItems to prevent re-creation on every render.
   // This stops the infinite loop caused by the useEffect dependency.
   const navigationItems = useMemo(() => getNavigationItems(user?.role, canAccess), [user?.role, canAccess]);
 
   // Effect to open the parent menu of the active child on page load
+  // UPDATED: Enhanced to handle 3-level nested menus
   useEffect(() => {
-    const activeItem = navigationItems.find(item => 
-        item.children && item.children.some(child => location.pathname === child.path)
-    );
-    if (activeItem) {
-        setOpenMenus(prev => ({ ...prev, [activeItem.id]: true }));
-    }
+    const currentPath = location.pathname;
+    
+    // Check for 3-level nested items (payment plans)
+    navigationItems.forEach(item => {
+      if (item.children) {
+        item.children.forEach(child => {
+          if (child.children) {
+            const activeGrandchild = child.children.find(grandchild => currentPath === grandchild.path);
+            if (activeGrandchild) {
+              setOpenMenus(prev => ({ ...prev, [item.id]: true }));
+              setOpenSubMenus(prev => ({ ...prev, [child.id]: true }));
+            }
+          } else if (currentPath === child.path) {
+            setOpenMenus(prev => ({ ...prev, [item.id]: true }));
+          }
+        });
+      }
+    });
   }, [location.pathname, navigationItems]);
 
   const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
@@ -519,6 +588,11 @@ const DashboardLayout = ({ children }) => {
 
   const handleMenuToggle = (itemId) => {
     setOpenMenus(prev => ({ ...prev, [itemId]: !prev[itemId] }));
+  };
+
+  // NEW: Handle sub-menu toggle for 3-level menus
+  const handleSubMenuToggle = (itemId) => {
+    setOpenSubMenus(prev => ({ ...prev, [itemId]: !prev[itemId] }));
   };
 
   const isPathActive = (path) => {
@@ -548,6 +622,8 @@ const DashboardLayout = ({ children }) => {
               onNavigate={handleNavigation}
               isOpen={!!openMenus[item.id]}
               onToggle={() => handleMenuToggle(item.id)}
+              openSubMenus={openSubMenus}               // NEW: Pass sub-menu state
+              onSubMenuToggle={handleSubMenuToggle}     // NEW: Pass sub-menu toggle handler
             />
           ))}
         </List>
@@ -555,7 +631,7 @@ const DashboardLayout = ({ children }) => {
 
       <Box sx={{ p: 2, mt: 'auto', borderTop: '1px solid', borderColor: 'divider' }}>
         <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', display: 'block' }}>
-          PropVantage AI v1.2.0
+          PropVantage AI v1.3.0
         </Typography>
       </Box>
     </Box>

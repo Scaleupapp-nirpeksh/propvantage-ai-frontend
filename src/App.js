@@ -55,6 +55,8 @@ const LeadsPipelinePage = React.lazy(() => import('./pages/leads/LeadsPipelinePa
 const SalesListPage = React.lazy(() => import('./pages/sales/SalesListPage'));
 const SaleDetailPage = React.lazy(() => import('./pages/sales/SaleDetailPage'));
 const CreateSalePage = React.lazy(() => import('./pages/sales/CreateSalePage'));
+const EditSalePage = React.lazy(() => import('./pages/sales/EditSalePage')); // Added EditSalePage
+const PaymentPlanManagementPage = React.lazy(() => import('./pages/payments/PaymentPlanManagementPage'));
 
 // Analytics Pages
 const AnalyticsDashboard = React.lazy(() => import('./pages/analytics/AnalyticsDashboard'));
@@ -427,6 +429,27 @@ const AppRoutes = () => {
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback />}>
               <SaleDetailPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/sales/:saleId/edit" element={
+        <ProtectedRoute requiredPermission="SALES">
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading sale editor..." />}>
+              <EditSalePage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+           {/* Main Payment Plan Template Management */}
+           <Route path="/sales/payment-plans" element={
+        <ProtectedRoute requiredPermission="SALES">
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading payment plan templates..." />}>
+              <PaymentPlanManagementPage />
             </Suspense>
           </DashboardLayout>
         </ProtectedRoute>

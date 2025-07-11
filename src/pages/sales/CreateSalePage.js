@@ -1,7 +1,9 @@
-// File: src/pages/sales/CreateSalePage.js
-// Description: Comprehensive sale creation page with unit selection, cost sheet generation, and booking
-// Version: 1.0 - Production-grade sale creation interface with real-time calculations
-// Location: src/pages/sales/CreateSalePage.js
+/**
+ * File: src/pages/sales/CreateSalePage.js
+ * Description: CORRECTED Enhanced sale creation page with comprehensive cost sheet and payment plan integration
+ * Version: 3.1 - Fixed project resolution and payment template loading
+ * Location: src/pages/sales/CreateSalePage.js
+ */
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -18,12 +20,10 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Autocomplete,
   Chip,
   Stepper,
   Step,
   StepLabel,
-  StepContent,
   Paper,
   Table,
   TableBody,
@@ -43,16 +43,24 @@ import {
   IconButton,
   Tooltip,
   Stack,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   useTheme,
   useMediaQuery,
   Fab,
   InputAdornment,
-  FormHelperText,
-  Switch,
+  Badge,
+  Avatar,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemAvatar,
+  ListItemSecondaryAction,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
   FormControlLabel,
+  Switch,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import {
   ArrowBack,
@@ -61,8 +69,6 @@ import {
   Search,
   Clear,
   Add,
-  ExpandMore,
-  Visibility,
   Calculate,
   Person,
   Home,
@@ -76,54 +82,202 @@ import {
   Email,
   WhatsApp,
   Refresh,
-  FilterList,
   ViewModule,
   ViewList,
+  Phone,
+  LocationOn,
+  Business,
+  CheckCircle,
+  Cancel,
+  Edit,
+  Bed,
+  Star,
+  ExpandMore,
+  Schedule,
+  Assessment,
+  TrendingUp,
+  Payment,
+  CalendarToday,
+  PieChart,
+  ShowChart,
+  Download,
+  Timeline,
 } from '@mui/icons-material';
 
 import { useAuth } from '../../context/AuthContext';
-import { salesAPI, projectAPI, unitAPI, leadAPI, pricingAPI } from '../../services/api';
-import { formatCurrency, formatDate, formatPhoneNumber } from '../../utils/formatters';
+import { projectAPI, unitAPI, leadAPI, pricingAPI, salesAPI, projectPaymentAPI } from '../../services/api';
+import { formatCurrency, formatDate, formatPhoneNumber, formatPercentage } from '../../utils/formatters';
 
-// Steps configuration
+// ============================================================================
+// CONSTANTS AND CONFIGURATION
+// ============================================================================
+
 const SALE_STEPS = [
   {
+    id: 'unit',
     label: 'Select Unit',
     description: 'Choose the unit to book',
     icon: Home,
+    required: true,
   },
   {
+    id: 'customer',
     label: 'Select Customer',
     description: 'Choose or add customer',
     icon: Person,
+    required: true,
   },
   {
+    id: 'pricing',
     label: 'Generate Cost Sheet',
-    description: 'Calculate pricing and discounts',
+    description: 'Calculate detailed pricing',
     icon: Calculate,
+    required: true,
   },
   {
+    id: 'payment',
+    label: 'Payment Plan',
+    description: 'Select payment schedule',
+    icon: Payment,
+    required: true,
+  },
+  {
+    id: 'review',
     label: 'Review & Book',
     description: 'Confirm and create sale',
-    icon: Check,
+    icon: CheckCircle,
+    required: true,
   },
 ];
 
-// Unit availability status
 const UNIT_STATUSES = {
-  available: { label: 'Available', color: 'success' },
-  blocked: { label: 'Blocked', color: 'warning' },
-  sold: { label: 'Sold', color: 'error' },
-  reserved: { label: 'Reserved', color: 'info' },
+  available: { label: 'Available', color: 'success', icon: CheckCircle },
+  blocked: { label: 'Blocked', color: 'warning', icon: Warning },
+  sold: { label: 'Sold', color: 'error', icon: Cancel },
+  reserved: { label: 'Reserved', color: 'info', icon: Info },
 };
 
-// Safe display helper
+const COST_COMPONENTS = [
+  {
+    id: 'basePrice',
+    label: 'Base Unit Price',
+    description: 'Standard unit price as per rate card',
+    category: 'primary',
+    included: true,
+    editable: false,
+  },
+  {
+    id: 'premiumCharges',
+    label: 'Premium Charges',
+    description: 'Floor premium, corner premium, park facing, etc.',
+    category: 'primary',
+    included: true,
+    editable: true,
+  },
+  {
+    id: 'parkingCharges',
+    label: 'Parking Charges',
+    description: 'Covered/Open parking charges',
+    category: 'primary',
+    included: true,
+    editable: true,
+  },
+  {
+    id: 'clubMembership',
+    label: 'Club Membership',
+    description: 'Clubhouse and amenities access',
+    category: 'amenities',
+    included: true,
+    editable: true,
+  },
+  {
+    id: 'infrastructureDevelopment',
+    label: 'Infrastructure Development Charges',
+    description: 'IDC for common infrastructure',
+    category: 'development',
+    included: true,
+    editable: false,
+  },
+  {
+    id: 'powerBackup',
+    label: 'Power Backup Charges',
+    description: 'Generator and UPS infrastructure',
+    category: 'utilities',
+    included: true,
+    editable: true,
+  },
+  {
+    id: 'maintenanceDeposit',
+    label: 'Maintenance Security Deposit',
+    description: 'Refundable maintenance deposit',
+    category: 'deposits',
+    included: true,
+    editable: true,
+  },
+  {
+    id: 'legalCharges',
+    label: 'Legal & Documentation',
+    description: 'Registration, stamp duty, legal fees',
+    category: 'legal',
+    included: true,
+    editable: false,
+  },
+  {
+    id: 'gst',
+    label: 'GST',
+    description: 'Goods and Services Tax',
+    category: 'taxes',
+    included: true,
+    editable: false,
+  },
+  {
+    id: 'registrationCharges',
+    label: 'Registration Charges',
+    description: 'Property registration fees',
+    category: 'legal',
+    included: true,
+    editable: false,
+  },
+];
+
+const PREMIUM_FACTORS = {
+  floor: {
+    'ground': 0,
+    'first': 2,
+    'second': 4,
+    'third': 6,
+    'fourth': 8,
+    'fifth': 10,
+    'above_fifth': 12,
+  },
+  facing: {
+    'east': 5,
+    'west': 3,
+    'north': 8,
+    'south': 2,
+    'northeast': 10,
+    'northwest': 7,
+    'southeast': 6,
+    'southwest': 4,
+  },
+  features: {
+    'park_facing': 15,
+    'corner_unit': 10,
+    'end_unit': 8,
+    'terrace_access': 20,
+    'garden_access': 12,
+  }
+};
+
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
+
 const getSafeDisplayValue = (value, fallback = '-') => {
   if (!value) return fallback;
   if (typeof value === 'string') return value;
   if (typeof value === 'number') return value.toString();
   if (typeof value === 'object') {
-    // Handle address objects
     if (value.city || value.state || value.addressLine1) {
       const parts = [];
       if (value.addressLine1) parts.push(value.addressLine1);
@@ -138,7 +292,66 @@ const getSafeDisplayValue = (value, fallback = '-') => {
   return fallback;
 };
 
-// Unit Selection Component
+const getCustomerDisplayName = (customer) => {
+  if (!customer) return 'Unknown Customer';
+  const fullName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim();
+  return fullName || customer.email || customer.phone || 'Unknown Customer';
+};
+
+const getUnitDisplayName = (unit) => {
+  if (!unit) return 'Unknown Unit';
+  return unit.unitNumber || unit.fullAddress || unit.name || 'Unknown Unit';
+};
+
+// FIXED: Enhanced project resolution function
+const getProjectInfo = (projectId, projects) => {
+  if (!projectId || !projects || !Array.isArray(projects)) return null;
+  
+  // Handle both string ID and object with _id
+  let targetId;
+  if (typeof projectId === 'string') {
+    targetId = projectId;
+  } else if (typeof projectId === 'object' && projectId._id) {
+    targetId = projectId._id;
+  } else if (typeof projectId === 'object' && projectId.id) {
+    targetId = projectId.id;
+  } else {
+    console.warn('Invalid project identifier:', projectId);
+    return null;
+  }
+  
+  const foundProject = projects.find(p => p._id === targetId || p.id === targetId);
+  if (!foundProject) {
+    console.warn('Project not found for ID:', targetId, 'Available projects:', projects.map(p => ({ id: p._id, name: p.name })));
+  }
+  
+  return foundProject || null;
+};
+
+// FIXED: Enhanced unit project resolution
+const getUnitProject = (unit, projects) => {
+  if (!unit || !projects) return null;
+  
+  // First try to get from unit.project object (if it's populated)
+  if (unit.project && typeof unit.project === 'object' && unit.project.name) {
+    // This is already a populated project object
+    return unit.project;
+  }
+  
+  // Then try to find by project ID
+  const projectId = unit.project || unit.projectId;
+  if (!projectId) {
+    console.warn('No project ID found in unit:', unit);
+    return null;
+  }
+  
+  return getProjectInfo(projectId, projects);
+};
+
+// ============================================================================
+// UNIT SELECTION COMPONENT
+// ============================================================================
+
 const UnitSelection = ({ 
   selectedUnit, 
   onUnitSelect, 
@@ -149,30 +362,53 @@ const UnitSelection = ({
   filters,
   onFilterChange 
 }) => {
-  const [viewMode, setViewMode] = useState('table'); // 'table' or 'grid'
   const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState('table');
 
-  // Filter units based on search and filters
+  // FIXED: Enhanced filtering with proper project resolution and debugging
   const filteredUnits = useMemo(() => {
     let filtered = units.filter(unit => unit.status === 'available');
     
+    console.log('🔍 Filtering units:', {
+      totalUnits: units.length,
+      availableUnits: filtered.length,
+      projectFilter: filters.project,
+      unitTypeFilter: filters.unitType,
+      towerFilter: filters.tower
+    });
+    
     // Apply search filter
     if (searchQuery) {
-      filtered = filtered.filter(unit => 
-        unit.unitNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        unit.unitType?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        unit.tower?.name?.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(unit => {
+        const project = getUnitProject(unit, projects);
+        return (
+          unit.unitNumber?.toLowerCase().includes(query) ||
+          unit.unitType?.toLowerCase().includes(query) ||
+          unit.type?.toLowerCase().includes(query) ||
+          unit.tower?.towerName?.toLowerCase().includes(query) ||
+          unit.fullAddress?.toLowerCase().includes(query) ||
+          project?.name?.toLowerCase().includes(query)
+        );
+      });
     }
 
     // Apply project filter
     if (filters.project && filters.project !== 'all') {
-      filtered = filtered.filter(unit => unit.project === filters.project);
+      const beforeFilter = filtered.length;
+      filtered = filtered.filter(unit => {
+        const projectId = unit.project?._id || unit.project || unit.projectId;
+        return projectId === filters.project;
+      });
+      console.log(`📊 Project filter applied: ${beforeFilter} -> ${filtered.length} units`);
     }
 
     // Apply unit type filter
     if (filters.unitType && filters.unitType !== 'all') {
-      filtered = filtered.filter(unit => unit.unitType === filters.unitType);
+      filtered = filtered.filter(unit => {
+        const unitType = unit.unitType || unit.type;
+        return unitType === filters.unitType;
+      });
     }
 
     // Apply tower filter
@@ -180,17 +416,39 @@ const UnitSelection = ({
       filtered = filtered.filter(unit => unit.tower?._id === filters.tower);
     }
 
+    console.log('🎯 Final filtered units:', filtered.length);
     return filtered;
-  }, [units, searchQuery, filters]);
+  }, [units, searchQuery, filters, projects]);
 
-  const handleUnitClick = (unit) => {
-    onUnitSelect(unit);
-  };
+  const uniqueUnitTypes = useMemo(() => {
+    const types = new Set();
+    units.forEach(unit => {
+      const unitType = unit.unitType || unit.type;
+      if (unitType) types.add(unitType);
+    });
+    return Array.from(types);
+  }, [units]);
+
+  const uniqueTowers = useMemo(() => {
+    const towersMap = new Map();
+    units.forEach(unit => {
+      if (unit.tower && unit.tower._id) {
+        towersMap.set(unit.tower._id, unit.tower);
+      }
+    });
+    return Array.from(towersMap.values());
+  }, [units]);
 
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-        <CircularProgress />
+        <CircularProgress size={60} />
+        <Box sx={{ ml: 2 }}>
+          <Typography variant="h6">Loading available units...</Typography>
+          <Typography variant="body2" color="textSecondary">
+            Please wait while we fetch the latest unit availability
+          </Typography>
+        </Box>
       </Box>
     );
   }
@@ -199,12 +457,21 @@ const UnitSelection = ({
     <Box>
       {/* Search and Filters */}
       <Card sx={{ mb: 3 }}>
+        <CardHeader
+          title="Find Your Perfect Unit"
+          subheader="Use the filters below to narrow down available units"
+          action={
+            <Badge badgeContent={filteredUnits.length} color="primary">
+              <Home />
+            </Badge>
+          }
+        />
         <CardContent>
           <Grid container spacing={2} alignItems="center">
             <Grid item xs={12} md={4}>
               <TextField
                 fullWidth
-                placeholder="Search units..."
+                placeholder="Search by unit number, type, or address..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 InputProps={{
@@ -245,40 +512,41 @@ const UnitSelection = ({
                   onChange={(e) => onFilterChange('unitType', e.target.value)}
                 >
                   <MenuItem value="all">All Types</MenuItem>
-                  <MenuItem value="1BHK">1BHK</MenuItem>
-                  <MenuItem value="2BHK">2BHK</MenuItem>
-                  <MenuItem value="3BHK">3BHK</MenuItem>
-                  <MenuItem value="4BHK">4BHK</MenuItem>
-                  <MenuItem value="Studio">Studio</MenuItem>
+                  {uniqueUnitTypes.map(type => (
+                    <MenuItem key={type} value={type}>{type}</MenuItem>
+                  ))}
                 </Select>
               </FormControl>
             </Grid>
 
             <Grid item xs={12} md={2}>
-              <Button
-                variant="outlined"
-                startIcon={<Refresh />}
-                onClick={onRefresh}
-                fullWidth
-              >
-                Refresh
-              </Button>
+              <FormControl fullWidth>
+                <InputLabel>Tower</InputLabel>
+                <Select
+                  value={filters.tower || 'all'}
+                  label="Tower"
+                  onChange={(e) => onFilterChange('tower', e.target.value)}
+                >
+                  <MenuItem value="all">All Towers</MenuItem>
+                  {uniqueTowers.map(tower => (
+                    <MenuItem key={tower._id} value={tower._id}>
+                      {getSafeDisplayValue(tower.towerName)}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Grid>
 
             <Grid item xs={12} md={2}>
               <Box sx={{ display: 'flex', gap: 1 }}>
-                <IconButton 
-                  onClick={() => setViewMode('table')}
-                  color={viewMode === 'table' ? 'primary' : 'default'}
+                <Button
+                  variant="outlined"
+                  startIcon={<Refresh />}
+                  onClick={onRefresh}
+                  fullWidth
                 >
-                  <ViewList />
-                </IconButton>
-                <IconButton 
-                  onClick={() => setViewMode('grid')}
-                  color={viewMode === 'grid' ? 'primary' : 'default'}
-                >
-                  <ViewModule />
-                </IconButton>
+                  Refresh
+                </Button>
               </Box>
             </Grid>
           </Grid>
@@ -288,16 +556,34 @@ const UnitSelection = ({
       {/* Units Display */}
       {filteredUnits.length === 0 ? (
         <Alert severity="info" sx={{ mb: 3 }}>
-          No available units found matching your criteria.
+          <Typography variant="h6">No units found</Typography>
+          <Typography variant="body2">
+            No available units match your current search criteria. Try adjusting your filters or search terms.
+          </Typography>
         </Alert>
       ) : (
         <Card>
           <CardHeader
             title={`Available Units (${filteredUnits.length})`}
             action={
-              <Typography variant="body2" color="textSecondary">
-                Click on a unit to select
-              </Typography>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Tooltip title="Table View">
+                  <IconButton 
+                    onClick={() => setViewMode('table')}
+                    color={viewMode === 'table' ? 'primary' : 'default'}
+                  >
+                    <ViewList />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Grid View">
+                  <IconButton 
+                    onClick={() => setViewMode('grid')}
+                    color={viewMode === 'grid' ? 'primary' : 'default'}
+                  >
+                    <ViewModule />
+                  </IconButton>
+                </Tooltip>
+              </Box>
             }
           />
           <CardContent sx={{ p: 0 }}>
@@ -305,12 +591,9 @@ const UnitSelection = ({
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell>Unit Number</TableCell>
+                    <TableCell>Unit Details</TableCell>
                     <TableCell>Project</TableCell>
-                    <TableCell>Tower</TableCell>
-                    <TableCell>Type</TableCell>
-                    <TableCell>Area</TableCell>
-                    <TableCell>Floor</TableCell>
+                    <TableCell>Specifications</TableCell>
                     <TableCell>Price</TableCell>
                     <TableCell>Status</TableCell>
                     <TableCell>Action</TableCell>
@@ -318,7 +601,8 @@ const UnitSelection = ({
                 </TableHead>
                 <TableBody>
                   {filteredUnits.map((unit) => {
-                    const project = projects.find(p => p._id === unit.project);
+                    // FIXED: Proper project resolution
+                    const project = getUnitProject(unit, projects);
                     const isSelected = selectedUnit?._id === unit._id;
                     
                     return (
@@ -332,41 +616,53 @@ const UnitSelection = ({
                             backgroundColor: 'primary.50',
                           }
                         }}
-                        onClick={() => handleUnitClick(unit)}
+                        onClick={() => onUnitSelect(unit)}
                       >
                         <TableCell>
-                          <Typography variant="body2" fontWeight="medium">
-                            {unit.unitNumber}
-                          </Typography>
+                          <Box>
+                            <Typography variant="body1" fontWeight="medium">
+                              {unit.unitNumber}
+                            </Typography>
+                            <Typography variant="body2" color="textSecondary">
+                              {getSafeDisplayValue(unit.tower?.towerName)} • Floor {unit.floor}
+                            </Typography>
+                            {unit.features?.isParkFacing && (
+                              <Chip label="Park Facing" size="small" color="success" sx={{ mt: 0.5, mr: 0.5 }} />
+                            )}
+                            {unit.features?.isCornerUnit && (
+                              <Chip label="Corner Unit" size="small" color="info" sx={{ mt: 0.5, mr: 0.5 }} />
+                            )}
+                            {unit.features?.hasBalcony && (
+                              <Chip label="Balcony" size="small" color="primary" sx={{ mt: 0.5, mr: 0.5 }} />
+                            )}
+                          </Box>
                         </TableCell>
                         <TableCell>
-                          <Typography variant="body2">
-                            {project?.name || 'Unknown Project'}
-                          </Typography>
+                          <Box>
+                            <Typography variant="body2" fontWeight="medium">
+                              {project?.name || 'Unknown Project'}
+                            </Typography>
+                            <Typography variant="caption" color="textSecondary">
+                              {project?.location?.city || project?.location || 'Unknown Location'}
+                            </Typography>
+                          </Box>
                         </TableCell>
                         <TableCell>
-                          <Typography variant="body2">
-                            {getSafeDisplayValue(unit.tower?.name)}
-                          </Typography>
+                          <Box>
+                            <Typography variant="body2" fontWeight="medium">
+                              {unit.unitType || unit.type || 'N/A'}
+                            </Typography>
+                            <Typography variant="caption" color="textSecondary" display="block">
+                              {unit.areaSqft || unit.builtupArea || unit.area || 'N/A'} sq ft
+                            </Typography>
+                            <Typography variant="caption" color="textSecondary">
+                              {unit.specifications?.bedrooms || 'N/A'}BR • {unit.specifications?.bathrooms || 'N/A'}BA
+                            </Typography>
+                          </Box>
                         </TableCell>
                         <TableCell>
-                          <Typography variant="body2">
-                            {unit.unitType || unit.type}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2">
-                            {unit.builtupArea || unit.area} sq ft
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2">
-                            {unit.floor}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2" fontWeight="medium" color="primary">
-                            {formatCurrency(unit.currentPrice || unit.basePrice)}
+                          <Typography variant="body1" fontWeight="medium" color="primary">
+                            {formatCurrency(unit.currentPrice || unit.basePrice || 0)}
                           </Typography>
                         </TableCell>
                         <TableCell>
@@ -374,6 +670,7 @@ const UnitSelection = ({
                             label={UNIT_STATUSES[unit.status]?.label || unit.status}
                             color={UNIT_STATUSES[unit.status]?.color || 'default'}
                             size="small"
+                            icon={React.createElement(UNIT_STATUSES[unit.status]?.icon || Info, { sx: { fontSize: 16 } })}
                           />
                         </TableCell>
                         <TableCell>
@@ -382,8 +679,9 @@ const UnitSelection = ({
                             size="small"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleUnitClick(unit);
+                              onUnitSelect(unit);
                             }}
+                            startIcon={isSelected ? <Check /> : <Add />}
                           >
                             {isSelected ? 'Selected' : 'Select'}
                           </Button>
@@ -403,42 +701,108 @@ const UnitSelection = ({
         <Card sx={{ mt: 3, border: '2px solid', borderColor: 'primary.main' }}>
           <CardHeader
             title="Selected Unit"
-            avatar={<Home color="primary" />}
+            avatar={
+              <Avatar sx={{ bgcolor: 'primary.main' }}>
+                <CheckCircle />
+              </Avatar>
+            }
+            action={
+              <Button 
+                variant="outlined" 
+                size="small"
+                onClick={() => onUnitSelect(null)}
+                startIcon={<Clear />}
+              >
+                Clear Selection
+              </Button>
+            }
           />
           <CardContent>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
-                <Typography variant="body2" color="textSecondary">
+            <Grid container spacing={3}>
+              <Grid item xs={12} sm={6} md={3}>
+                <Typography variant="body2" color="textSecondary" gutterBottom>
                   Unit Number
                 </Typography>
                 <Typography variant="h6" fontWeight="medium">
                   {selectedUnit.unitNumber}
                 </Typography>
+                <Typography variant="caption" color="textSecondary">
+                  {getSafeDisplayValue(selectedUnit.tower?.towerName)}
+                </Typography>
               </Grid>
-              <Grid item xs={12} sm={6}>
-                <Typography variant="body2" color="textSecondary">
+              <Grid item xs={12} sm={6} md={3}>
+                <Typography variant="body2" color="textSecondary" gutterBottom>
                   Project
                 </Typography>
                 <Typography variant="h6" fontWeight="medium">
-                  {projects.find(p => p._id === selectedUnit.project)?.name || 'Unknown'}
+                  {getUnitProject(selectedUnit, projects)?.name || 'Unknown Project'}
+                </Typography>
+                <Typography variant="caption" color="textSecondary">
+                  {getUnitProject(selectedUnit, projects)?.location?.city || 'Unknown Location'}
                 </Typography>
               </Grid>
-              <Grid item xs={12} sm={6}>
-                <Typography variant="body2" color="textSecondary">
-                  Type & Area
+              <Grid item xs={12} sm={6} md={3}>
+                <Typography variant="body2" color="textSecondary" gutterBottom>
+                  Configuration
                 </Typography>
                 <Typography variant="h6" fontWeight="medium">
-                  {selectedUnit.unitType} • {selectedUnit.builtupArea || selectedUnit.area} sq ft
+                  {selectedUnit.unitType || selectedUnit.type}
+                </Typography>
+                <Typography variant="caption" color="textSecondary">
+                  {selectedUnit.areaSqft || selectedUnit.builtupArea || selectedUnit.area} sq ft • Floor {selectedUnit.floor} • {selectedUnit.facing}
                 </Typography>
               </Grid>
-              <Grid item xs={12} sm={6}>
-                <Typography variant="body2" color="textSecondary">
+              <Grid item xs={12} sm={6} md={3}>
+                <Typography variant="body2" color="textSecondary" gutterBottom>
                   Base Price
                 </Typography>
                 <Typography variant="h6" fontWeight="medium" color="primary">
                   {formatCurrency(selectedUnit.currentPrice || selectedUnit.basePrice)}
                 </Typography>
               </Grid>
+              
+              {/* Additional Details Row */}
+              {selectedUnit.specifications && (
+                <Grid item xs={12} sm={6} md={3}>
+                  <Typography variant="body2" color="textSecondary" gutterBottom>
+                    Room Details
+                  </Typography>
+                  <Typography variant="body1" fontWeight="medium">
+                    {selectedUnit.specifications.bedrooms}BR • {selectedUnit.specifications.bathrooms}BA • {selectedUnit.specifications.livingRooms}LR
+                  </Typography>
+                </Grid>
+              )}
+              
+              {selectedUnit.features && Object.values(selectedUnit.features).some(Boolean) && (
+                <Grid item xs={12} sm={6} md={9}>
+                  <Typography variant="body2" color="textSecondary" gutterBottom>
+                    Special Features
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    {selectedUnit.features.isParkFacing && (
+                      <Chip label="Park Facing" size="small" color="success" />
+                    )}
+                    {selectedUnit.features.isCornerUnit && (
+                      <Chip label="Corner Unit" size="small" color="info" />
+                    )}
+                    {selectedUnit.features.hasBalcony && (
+                      <Chip label="Has Balcony" size="small" color="primary" />
+                    )}
+                    {selectedUnit.features.hasServantRoom && (
+                      <Chip label="Servant Room" size="small" color="secondary" />
+                    )}
+                    {selectedUnit.features.hasStudyRoom && (
+                      <Chip label="Study Room" size="small" color="warning" />
+                    )}
+                    {selectedUnit.features.hasUtilityArea && (
+                      <Chip label="Utility Area" size="small" color="default" />
+                    )}
+                    {selectedUnit.features.hasParkingSlot && (
+                      <Chip label="Parking Included" size="small" color="success" />
+                    )}
+                  </Box>
+                </Grid>
+              )}
             </Grid>
           </CardContent>
         </Card>
@@ -447,38 +811,43 @@ const UnitSelection = ({
   );
 };
 
-// Customer Selection Component
+// ============================================================================
+// CUSTOMER SELECTION COMPONENT
+// ============================================================================
+
 const CustomerSelection = ({ 
   selectedCustomer, 
   onCustomerSelect, 
   leads, 
   loading,
   onRefresh,
-  onCreateNew 
+  projects
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   // Filter leads based on search
   const filteredLeads = useMemo(() => {
     if (!searchQuery) return leads;
     
+    const query = searchQuery.toLowerCase();
     return leads.filter(lead => 
-      lead.firstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      lead.lastName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      lead.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      lead.firstName?.toLowerCase().includes(query) ||
+      lead.lastName?.toLowerCase().includes(query) ||
+      lead.email?.toLowerCase().includes(query) ||
       lead.phone?.includes(searchQuery)
     );
   }, [leads, searchQuery]);
 
-  const handleCustomerClick = (customer) => {
-    onCustomerSelect(customer);
-  };
-
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-        <CircularProgress />
+        <CircularProgress size={60} />
+        <Box sx={{ ml: 2 }}>
+          <Typography variant="h6">Loading customers...</Typography>
+          <Typography variant="body2" color="textSecondary">
+            Fetching customer data from your CRM
+          </Typography>
+        </Box>
       </Box>
     );
   }
@@ -487,12 +856,21 @@ const CustomerSelection = ({
     <Box>
       {/* Search and Actions */}
       <Card sx={{ mb: 3 }}>
+        <CardHeader
+          title="Select Customer"
+          subheader="Choose an existing customer or create a new one"
+          action={
+            <Badge badgeContent={filteredLeads.length} color="primary">
+              <Person />
+            </Badge>
+          }
+        />
         <CardContent>
           <Grid container spacing={2} alignItems="center">
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
-                placeholder="Search customers by name, email, or phone..."
+                placeholder="Search by name, email, or phone number..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 InputProps={{
@@ -508,9 +886,9 @@ const CustomerSelection = ({
             
             <Grid item xs={12} md={3}>
               <Button
-                variant="outlined"
+                variant="contained"
                 startIcon={<Add />}
-                onClick={() => setShowCreateDialog(true)}
+                onClick={() => window.open('/leads/create', '_blank')}
                 fullWidth
               >
                 Add New Customer
@@ -524,7 +902,7 @@ const CustomerSelection = ({
                 onClick={onRefresh}
                 fullWidth
               >
-                Refresh
+                Refresh List
               </Button>
             </Grid>
           </Grid>
@@ -534,94 +912,163 @@ const CustomerSelection = ({
       {/* Customers Display */}
       {filteredLeads.length === 0 ? (
         <Alert severity="info" sx={{ mb: 3 }}>
-          No customers found matching your criteria.
+          <Typography variant="h6">No customers found</Typography>
+          <Typography variant="body2">
+            {searchQuery ? 
+              'No customers match your search criteria. Try a different search term.' :
+              'No customers available. Add a new customer to get started.'
+            }
+          </Typography>
+          <Button 
+            variant="contained" 
+            sx={{ mt: 2 }}
+            startIcon={<Add />}
+            onClick={() => window.open('/leads/create', '_blank')}
+          >
+            Add Your First Customer
+          </Button>
         </Alert>
       ) : (
         <Card>
           <CardHeader
-            title={`Select Customer (${filteredLeads.length})`}
+            title={`Choose Customer (${filteredLeads.length})`}
             action={
               <Typography variant="body2" color="textSecondary">
-                Click on a customer to select
+                Click on a customer to select them
               </Typography>
             }
           />
           <CardContent sx={{ p: 0 }}>
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Name</TableCell>
-                    <TableCell>Email</TableCell>
-                    <TableCell>Phone</TableCell>
-                    <TableCell>Source</TableCell>
-                    <TableCell>Status</TableCell>
-                    <TableCell>Action</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {filteredLeads.map((lead) => {
-                    const isSelected = selectedCustomer?._id === lead._id;
-                    const customerName = `${lead.firstName || ''} ${lead.lastName || ''}`.trim();
-                    
-                    return (
-                      <TableRow
-                        key={lead._id}
-                        hover
-                        selected={isSelected}
-                        sx={{ 
-                          cursor: 'pointer',
-                          '&.Mui-selected': {
-                            backgroundColor: 'primary.50',
-                          }
-                        }}
-                        onClick={() => handleCustomerClick(lead)}
-                      >
-                        <TableCell>
-                          <Typography variant="body2" fontWeight="medium">
-                            {customerName || 'Unknown Name'}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2">
-                            {lead.email || '-'}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2">
-                            {formatPhoneNumber(lead.phone) || '-'}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2">
-                            {lead.source || lead.leadSource || '-'}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Chip
-                            label={lead.status || 'New'}
-                            color={lead.status === 'Hot' ? 'error' : 'default'}
-                            size="small"
-                          />
-                        </TableCell>
-                        <TableCell>
+            <List>
+              {filteredLeads.map((lead, index) => {
+                const isSelected = selectedCustomer?._id === lead._id;
+                const customerName = getCustomerDisplayName(lead);
+                // FIXED: Proper project resolution for leads
+                const leadProject = getProjectInfo(lead.project?._id || lead.project, projects);
+                
+                return (
+                  <React.Fragment key={lead._id}>
+                    <ListItem
+                      button
+                      selected={isSelected}
+                      onClick={() => onCustomerSelect(lead)}
+                      sx={{
+                        '&.Mui-selected': {
+                          backgroundColor: 'primary.50',
+                        }
+                      }}
+                    >
+                      <ListItemAvatar>
+                        <Avatar sx={{ bgcolor: isSelected ? 'primary.main' : 'grey.400' }}>
+                          {customerName[0] || 'C'}
+                        </Avatar>
+                      </ListItemAvatar>
+                      <ListItemText
+                        primary={
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                            <Typography variant="body1" fontWeight="medium">
+                              {customerName}
+                            </Typography>
+                            {lead.priority === 'Critical' && (
+                              <Chip label="Critical" color="error" size="small" />
+                            )}
+                            {lead.priority === 'High' && (
+                              <Chip label="High Priority" color="warning" size="small" />
+                            )}
+                            {lead.score && lead.score >= 90 && (
+                              <Chip label={`Score: ${lead.score} (${lead.scoreGrade})`} color="success" size="small" />
+                            )}
+                            {lead.qualificationStatus === 'Pre-Approved' && (
+                              <Chip label="Pre-Approved" color="info" size="small" />
+                            )}
+                          </Box>
+                        }
+                        secondary={
+                          <Box>
+                            <Typography variant="body2" color="textSecondary">
+                              {lead.email && (
+                                <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
+                                  <Email sx={{ fontSize: 14 }} />
+                                  {lead.email}
+                                </Box>
+                              )}
+                              {lead.phone && (
+                                <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
+                                  <Phone sx={{ fontSize: 14 }} />
+                                  {formatPhoneNumber(lead.phone)}
+                                </Box>
+                              )}
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
+                              {lead.source && (
+                                <Chip 
+                                  label={lead.source} 
+                                  size="small" 
+                                  variant="outlined" 
+                                />
+                              )}
+                              {lead.status && (
+                                <Chip 
+                                  label={lead.status} 
+                                  size="small" 
+                                  color={lead.status === 'Booked' ? 'success' : 'default'}
+                                  variant="outlined" 
+                                />
+                              )}
+                              {leadProject?.name && (
+                                <Chip 
+                                  label={leadProject.name} 
+                                  size="small" 
+                                  color="primary"
+                                  variant="outlined" 
+                                />
+                              )}
+                              {lead.followUpSchedule?.isOverdue && (
+                                <Chip 
+                                  label={`Overdue: ${lead.followUpSchedule.overdueBy}d`} 
+                                  size="small" 
+                                  color="error"
+                                />
+                              )}
+                            </Box>
+                          </Box>
+                        }
+                      />
+                      <ListItemSecondaryAction>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          {lead.phone && (
+                            <Tooltip title="Call Customer">
+                              <IconButton size="small" href={`tel:${lead.phone}`}>
+                                <Phone fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                          {lead.email && (
+                            <Tooltip title="Email Customer">
+                              <IconButton size="small" href={`mailto:${lead.email}`}>
+                                <Email fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          )}
                           <Button
                             variant={isSelected ? 'contained' : 'outlined'}
                             size="small"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleCustomerClick(lead);
+                              onCustomerSelect(lead);
                             }}
+                            startIcon={isSelected ? <Check /> : <Add />}
                           >
                             {isSelected ? 'Selected' : 'Select'}
                           </Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                        </Box>
+                      </ListItemSecondaryAction>
+                    </ListItem>
+                    {index < filteredLeads.length - 1 && <Divider />}
+                  </React.Fragment>
+                );
+              })}
+            </List>
           </CardContent>
         </Card>
       )}
@@ -631,191 +1078,655 @@ const CustomerSelection = ({
         <Card sx={{ mt: 3, border: '2px solid', borderColor: 'primary.main' }}>
           <CardHeader
             title="Selected Customer"
-            avatar={<Person color="primary" />}
+            avatar={
+              <Avatar sx={{ bgcolor: 'primary.main' }}>
+                <CheckCircle />
+              </Avatar>
+            }
+            action={
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                {selectedCustomer.phone && (
+                  <Tooltip title="Call Customer">
+                    <IconButton color="primary" href={`tel:${selectedCustomer.phone}`}>
+                      <Phone />
+                    </IconButton>
+                  </Tooltip>
+                )}
+                {selectedCustomer.email && (
+                  <Tooltip title="Email Customer">
+                    <IconButton color="primary" href={`mailto:${selectedCustomer.email}`}>
+                      <Email />
+                    </IconButton>
+                  </Tooltip>
+                )}
+                <Button 
+                  variant="outlined" 
+                  size="small"
+                  onClick={() => onCustomerSelect(null)}
+                  startIcon={<Clear />}
+                >
+                  Clear Selection
+                </Button>
+              </Box>
+            }
           />
           <CardContent>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
-                <Typography variant="body2" color="textSecondary">
+            <Grid container spacing={3}>
+              <Grid item xs={12} sm={6} md={3}>
+                <Typography variant="body2" color="textSecondary" gutterBottom>
                   Customer Name
                 </Typography>
                 <Typography variant="h6" fontWeight="medium">
-                  {`${selectedCustomer.firstName || ''} ${selectedCustomer.lastName || ''}`.trim()}
+                  {getCustomerDisplayName(selectedCustomer)}
                 </Typography>
               </Grid>
-              <Grid item xs={12} sm={6}>
-                <Typography variant="body2" color="textSecondary">
-                  Email
+              <Grid item xs={12} sm={6} md={3}>
+                <Typography variant="body2" color="textSecondary" gutterBottom>
+                  Email Address
                 </Typography>
                 <Typography variant="h6" fontWeight="medium">
                   {selectedCustomer.email || '-'}
                 </Typography>
               </Grid>
-              <Grid item xs={12} sm={6}>
-                <Typography variant="body2" color="textSecondary">
-                  Phone
+              <Grid item xs={12} sm={6} md={3}>
+                <Typography variant="body2" color="textSecondary" gutterBottom>
+                  Phone Number
                 </Typography>
                 <Typography variant="h6" fontWeight="medium">
                   {formatPhoneNumber(selectedCustomer.phone) || '-'}
                 </Typography>
               </Grid>
-              <Grid item xs={12} sm={6}>
-                <Typography variant="body2" color="textSecondary">
+              <Grid item xs={12} sm={6} md={3}>
+                <Typography variant="body2" color="textSecondary" gutterBottom>
                   Lead Source
                 </Typography>
                 <Typography variant="h6" fontWeight="medium">
                   {selectedCustomer.source || selectedCustomer.leadSource || '-'}
                 </Typography>
               </Grid>
+              
+              {/* Additional Customer Details */}
+              {(selectedCustomer.score || selectedCustomer.priority || selectedCustomer.qualificationStatus || selectedCustomer.status) && (
+                <>
+                  {selectedCustomer.score && (
+                    <Grid item xs={12} sm={6} md={3}>
+                      <Typography variant="body2" color="textSecondary" gutterBottom>
+                        Lead Score
+                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="h6" fontWeight="medium" color="success.main">
+                          {selectedCustomer.score}
+                        </Typography>
+                        {selectedCustomer.scoreGrade && (
+                          <Chip label={selectedCustomer.scoreGrade} size="small" color="success" />
+                        )}
+                      </Box>
+                    </Grid>
+                  )}
+                  
+                  {selectedCustomer.priority && (
+                    <Grid item xs={12} sm={6} md={3}>
+                      <Typography variant="body2" color="textSecondary" gutterBottom>
+                        Priority Level
+                      </Typography>
+                      <Chip 
+                        label={selectedCustomer.priority} 
+                        color={
+                          selectedCustomer.priority === 'Critical' ? 'error' : 
+                          selectedCustomer.priority === 'High' ? 'warning' : 'default'
+                        }
+                        icon={<Star />}
+                      />
+                    </Grid>
+                  )}
+                  
+                  {selectedCustomer.status && (
+                    <Grid item xs={12} sm={6} md={3}>
+                      <Typography variant="body2" color="textSecondary" gutterBottom>
+                        Current Status
+                      </Typography>
+                      <Chip 
+                        label={selectedCustomer.status} 
+                        color={selectedCustomer.status === 'Booked' ? 'success' : 'primary'}
+                        variant="outlined"
+                      />
+                    </Grid>
+                  )}
+                  
+                  {selectedCustomer.project && (
+                    <Grid item xs={12} sm={6} md={3}>
+                      <Typography variant="body2" color="textSecondary" gutterBottom>
+                        Interested Project
+                      </Typography>
+                      <Typography variant="body1" fontWeight="medium">
+                        {getProjectInfo(selectedCustomer.project._id || selectedCustomer.project, projects)?.name || 'Unknown Project'}
+                      </Typography>
+                      <Typography variant="caption" color="textSecondary">
+                        {getProjectInfo(selectedCustomer.project._id || selectedCustomer.project, projects)?.location?.city || 'Unknown Location'}
+                      </Typography>
+                    </Grid>
+                  )}
+                  
+                  {selectedCustomer.engagementMetrics && (
+                    <Grid item xs={12}>
+                      <Typography variant="body2" color="textSecondary" gutterBottom>
+                        Engagement Details
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                        <Chip 
+                          label={`Response Rate: ${selectedCustomer.engagementMetrics.responseRate}%`} 
+                          size="small" 
+                          color="info" 
+                          variant="outlined"
+                        />
+                        <Chip 
+                          label={`Preferred: ${selectedCustomer.engagementMetrics.preferredContactMethod}`} 
+                          size="small" 
+                          color="primary" 
+                          variant="outlined"
+                        />
+                        {selectedCustomer.followUpSchedule?.isOverdue && (
+                          <Chip 
+                            label={`Follow-up Overdue: ${selectedCustomer.followUpSchedule.overdueBy} days`} 
+                            size="small" 
+                            color="error"
+                          />
+                        )}
+                      </Box>
+                    </Grid>
+                  )}
+                </>
+              )}
             </Grid>
           </CardContent>
         </Card>
       )}
-
-      {/* Create New Customer Dialog */}
-      <Dialog
-        open={showCreateDialog}
-        onClose={() => setShowCreateDialog(false)}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>Create New Customer</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            For now, please use the Lead Management section to add new customers.
-            You can navigate to Leads → Add New Lead to create a new customer.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowCreateDialog(false)}>
-            Cancel
-          </Button>
-          <Button 
-            onClick={() => {
-              setShowCreateDialog(false);
-              window.open('/leads/create', '_blank');
-            }}
-            variant="contained"
-          >
-            Go to Add Lead
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 };
 
-// Cost Sheet Component
-const CostSheet = ({ 
+// ============================================================================
+// ENHANCED COST SHEET COMPONENT
+// ============================================================================
+
+const EnhancedCostSheet = ({ 
   selectedUnit, 
   selectedCustomer, 
   costSheet,
   onGenerateCostSheet,
   discount,
   onDiscountChange,
-  loading 
+  loading,
+  projects 
 }) => {
-  const [discountType, setDiscountType] = useState('percentage'); // 'percentage' or 'amount'
-  const [discountValue, setDiscountValue] = useState(0);
+  const [activeTab, setActiveTab] = useState(0);
+  const [costComponents, setCostComponents] = useState({});
+  const [customizations, setCustomizations] = useState({});
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [previewMode, setPreviewMode] = useState('detailed');
 
-  const handleDiscountChange = (type, value) => {
-    setDiscountType(type);
-    setDiscountValue(value);
-    onDiscountChange(type, value);
+  // FIXED: Get project using proper resolution
+  const project = getUnitProject(selectedUnit, projects);
+
+  // Initialize cost components
+  useEffect(() => {
+    if (selectedUnit && project) {
+      initializeCostComponents();
+    }
+  }, [selectedUnit, project]);
+
+  const initializeCostComponents = () => {
+    const basePrice = selectedUnit.currentPrice || selectedUnit.basePrice || 0;
+    const unitArea = selectedUnit.areaSqft || selectedUnit.builtupArea || selectedUnit.area || 1000;
+    
+    const components = {
+      basePrice: {
+        amount: basePrice,
+        calculation: `${formatCurrency(basePrice / unitArea)}/sq ft × ${unitArea} sq ft`,
+        editable: false,
+      },
+      premiumCharges: {
+        amount: calculatePremiumCharges(selectedUnit, basePrice),
+        calculation: 'Floor + Facing + Feature premiums',
+        editable: true,
+      },
+      parkingCharges: {
+        amount: selectedUnit.features?.hasParkingSlot ? 200000 : 0,
+        calculation: selectedUnit.features?.hasParkingSlot ? '1 covered parking slot' : 'No parking included',
+        editable: true,
+      },
+      clubMembership: {
+        amount: 150000,
+        calculation: 'One-time club membership fee',
+        editable: true,
+      },
+      infrastructureDevelopment: {
+        amount: Math.round(basePrice * 0.02),
+        calculation: '2% of base price',
+        editable: false,
+      },
+      powerBackup: {
+        amount: unitArea * 50,
+        calculation: `₹50/sq ft × ${unitArea} sq ft`,
+        editable: true,
+      },
+      maintenanceDeposit: {
+        amount: unitArea * 25,
+        calculation: `₹25/sq ft × ${unitArea} sq ft (Refundable)`,
+        editable: true,
+      },
+      legalCharges: {
+        amount: Math.round(basePrice * 0.01),
+        calculation: '1% of base price',
+        editable: false,
+      },
+      registrationCharges: {
+        amount: Math.round(basePrice * 0.01),
+        calculation: '1% of base price (approx)',
+        editable: false,
+      },
+    };
+
+    // Calculate GST on applicable components
+    const gstApplicableAmount = components.basePrice.amount + 
+                               components.premiumCharges.amount + 
+                               components.parkingCharges.amount;
+    components.gst = {
+      amount: Math.round(gstApplicableAmount * 0.05),
+      calculation: `5% GST on applicable components (${formatCurrency(gstApplicableAmount)})`,
+      editable: false,
+    };
+
+    setCostComponents(components);
+  };
+
+  const calculatePremiumCharges = (unit, basePrice) => {
+    let premium = 0;
+    const premiumBase = basePrice * 0.01; // 1% base for premium calculations
+
+    // Floor premium
+    const floorKey = unit.floor <= 1 ? 'ground' : 
+                     unit.floor === 2 ? 'first' :
+                     unit.floor === 3 ? 'second' :
+                     unit.floor === 4 ? 'third' :
+                     unit.floor === 5 ? 'fourth' :
+                     unit.floor === 6 ? 'fifth' : 'above_fifth';
+    premium += premiumBase * (PREMIUM_FACTORS.floor[floorKey] || 0);
+
+    // Facing premium
+    const facingKey = unit.facing?.toLowerCase() || 'east';
+    premium += premiumBase * (PREMIUM_FACTORS.facing[facingKey] || 0);
+
+    // Feature premiums
+    if (unit.features?.isParkFacing) premium += premiumBase * PREMIUM_FACTORS.features.park_facing;
+    if (unit.features?.isCornerUnit) premium += premiumBase * PREMIUM_FACTORS.features.corner_unit;
+
+    return Math.round(premium);
+  };
+
+  const handleComponentChange = (componentId, newAmount) => {
+    setCostComponents(prev => ({
+      ...prev,
+      [componentId]: {
+        ...prev[componentId],
+        amount: parseFloat(newAmount) || 0,
+      }
+    }));
+  };
+
+  const calculateTotals = () => {
+    const subtotal = Object.values(costComponents).reduce((sum, comp) => sum + (comp.amount || 0), 0);
+    
+    let discountAmount = 0;
+    if (discount.type === 'percentage') {
+      discountAmount = subtotal * (discount.value / 100);
+    } else {
+      discountAmount = discount.value;
+    }
+
+    const total = subtotal - discountAmount;
+
+    return {
+      subtotal,
+      discountAmount,
+      total,
+      components: costComponents,
+    };
+  };
+
+  const totals = calculateTotals();
+
+  const generateDetailedCostSheet = async () => {
+    try {
+      
+      const costSheetData = {
+        unitDetails: {
+          unitId: selectedUnit._id,
+          unitNumber: selectedUnit.unitNumber,
+          project: project?.name || 'Unknown Project',
+          area: selectedUnit.areaSqft || selectedUnit.builtupArea || selectedUnit.area,
+          type: selectedUnit.unitType || selectedUnit.type,
+          floor: selectedUnit.floor,
+          facing: selectedUnit.facing,
+        },
+        costBreakdown: Object.entries(costComponents).map(([key, component]) => {
+          const componentDef = COST_COMPONENTS.find(c => c.id === key);
+          return {
+            id: key,
+            item: componentDef?.label || key,
+            description: componentDef?.description,
+            category: componentDef?.category,
+            amount: component.amount,
+            calculation: component.calculation,
+            editable: component.editable,
+          };
+        }),
+        discountDetails: {
+          type: discount.type,
+          value: discount.value,
+          amount: totals.discountAmount,
+        },
+        totals: {
+          subtotal: totals.subtotal,
+          discountAmount: totals.discountAmount,
+          finalAmount: totals.total,
+        },
+        generatedAt: new Date().toISOString(),
+        generatedBy: selectedCustomer._id,
+      };
+
+      onGenerateCostSheet(costSheetData);
+      
+    } catch (error) {
+      console.error('Error generating cost sheet:', error);
+    }
   };
 
   if (!selectedUnit || !selectedCustomer) {
     return (
-      <Alert severity="info">
-        Please select both a unit and customer to generate the cost sheet.
+      <Alert severity="info" sx={{ mb: 3 }}>
+        <Typography variant="h6">Complete Previous Steps</Typography>
+        <Typography variant="body2">
+          Please select both a unit and customer before generating the cost sheet.
+        </Typography>
       </Alert>
     );
   }
 
   return (
     <Box>
-      {/* Generate Cost Sheet */}
+      {/* Cost Sheet Header */}
       <Card sx={{ mb: 3 }}>
         <CardHeader
-          title="Generate Cost Sheet"
+          title="Detailed Cost Sheet Generation"
+          subheader="Configure all cost components and generate comprehensive pricing"
           action={
-            <Button
-              variant="contained"
-              startIcon={<Calculate />}
-              onClick={onGenerateCostSheet}
-              disabled={loading}
-            >
-              {loading ? 'Generating...' : 'Generate Cost Sheet'}
-            </Button>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={showAdvanced}
+                    onChange={(e) => setShowAdvanced(e.target.checked)}
+                  />
+                }
+                label="Advanced Mode"
+              />
+              <Button
+                variant="contained"
+                startIcon={<Calculate />}
+                onClick={generateDetailedCostSheet}
+                disabled={loading}
+                size="large"
+              >
+                {loading ? 'Generating...' : 'Generate Cost Sheet'}
+              </Button>
+            </Box>
           }
         />
-        <CardContent>
-          <Grid container spacing={3}>
-            {/* Discount Configuration */}
-            <Grid item xs={12} md={6}>
-              <Typography variant="h6" gutterBottom>
-                Discount Configuration
-              </Typography>
-              <FormControl fullWidth sx={{ mb: 2 }}>
-                <InputLabel>Discount Type</InputLabel>
-                <Select
-                  value={discountType}
-                  label="Discount Type"
-                  onChange={(e) => handleDiscountChange(e.target.value, discountValue)}
-                >
-                  <MenuItem value="percentage">Percentage (%)</MenuItem>
-                  <MenuItem value="amount">Fixed Amount (₹)</MenuItem>
-                </Select>
-              </FormControl>
-              <TextField
-                fullWidth
-                label={`Discount ${discountType === 'percentage' ? 'Percentage' : 'Amount'}`}
-                type="number"
-                value={discountValue}
-                onChange={(e) => handleDiscountChange(discountType, parseFloat(e.target.value) || 0)}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      {discountType === 'percentage' ? <Percent /> : <AttachMoney />}
-                    </InputAdornment>
-                  ),
-                }}
-                inputProps={{
-                  min: 0,
-                  max: discountType === 'percentage' ? 100 : undefined,
-                }}
-              />
-            </Grid>
-
-            {/* Unit Summary */}
-            <Grid item xs={12} md={6}>
-              <Typography variant="h6" gutterBottom>
-                Unit Summary
-              </Typography>
-              <Box sx={{ p: 2, backgroundColor: 'grey.50', borderRadius: 1 }}>
-                <Typography variant="body2" color="textSecondary">
-                  Unit: {selectedUnit.unitNumber}
-                </Typography>
-                <Typography variant="body2" color="textSecondary">
-                  Type: {selectedUnit.unitType}
-                </Typography>
-                <Typography variant="body2" color="textSecondary">
-                  Area: {selectedUnit.builtupArea || selectedUnit.area} sq ft
-                </Typography>
-                <Typography variant="body2" color="textSecondary">
-                  Base Price: {formatCurrency(selectedUnit.currentPrice || selectedUnit.basePrice)}
-                </Typography>
-              </Box>
-            </Grid>
-          </Grid>
-        </CardContent>
       </Card>
 
-      {/* Cost Sheet Display */}
+      {/* Cost Components Configuration */}
+      <Grid container spacing={3}>
+        {/* Unit & Customer Summary */}
+        <Grid item xs={12} md={4}>
+          <Card>
+            <CardHeader title="Unit Summary" />
+            <CardContent>
+              <Stack spacing={2}>
+                <Box>
+                  <Typography variant="body2" color="textSecondary">Unit</Typography>
+                  <Typography variant="h6">{selectedUnit.unitNumber}</Typography>
+                  <Typography variant="caption">{project?.name || 'Unknown Project'}</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="body2" color="textSecondary">Configuration</Typography>
+                  <Typography variant="body1">{selectedUnit.unitType || selectedUnit.type}</Typography>
+                  <Typography variant="caption">
+                    {selectedUnit.areaSqft || selectedUnit.area} sq ft • Floor {selectedUnit.floor} • {selectedUnit.facing}
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography variant="body2" color="textSecondary">Customer</Typography>
+                  <Typography variant="body1">
+                    {`${selectedCustomer.firstName || ''} ${selectedCustomer.lastName || ''}`.trim()}
+                  </Typography>
+                  <Typography variant="caption">{selectedCustomer.email}</Typography>
+                </Box>
+                <Divider />
+                <Box sx={{ bgcolor: 'primary.50', p: 2, borderRadius: 1 }}>
+                  <Typography variant="body2" color="textSecondary">Total Amount</Typography>
+                  <Typography variant="h5" color="primary" fontWeight="bold">
+                    {formatCurrency(totals.total)}
+                  </Typography>
+                  {totals.discountAmount > 0 && (
+                    <Typography variant="caption" color="success.main">
+                      Discount: {formatCurrency(totals.discountAmount)}
+                    </Typography>
+                  )}
+                </Box>
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Cost Components */}
+        <Grid item xs={12} md={8}>
+          <Card>
+            <CardHeader 
+              title="Cost Components" 
+              action={
+                <Tabs value={activeTab} onChange={(e, v) => setActiveTab(v)}>
+                  <Tab label="By Category" />
+                  <Tab label="All Components" />
+                </Tabs>
+              }
+            />
+            <CardContent>
+              {/* Component Categories */}
+              {activeTab === 0 && (
+                <Box>
+                  {['primary', 'amenities', 'development', 'utilities', 'deposits', 'legal', 'taxes'].map(category => (
+                    <Accordion key={category}>
+                      <AccordionSummary expandIcon={<ExpandMore />}>
+                        <Typography variant="subtitle1" sx={{ textTransform: 'capitalize' }}>
+                          {category.replace(/([A-Z])/g, ' $1')} Components
+                        </Typography>
+                        <Typography variant="body2" color="textSecondary" sx={{ ml: 2 }}>
+                          {formatCurrency(
+                            Object.entries(costComponents)
+                              .filter(([key]) => COST_COMPONENTS.find(c => c.id === key)?.category === category)
+                              .reduce((sum, [, comp]) => sum + (comp.amount || 0), 0)
+                          )}
+                        </Typography>
+                      </AccordionSummary>
+                      <AccordionDetails>
+                        <Stack spacing={2}>
+                          {COST_COMPONENTS
+                            .filter(comp => comp.category === category)
+                            .map(componentDef => {
+                              const component = costComponents[componentDef.id];
+                              if (!component) return null;
+
+                              return (
+                                <Box key={componentDef.id}>
+                                  <Grid container spacing={2} alignItems="center">
+                                    <Grid item xs={12} sm={6}>
+                                      <Typography variant="body2" fontWeight="medium">
+                                        {componentDef.label}
+                                      </Typography>
+                                      <Typography variant="caption" color="textSecondary">
+                                        {componentDef.description}
+                                      </Typography>
+                                    </Grid>
+                                    <Grid item xs={12} sm={3}>
+                                      <TextField
+                                        fullWidth
+                                        size="small"
+                                        type="number"
+                                        value={component.amount}
+                                        onChange={(e) => handleComponentChange(componentDef.id, e.target.value)}
+                                        disabled={!component.editable || !showAdvanced}
+                                        InputProps={{
+                                          startAdornment: <InputAdornment position="start">₹</InputAdornment>,
+                                        }}
+                                      />
+                                    </Grid>
+                                    <Grid item xs={12} sm={3}>
+                                      <Typography variant="caption" color="textSecondary">
+                                        {component.calculation}
+                                      </Typography>
+                                    </Grid>
+                                  </Grid>
+                                  <Divider sx={{ mt: 1 }} />
+                                </Box>
+                              );
+                            })}
+                        </Stack>
+                      </AccordionDetails>
+                    </Accordion>
+                  ))}
+                </Box>
+              )}
+
+              {/* All Components List */}
+              {activeTab === 1 && (
+                <TableContainer>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Component</TableCell>
+                        <TableCell>Amount</TableCell>
+                        <TableCell>Calculation</TableCell>
+                        <TableCell>Category</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {Object.entries(costComponents).map(([key, component]) => {
+                        const componentDef = COST_COMPONENTS.find(c => c.id === key);
+                        return (
+                          <TableRow key={key}>
+                            <TableCell>
+                              <Typography variant="body2" fontWeight="medium">
+                                {componentDef?.label}
+                              </Typography>
+                              <Typography variant="caption" color="textSecondary">
+                                {componentDef?.description}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                type="number"
+                                value={component.amount}
+                                onChange={(e) => handleComponentChange(key, e.target.value)}
+                                disabled={!component.editable || !showAdvanced}
+                                InputProps={{
+                                  startAdornment: <InputAdornment position="start">₹</InputAdornment>,
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="caption" color="textSecondary">
+                                {component.calculation}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Chip 
+                                label={componentDef?.category} 
+                                size="small" 
+                                variant="outlined"
+                                sx={{ textTransform: 'capitalize' }}
+                              />
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Discount Configuration */}
+        <Grid item xs={12}>
+          <Card>
+            <CardHeader title="Discount Configuration" />
+            <CardContent>
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={3}>
+                  <FormControl fullWidth>
+                    <InputLabel>Discount Type</InputLabel>
+                    <Select
+                      value={discount.type}
+                      label="Discount Type"
+                      onChange={(e) => onDiscountChange(e.target.value, discount.value)}
+                    >
+                      <MenuItem value="percentage">Percentage (%)</MenuItem>
+                      <MenuItem value="amount">Fixed Amount (₹)</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} md={3}>
+                  <TextField
+                    fullWidth
+                    label="Discount Value"
+                    type="number"
+                    value={discount.value}
+                    onChange={(e) => onDiscountChange(discount.type, e.target.value)}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          {discount.type === 'percentage' ? '%' : '₹'}
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Box sx={{ bgcolor: 'success.50', p: 2, borderRadius: 1 }}>
+                    <Typography variant="body2" color="textSecondary">Discount Amount</Typography>
+                    <Typography variant="h6" color="success.main" fontWeight="bold">
+                      {formatCurrency(totals.discountAmount)}
+                    </Typography>
+                    <Typography variant="caption">
+                      Customer saves {formatPercentage((totals.discountAmount / totals.subtotal) * 100)} on total
+                    </Typography>
+                  </Box>
+                </Grid>
+              </Grid>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      {/* Generated Cost Sheet Display */}
       {costSheet && (
-        <Card>
+        <Card sx={{ mt: 3 }}>
           <CardHeader
-            title="Cost Sheet"
+            title="Generated Cost Sheet"
+            subheader={`Generated on ${formatDate(new Date())}`}
             action={
               <Box sx={{ display: 'flex', gap: 1 }}>
                 <Button variant="outlined" startIcon={<Print />} size="small">
@@ -824,48 +1735,100 @@ const CostSheet = ({
                 <Button variant="outlined" startIcon={<Email />} size="small">
                   Email
                 </Button>
+                <Button variant="outlined" startIcon={<Download />} size="small">
+                  Export PDF
+                </Button>
               </Box>
             }
           />
           <CardContent>
-            <TableContainer>
+            <TableContainer component={Paper} variant="outlined">
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell>Item</TableCell>
+                    <TableCell>Component</TableCell>
+                    <TableCell>Description</TableCell>
                     <TableCell align="right">Amount</TableCell>
+                    <TableCell align="center">Category</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {costSheet.breakdown?.map((item, index) => (
+                  {costSheet.costBreakdown?.map((item, index) => (
                     <TableRow key={index}>
                       <TableCell>
-                        <Typography variant="body2" fontWeight={item.isBold ? 'bold' : 'normal'}>
+                        <Typography variant="body2" fontWeight="medium">
                           {item.item}
                         </Typography>
                       </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" color="textSecondary">
+                          {item.description}
+                        </Typography>
+                        {item.calculation && (
+                          <Typography variant="caption" display="block" color="textSecondary">
+                            {item.calculation}
+                          </Typography>
+                        )}
+                      </TableCell>
                       <TableCell align="right">
-                        <Typography 
-                          variant="body2" 
-                          fontWeight={item.isBold ? 'bold' : 'normal'}
-                          color={item.amount < 0 ? 'success.main' : 'inherit'}
-                        >
+                        <Typography variant="body2" fontWeight="medium">
                           {formatCurrency(item.amount)}
                         </Typography>
                       </TableCell>
+                      <TableCell align="center">
+                        <Chip 
+                          label={item.category} 
+                          size="small" 
+                          variant="outlined"
+                          sx={{ textTransform: 'capitalize' }}
+                        />
+                      </TableCell>
                     </TableRow>
                   ))}
-                  <TableRow>
-                    <TableCell>
-                      <Typography variant="h6" fontWeight="bold">
-                        Total Payable Amount
+                  
+                  {/* Subtotal */}
+                  <TableRow sx={{ bgcolor: 'grey.50' }}>
+                    <TableCell colSpan={2}>
+                      <Typography variant="body1" fontWeight="bold">Subtotal</Typography>
+                    </TableCell>
+                    <TableCell align="right">
+                      <Typography variant="body1" fontWeight="bold">
+                        {formatCurrency(costSheet.totals?.subtotal)}
                       </Typography>
+                    </TableCell>
+                    <TableCell />
+                  </TableRow>
+
+                  {/* Discount */}
+                  {costSheet.discountDetails?.amount > 0 && (
+                    <TableRow>
+                      <TableCell colSpan={2}>
+                        <Typography variant="body1" fontWeight="medium" color="success.main">
+                          Discount ({costSheet.discountDetails.type === 'percentage' ? 
+                            `${costSheet.discountDetails.value}%` : 
+                            'Fixed Amount'})
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography variant="body1" fontWeight="medium" color="success.main">
+                          -{formatCurrency(costSheet.discountDetails.amount)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell />
+                    </TableRow>
+                  )}
+
+                  {/* Final Total */}
+                  <TableRow sx={{ bgcolor: 'primary.50' }}>
+                    <TableCell colSpan={2}>
+                      <Typography variant="h6" fontWeight="bold">Total Payable Amount</Typography>
                     </TableCell>
                     <TableCell align="right">
                       <Typography variant="h6" fontWeight="bold" color="primary">
-                        {formatCurrency(costSheet.finalPayableAmount)}
+                        {formatCurrency(costSheet.totals?.finalAmount)}
                       </Typography>
                     </TableCell>
+                    <TableCell />
                   </TableRow>
                 </TableBody>
               </Table>
@@ -877,163 +1840,917 @@ const CostSheet = ({
   );
 };
 
-// Review and Book Component
-const ReviewAndBook = ({ 
+// ============================================================================
+// FIXED PAYMENT PLAN SELECTION COMPONENT
+// ============================================================================
+
+const PaymentPlanSelection = ({ 
   selectedUnit, 
   selectedCustomer, 
   costSheet,
-  onCreateSale,
+  selectedPaymentPlan,
+  onPaymentPlanSelect,
+  paymentSchedule,
+  onGenerateSchedule,
   loading,
   projects 
 }) => {
+  const [paymentTemplates, setPaymentTemplates] = useState([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [customPlan, setCustomPlan] = useState(null);
+  const [showCustomPlan, setShowCustomPlan] = useState(false);
+
+  // FIXED: Get project using proper resolution
+  const project = getUnitProject(selectedUnit, projects);
+
+  // FIXED: Use activePaymentTemplates from project data instead of API call
+  useEffect(() => {
+    if (selectedUnit && project) {
+      console.log('🔄 Loading payment templates for project:', project.name, 'ID:', project._id);
+      loadPaymentTemplates();
+    } else {
+      console.log('⚠️ Cannot load payment templates - missing unit or project:', { 
+        hasUnit: !!selectedUnit, 
+        hasProject: !!project,
+        unitProject: selectedUnit?.project,
+        resolvedProject: project?.name 
+      });
+      setPaymentTemplates([]);
+    }
+  }, [selectedUnit, project]);
+
+  const loadPaymentTemplates = async () => {
+    try {
+      setTemplatesLoading(true);
+      
+      console.log('🔄 Loading payment templates for:', {
+        unitId: selectedUnit._id,
+        unitNumber: selectedUnit.unitNumber,
+        projectId: project?._id,
+        projectName: project?.name,
+        projectHasTemplates: project?.activePaymentTemplates?.length > 0
+      });
+      
+      // FIXED: Use activePaymentTemplates from project data
+      if (project && project.activePaymentTemplates && project.activePaymentTemplates.length > 0) {
+        console.log('✅ Using activePaymentTemplates from project:', project.activePaymentTemplates);
+        const activeTemplates = project.activePaymentTemplates.filter(t => t.isActive !== false);
+        setPaymentTemplates(activeTemplates);
+      } else {
+        console.log('⚠️ No activePaymentTemplates in project data, trying API fallback...');
+        // Fallback: Try to fetch from API if not available in project data
+        try {
+          // FIXED: Extract proper project ID string
+          const projectId = selectedUnit.project?._id || selectedUnit.project;
+          if (!projectId) {
+            console.error('❌ No project ID found for unit:', selectedUnit);
+            setPaymentTemplates([]);
+            return;
+          }
+          
+          console.log('🌐 Fetching payment templates via API for project ID:', projectId);
+          const response = await projectPaymentAPI.getPaymentPlanTemplates(projectId);
+          const templates = response.data?.data || response.data || [];
+          const activeTemplates = templates.filter(t => t.isActive);
+          console.log('📦 API returned templates:', activeTemplates);
+          setPaymentTemplates(activeTemplates);
+        } catch (apiError) {
+          console.error('❌ API fetch failed:', apiError);
+          setPaymentTemplates([]);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error loading payment templates:', error);
+      setPaymentTemplates([]);
+    } finally {
+      setTemplatesLoading(false);
+    }
+  };
+
+  const handleTemplateSelect = async (template) => {
+    try {
+      onPaymentPlanSelect(template);
+      
+      // Generate payment schedule based on template and cost sheet
+      const schedule = generatePaymentSchedule(template, costSheet);
+      onGenerateSchedule(schedule);
+      
+    } catch (error) {
+      console.error('Error selecting payment template:', error);
+    }
+  };
+
+  const generatePaymentSchedule = (template, costSheet) => {
+    if (!template || !costSheet) return [];
+
+    const totalAmount = costSheet.totals?.finalAmount || costSheet.finalPayableAmount || 0;
+    const startDate = new Date();
+
+    return template.installments.map((installment, index) => {
+      const amount = Math.round((totalAmount * installment.percentage) / 100);
+      const dueDate = new Date(startDate);
+      dueDate.setDate(dueDate.getDate() + (installment.dueAfterDays || 0));
+
+      return {
+        installmentNumber: installment.installmentNumber,
+        description: installment.description,
+        percentage: installment.percentage,
+        amount: amount,
+        dueDate: dueDate,
+        milestoneType: installment.milestoneType,
+        status: 'pending',
+        isOptional: installment.isOptional || false,
+      };
+    });
+  };
+
   if (!selectedUnit || !selectedCustomer || !costSheet) {
     return (
-      <Alert severity="warning">
-        Please complete all previous steps before reviewing the sale.
+      <Alert severity="info" sx={{ mb: 3 }}>
+        <Typography variant="h6">Complete Previous Steps</Typography>
+        <Typography variant="body2">
+          Please complete unit selection, customer selection, and cost sheet generation before setting up payment plan.
+        </Typography>
       </Alert>
     );
   }
 
-  const project = projects.find(p => p._id === selectedUnit.project);
-  const customerName = `${selectedCustomer.firstName || ''} ${selectedCustomer.lastName || ''}`.trim();
+  if (templatesLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+        <CircularProgress size={60} />
+        <Box sx={{ ml: 2 }}>
+          <Typography variant="h6">Loading payment plan templates...</Typography>
+          <Typography variant="body2" color="textSecondary">
+            Fetching available payment schedules for this project
+          </Typography>
+        </Box>
+      </Box>
+    );
+  }
 
   return (
     <Box>
-      {/* Sale Summary */}
+      {/* Payment Plan Header */}
       <Card sx={{ mb: 3 }}>
         <CardHeader
-          title="Sale Summary"
+          title="Select Payment Plan"
+          subheader={`Choose a payment schedule for ${project?.name || 'this project'} that works best for your customer`}
           action={
-            <Typography variant="h6" color="primary">
-              {formatCurrency(costSheet.finalPayableAmount)}
-            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+              <Typography variant="body2" color="textSecondary">
+                Project: {project?.name || 'Unknown Project'}
+              </Typography>
+              <Typography variant="h6" color="primary">
+                Total: {formatCurrency(costSheet.totals?.finalAmount || costSheet.finalPayableAmount)}
+              </Typography>
+            </Box>
           }
         />
-        <CardContent>
-          <Grid container spacing={3}>
-            {/* Property Details */}
-            <Grid item xs={12} md={6}>
-              <Typography variant="h6" gutterBottom>
-                Property Details
-              </Typography>
-              <Box sx={{ p: 2, backgroundColor: 'grey.50', borderRadius: 1 }}>
-                <Typography variant="body2" color="textSecondary">
-                  Project: {project?.name || 'Unknown'}
-                </Typography>
-                <Typography variant="body2" color="textSecondary">
-                  Unit: {selectedUnit.unitNumber}
-                </Typography>
-                <Typography variant="body2" color="textSecondary">
-                  Type: {selectedUnit.unitType}
-                </Typography>
-                <Typography variant="body2" color="textSecondary">
-                  Area: {selectedUnit.builtupArea || selectedUnit.area} sq ft
-                </Typography>
-                <Typography variant="body2" color="textSecondary">
-                  Floor: {selectedUnit.floor}
-                </Typography>
-                <Typography variant="body2" color="textSecondary">
-                  Tower: {getSafeDisplayValue(selectedUnit.tower?.name)}
-                </Typography>
-              </Box>
-            </Grid>
+      </Card>
 
-            {/* Customer Details */}
-            <Grid item xs={12} md={6}>
-              <Typography variant="h6" gutterBottom>
-                Customer Details
-              </Typography>
-              <Box sx={{ p: 2, backgroundColor: 'grey.50', borderRadius: 1 }}>
-                <Typography variant="body2" color="textSecondary">
-                  Name: {customerName}
-                </Typography>
-                <Typography variant="body2" color="textSecondary">
-                  Email: {selectedCustomer.email || '-'}
-                </Typography>
-                <Typography variant="body2" color="textSecondary">
-                  Phone: {formatPhoneNumber(selectedCustomer.phone) || '-'}
-                </Typography>
-                <Typography variant="body2" color="textSecondary">
-                  Source: {selectedCustomer.source || selectedCustomer.leadSource || '-'}
-                </Typography>
-              </Box>
-            </Grid>
-
-            {/* Pricing Summary */}
-            <Grid item xs={12}>
-              <Typography variant="h6" gutterBottom>
-                Pricing Summary
-              </Typography>
-              <Box sx={{ p: 2, backgroundColor: 'primary.50', borderRadius: 1 }}>
+      <Grid container spacing={3}>
+        {/* Available Payment Templates */}
+        <Grid item xs={12} md={8}>
+          <Card>
+            <CardHeader 
+              title={`Available Payment Plans (${paymentTemplates.length})`}
+              subheader={`For ${project?.name || 'this project'}`}
+              action={
+                <Button
+                  variant="outlined"
+                  startIcon={<Add />}
+                  onClick={() => setShowCustomPlan(true)}
+                >
+                  Create Custom Plan
+                </Button>
+              }
+            />
+            <CardContent>
+              {paymentTemplates.length === 0 ? (
+                <Alert severity="warning">
+                  <Typography variant="h6">No payment templates available</Typography>
+                  <Typography variant="body2" sx={{ mb: 2 }}>
+                    No active payment plan templates found for {project?.name || 'this project'}.
+                  </Typography>
+                  
+                  {/* Detailed Debug Information */}
+                  <Box sx={{ bgcolor: 'warning.50', p: 2, borderRadius: 1, mb: 2 }}>
+                    <Typography variant="body2" fontWeight="bold" gutterBottom>
+                      Debug Information:
+                    </Typography>
+                    <Typography variant="caption" display="block">
+                      • Project: {project?.name || 'Not found'} (ID: {project?._id || 'N/A'})
+                    </Typography>
+                    <Typography variant="caption" display="block">
+                      • Templates in project data: {project?.activePaymentTemplates?.length || 0}
+                    </Typography>
+                    <Typography variant="caption" display="block">
+                      • Payment configuration exists: {project?.paymentConfiguration ? 'Yes' : 'No'}
+                    </Typography>
+                    <Typography variant="caption" display="block">
+                      • Unit project ID: {selectedUnit?.project?._id || selectedUnit?.project || 'N/A'}
+                    </Typography>
+                    {project?.activePaymentTemplates?.length > 0 && (
+                      <Typography variant="caption" display="block">
+                        • Available template: "{project.activePaymentTemplates[0].name}"
+                      </Typography>
+                    )}
+                  </Box>
+                  
+                  <Button 
+                    variant="contained" 
+                    sx={{ mt: 1 }}
+                    startIcon={<Add />}
+                    onClick={() => setShowCustomPlan(true)}
+                  >
+                    Create Custom Payment Plan
+                  </Button>
+                </Alert>
+              ) : (
                 <Grid container spacing={2}>
-                  <Grid item xs={6}>
-                    <Typography variant="body2" color="textSecondary">
-                      Base Price:
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={6}>
-                    <Typography variant="body2" align="right">
-                      {formatCurrency(selectedUnit.currentPrice || selectedUnit.basePrice)}
-                    </Typography>
-                  </Grid>
-                  
-                  {costSheet.breakdown?.filter(item => item.item !== 'Base Price').map((item, index) => (
-                    <React.Fragment key={index}>
-                      <Grid item xs={6}>
-                        <Typography variant="body2" color="textSecondary">
-                          {item.item}:
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={6}>
-                        <Typography 
-                          variant="body2" 
-                          align="right"
-                          color={item.amount < 0 ? 'success.main' : 'inherit'}
+                  {paymentTemplates.map((template) => {
+                    const isSelected = selectedPaymentPlan?._id === template._id;
+                    
+                    return (
+                      <Grid item xs={12} sm={6} md={4} key={template._id}>
+                        <Card 
+                          variant="outlined"
+                          sx={{ 
+                            cursor: 'pointer',
+                            border: isSelected ? '2px solid' : '1px solid',
+                            borderColor: isSelected ? 'primary.main' : 'divider',
+                            '&:hover': { borderColor: 'primary.main' }
+                          }}
+                          onClick={() => handleTemplateSelect(template)}
                         >
-                          {formatCurrency(item.amount)}
-                        </Typography>
+                          <CardHeader
+                            title={template.name}
+                            subheader={template.planType?.replace('_', ' ')}
+                            avatar={
+                              <Avatar sx={{ bgcolor: isSelected ? 'primary.main' : 'grey.400' }}>
+                                {isSelected ? <Check /> : <Payment />}
+                              </Avatar>
+                            }
+                          />
+                          <CardContent>
+                            <Typography variant="body2" color="textSecondary" gutterBottom>
+                              {template.description || 'Payment plan with structured installments'}
+                            </Typography>
+                            
+                            <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+                              <Chip 
+                                label={`${template.installments?.length || 0} installments`} 
+                                size="small" 
+                                variant="outlined"
+                              />
+                              <Chip 
+                                label={`${template.gracePeriodDays || 0} days grace`} 
+                                size="small" 
+                                variant="outlined"
+                              />
+                            </Stack>
+
+                            <Typography variant="caption" color="textSecondary" gutterBottom>
+                              Key Installments:
+                            </Typography>
+                            {template.installments?.slice(0, 3).map((installment, index) => (
+                              <Box key={index} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                                <Typography variant="caption" noWrap sx={{ maxWidth: '60%' }}>
+                                  {installment.description}
+                                </Typography>
+                                <Typography variant="caption" fontWeight="medium">
+                                  {formatPercentage(installment.percentage)}
+                                </Typography>
+                              </Box>
+                            ))}
+                            {(template.installments?.length || 0) > 3 && (
+                              <Typography variant="caption" color="textSecondary">
+                                +{(template.installments?.length || 0) - 3} more...
+                              </Typography>
+                            )}
+
+                            <Button
+                              variant={isSelected ? 'contained' : 'outlined'}
+                              fullWidth
+                              sx={{ mt: 2 }}
+                              startIcon={isSelected ? <Check /> : <Add />}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleTemplateSelect(template);
+                              }}
+                            >
+                              {isSelected ? 'Selected' : 'Select Plan'}
+                            </Button>
+                          </CardContent>
+                        </Card>
                       </Grid>
-                    </React.Fragment>
-                  ))}
-                  
-                  <Grid item xs={6}>
-                    <Typography variant="h6" fontWeight="bold">
-                      Total Amount:
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={6}>
-                    <Typography variant="h6" fontWeight="bold" color="primary" align="right">
-                      {formatCurrency(costSheet.finalPayableAmount)}
-                    </Typography>
-                  </Grid>
+                    );
+                  })}
                 </Grid>
-              </Box>
-            </Grid>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Payment Plan Summary */}
+        <Grid item xs={12} md={4}>
+          <Card>
+            <CardHeader 
+              title="Payment Summary"
+              avatar={
+                <Avatar sx={{ bgcolor: 'success.main' }}>
+                  <Assessment />
+                </Avatar>
+              }
+            />
+            <CardContent>
+              {selectedPaymentPlan ? (
+                <Stack spacing={2}>
+                  <Box>
+                    <Typography variant="body2" color="textSecondary">Selected Plan</Typography>
+                    <Typography variant="h6" fontWeight="bold">
+                      {selectedPaymentPlan.name}
+                    </Typography>
+                    <Typography variant="caption" color="textSecondary">
+                      {selectedPaymentPlan.planType?.replace('_', ' ')}
+                    </Typography>
+                  </Box>
+
+                  <Divider />
+
+                  <Box>
+                    <Typography variant="body2" color="textSecondary">Plan Details</Typography>
+                    <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+                      <Chip 
+                        label={`${selectedPaymentPlan.installments?.length} installments`} 
+                        size="small" 
+                        color="primary"
+                      />
+                      <Chip 
+                        label={`${selectedPaymentPlan.gracePeriodDays} days grace`} 
+                        size="small" 
+                        color="info"
+                      />
+                    </Stack>
+                    {selectedPaymentPlan.lateFeeRate > 0 && (
+                      <Typography variant="caption" color="warning.main" display="block" sx={{ mt: 1 }}>
+                        Late fee: {formatPercentage(selectedPaymentPlan.lateFeeRate)} per month
+                      </Typography>
+                    )}
+                  </Box>
+
+                  <Divider />
+
+                  <Box>
+                    <Typography variant="body2" color="textSecondary" gutterBottom>Total Amount</Typography>
+                    <Typography variant="h5" color="primary" fontWeight="bold">
+                      {formatCurrency(costSheet.totals?.finalAmount || costSheet.finalPayableAmount)}
+                    </Typography>
+                  </Box>
+
+                  {paymentSchedule && paymentSchedule.length > 0 && (
+                    <>
+                      <Divider />
+                      <Box>
+                        <Typography variant="body2" color="textSecondary" gutterBottom>
+                          Next Payment Due
+                        </Typography>
+                        <Typography variant="h6" color="warning.main" fontWeight="bold">
+                          {formatCurrency(paymentSchedule[0]?.amount)}
+                        </Typography>
+                        <Typography variant="caption" color="textSecondary">
+                          {paymentSchedule[0]?.description} - {formatDate(paymentSchedule[0]?.dueDate)}
+                        </Typography>
+                      </Box>
+                    </>
+                  )}
+                </Stack>
+              ) : (
+                <Box sx={{ textAlign: 'center', py: 3 }}>
+                  <Payment sx={{ fontSize: 48, color: 'grey.400', mb: 2 }} />
+                  <Typography variant="body1" color="textSecondary">
+                    Select a payment plan to see details
+                  </Typography>
+                  {paymentTemplates.length === 0 && (
+                    <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
+                      No templates available for {project?.name || 'this project'}
+                    </Typography>
+                  )}
+                </Box>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Payment Schedule */}
+        {paymentSchedule && paymentSchedule.length > 0 && (
+          <Grid item xs={12}>
+            <Card>
+              <CardHeader 
+                title="Payment Schedule"
+                subheader="Detailed installment breakdown"
+                action={
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Button variant="outlined" startIcon={<Print />} size="small">
+                      Print Schedule
+                    </Button>
+                    <Button variant="outlined" startIcon={<Email />} size="small">
+                      Email to Customer
+                    </Button>
+                  </Box>
+                }
+              />
+              <CardContent>
+                <TableContainer component={Paper} variant="outlined">
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>#</TableCell>
+                        <TableCell>Description</TableCell>
+                        <TableCell>Milestone</TableCell>
+                        <TableCell align="right">Percentage</TableCell>
+                        <TableCell align="right">Amount</TableCell>
+                        <TableCell>Due Date</TableCell>
+                        <TableCell>Status</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {paymentSchedule.map((installment, index) => (
+                        <TableRow key={index}>
+                          <TableCell>
+                            <Typography variant="body2" fontWeight="medium">
+                              #{installment.installmentNumber}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2">
+                              {installment.description}
+                            </Typography>
+                            {installment.isOptional && (
+                              <Chip label="Optional" size="small" color="info" sx={{ mt: 0.5 }} />
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Chip 
+                              label={installment.milestoneType?.replace('_', ' ')} 
+                              size="small" 
+                              variant="outlined"
+                              sx={{ textTransform: 'capitalize' }}
+                            />
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography variant="body2" fontWeight="medium">
+                              {formatPercentage(installment.percentage)}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography variant="body2" fontWeight="bold" color="primary">
+                              {formatCurrency(installment.amount)}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2">
+                              {formatDate(installment.dueDate)}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Chip 
+                              label={installment.status} 
+                              size="small" 
+                              color="default"
+                              sx={{ textTransform: 'capitalize' }}
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      
+                      {/* Total Row */}
+                      <TableRow sx={{ bgcolor: 'primary.50' }}>
+                        <TableCell colSpan={3} align="right">
+                          <Typography variant="h6" fontWeight="bold">Total</Typography>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography variant="h6" fontWeight="bold">100%</Typography>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography variant="h6" fontWeight="bold" color="primary">
+                            {formatCurrency(paymentSchedule.reduce((sum, inst) => sum + inst.amount, 0))}
+                          </Typography>
+                        </TableCell>
+                        <TableCell colSpan={2}></TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </CardContent>
+            </Card>
           </Grid>
+        )}
+      </Grid>
+    </Box>
+  );
+};
+
+// ============================================================================
+// ENHANCED REVIEW AND BOOK COMPONENT
+// ============================================================================
+
+const EnhancedReviewAndBook = ({ 
+  selectedUnit, 
+  selectedCustomer, 
+  costSheet,
+  selectedPaymentPlan,
+  paymentSchedule,
+  onCreateSale,
+  loading,
+  projects 
+}) => {
+  const [activeTab, setActiveTab] = useState(0);
+
+  if (!selectedUnit || !selectedCustomer || !costSheet || !selectedPaymentPlan) {
+    return (
+      <Alert severity="warning" sx={{ mb: 3 }}>
+        <Typography variant="h6">Complete All Steps</Typography>
+        <Typography variant="body2">
+          Please complete all previous steps before reviewing the sale:
+        </Typography>
+        <Box component="ul" sx={{ mt: 1, mb: 0 }}>
+          <li>Unit selection</li>
+          <li>Customer selection</li>
+          <li>Cost sheet generation</li>
+          <li>Payment plan selection</li>
+        </Box>
+      </Alert>
+    );
+  }
+
+  // FIXED: Get project using proper resolution
+  const project = getUnitProject(selectedUnit, projects);
+  const customerName = `${selectedCustomer.firstName || ''} ${selectedCustomer.lastName || ''}`.trim();
+
+  const TabPanel = ({ children, value, index }) => (
+    <div hidden={value !== index}>
+      {value === index && <Box sx={{ py: 3 }}>{children}</Box>}
+    </div>
+  );
+
+  return (
+    <Box>
+      {/* Sale Summary Header */}
+      <Card sx={{ mb: 3, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
+        <CardContent sx={{ p: 4 }}>
+          <Box sx={{ textAlign: 'center' }}>
+            <Typography variant="h4" fontWeight="bold" gutterBottom>
+              Sale Summary
+            </Typography>
+            <Typography variant="h5" sx={{ mb: 2 }}>
+              {formatCurrency(costSheet.totals?.finalAmount || costSheet.finalPayableAmount)}
+            </Typography>
+            <Typography variant="body1" sx={{ opacity: 0.9 }}>
+              {customerName} • {selectedUnit.unitNumber} • {project?.name || 'Unknown Project'}
+            </Typography>
+            <Typography variant="body2" sx={{ opacity: 0.8, mt: 1 }}>
+              Payment Plan: {selectedPaymentPlan.name} • {paymentSchedule?.length} installments
+            </Typography>
+          </Box>
         </CardContent>
       </Card>
 
-      {/* Booking Actions */}
+      {/* Tabbed Review Content */}
       <Card>
+        <CardHeader
+          title="Review Sale Details"
+          subheader="Please review all details carefully before confirming the booking"
+        />
         <CardContent>
-          <Box sx={{ textAlign: 'center', py: 2 }}>
-            <Typography variant="h6" gutterBottom>
-              Ready to Book?
+          <Tabs value={activeTab} onChange={(e, v) => setActiveTab(v)} variant="fullWidth">
+            <Tab label="Property Details" icon={<Home />} />
+            <Tab label="Customer Details" icon={<Person />} />
+            <Tab label="Cost Breakdown" icon={<Receipt />} />
+            <Tab label="Payment Schedule" icon={<Payment />} />
+          </Tabs>
+
+          {/* Property Details Tab */}
+          <TabPanel value={activeTab} index={0}>
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={6}>
+                <Paper sx={{ p: 3 }}>
+                  <Typography variant="h6" gutterBottom>Project Information</Typography>
+                  <Stack spacing={2}>
+                    <Box>
+                      <Typography variant="body2" color="textSecondary">Project Name</Typography>
+                      <Typography variant="h6">{project?.name || 'Unknown Project'}</Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="body2" color="textSecondary">Location</Typography>
+                      <Typography variant="body1">
+                        {project?.location?.city || 'Unknown City'}, {project?.location?.state || project?.location?.area || 'Unknown Location'}
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="body2" color="textSecondary">Project Type</Typography>
+                      <Chip label={project?.type || 'Unknown Type'} color="primary" />
+                    </Box>
+                  </Stack>
+                </Paper>
+              </Grid>
+              
+              <Grid item xs={12} md={6}>
+                <Paper sx={{ p: 3 }}>
+                  <Typography variant="h6" gutterBottom>Unit Specifications</Typography>
+                  <Stack spacing={2}>
+                    <Box>
+                      <Typography variant="body2" color="textSecondary">Unit Number</Typography>
+                      <Typography variant="h6">{selectedUnit.unitNumber}</Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="body2" color="textSecondary">Configuration</Typography>
+                      <Typography variant="body1">{selectedUnit.unitType || selectedUnit.type}</Typography>
+                      <Typography variant="caption">
+                        {selectedUnit.specifications?.bedrooms || 'N/A'}BR • {selectedUnit.specifications?.bathrooms || 'N/A'}BA
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="body2" color="textSecondary">Area & Floor</Typography>
+                      <Typography variant="body1">
+                        {selectedUnit.areaSqft || selectedUnit.area || 'N/A'} sq ft • Floor {selectedUnit.floor}
+                      </Typography>
+                      <Typography variant="caption">{selectedUnit.facing} facing</Typography>
+                    </Box>
+                    {selectedUnit.features && Object.values(selectedUnit.features).some(Boolean) && (
+                      <Box>
+                        <Typography variant="body2" color="textSecondary">Special Features</Typography>
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
+                          {selectedUnit.features.isParkFacing && <Chip label="Park View" size="small" color="success" />}
+                          {selectedUnit.features.isCornerUnit && <Chip label="Corner Unit" size="small" color="info" />}
+                          {selectedUnit.features.hasBalcony && <Chip label="Balcony" size="small" color="primary" />}
+                          {selectedUnit.features.hasParkingSlot && <Chip label="Parking" size="small" color="success" />}
+                        </Box>
+                      </Box>
+                    )}
+                  </Stack>
+                </Paper>
+              </Grid>
+            </Grid>
+          </TabPanel>
+
+          {/* Customer Details Tab */}
+          <TabPanel value={activeTab} index={1}>
+            <Paper sx={{ p: 3 }}>
+              <Typography variant="h6" gutterBottom>Customer Information</Typography>
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={6}>
+                  <Stack spacing={2}>
+                    <Box>
+                      <Typography variant="body2" color="textSecondary">Full Name</Typography>
+                      <Typography variant="h6">{customerName}</Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="body2" color="textSecondary">Email Address</Typography>
+                      <Typography variant="body1">{selectedCustomer.email || '-'}</Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="body2" color="textSecondary">Phone Number</Typography>
+                      <Typography variant="body1">{formatPhoneNumber(selectedCustomer.phone) || '-'}</Typography>
+                    </Box>
+                  </Stack>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Stack spacing={2}>
+                    <Box>
+                      <Typography variant="body2" color="textSecondary">Lead Source</Typography>
+                      <Typography variant="body1">{selectedCustomer.source || selectedCustomer.leadSource || '-'}</Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="body2" color="textSecondary">Current Status</Typography>
+                      <Chip label={selectedCustomer.status || 'Active'} color="primary" />
+                    </Box>
+                    {selectedCustomer.score && (
+                      <Box>
+                        <Typography variant="body2" color="textSecondary">Lead Score</Typography>
+                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                          <Chip label={`${selectedCustomer.score} (${selectedCustomer.scoreGrade})`} color="success" />
+                          {selectedCustomer.priority && (
+                            <Chip label={selectedCustomer.priority} color="warning" />
+                          )}
+                        </Box>
+                      </Box>
+                    )}
+                  </Stack>
+                </Grid>
+              </Grid>
+            </Paper>
+          </TabPanel>
+
+          {/* Cost Breakdown Tab */}
+          <TabPanel value={activeTab} index={2}>
+            <TableContainer component={Paper}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Cost Component</TableCell>
+                    <TableCell>Description</TableCell>
+                    <TableCell align="right">Amount</TableCell>
+                    <TableCell align="center">Category</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {costSheet.costBreakdown?.map((item, index) => (
+                    <TableRow key={index}>
+                      <TableCell>
+                        <Typography variant="body2" fontWeight="medium">
+                          {item.item}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" color="textSecondary">
+                          {item.description}
+                        </Typography>
+                        {item.calculation && (
+                          <Typography variant="caption" display="block" color="textSecondary">
+                            {item.calculation}
+                          </Typography>
+                        )}
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography variant="body2" fontWeight="medium">
+                          {formatCurrency(item.amount)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="center">
+                        <Chip 
+                          label={item.category} 
+                          size="small" 
+                          variant="outlined"
+                          sx={{ textTransform: 'capitalize' }}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  
+                  {/* Subtotal, Discount, Total */}
+                  <TableRow sx={{ bgcolor: 'grey.50' }}>
+                    <TableCell colSpan={2}><Typography fontWeight="bold">Subtotal</Typography></TableCell>
+                    <TableCell align="right">
+                      <Typography fontWeight="bold">{formatCurrency(costSheet.totals?.subtotal)}</Typography>
+                    </TableCell>
+                    <TableCell />
+                  </TableRow>
+                  
+                  {costSheet.discountDetails?.amount > 0 && (
+                    <TableRow>
+                      <TableCell colSpan={2}>
+                        <Typography color="success.main" fontWeight="medium">
+                          Discount ({costSheet.discountDetails.type === 'percentage' ? 
+                            `${costSheet.discountDetails.value}%` : 'Fixed Amount'})
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography color="success.main" fontWeight="medium">
+                          -{formatCurrency(costSheet.discountDetails.amount)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell />
+                    </TableRow>
+                  )}
+                  
+                  <TableRow sx={{ bgcolor: 'primary.50' }}>
+                    <TableCell colSpan={2}>
+                      <Typography variant="h6" fontWeight="bold">Total Payable Amount</Typography>
+                    </TableCell>
+                    <TableCell align="right">
+                      <Typography variant="h6" fontWeight="bold" color="primary">
+                        {formatCurrency(costSheet.totals?.finalAmount)}
+                      </Typography>
+                    </TableCell>
+                    <TableCell />
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </TabPanel>
+
+          {/* Payment Schedule Tab */}
+          <TabPanel value={activeTab} index={3}>
+            <Box sx={{ mb: 3 }}>
+              <Alert severity="info">
+                <Typography variant="body2">
+                  <strong>Payment Plan:</strong> {selectedPaymentPlan.name} • 
+                  <strong> Grace Period:</strong> {selectedPaymentPlan.gracePeriodDays} days • 
+                  {selectedPaymentPlan.lateFeeRate > 0 && (
+                    <><strong> Late Fee:</strong> {formatPercentage(selectedPaymentPlan.lateFeeRate)}/month</>
+                  )}
+                </Typography>
+              </Alert>
+            </Box>
+            
+            <TableContainer component={Paper}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Installment</TableCell>
+                    <TableCell>Description</TableCell>
+                    <TableCell>Milestone</TableCell>
+                    <TableCell align="right">Percentage</TableCell>
+                    <TableCell align="right">Amount</TableCell>
+                    <TableCell>Due Date</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {paymentSchedule?.map((installment, index) => (
+                    <TableRow key={index}>
+                      <TableCell>
+                        <Typography variant="body2" fontWeight="medium">
+                          #{installment.installmentNumber}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">{installment.description}</Typography>
+                        {installment.isOptional && (
+                          <Chip label="Optional" size="small" color="info" sx={{ mt: 0.5 }} />
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Chip 
+                          label={installment.milestoneType?.replace('_', ' ')} 
+                          size="small" 
+                          variant="outlined"
+                          sx={{ textTransform: 'capitalize' }}
+                        />
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography variant="body2" fontWeight="medium">
+                          {formatPercentage(installment.percentage)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography variant="body2" fontWeight="bold" color="primary">
+                          {formatCurrency(installment.amount)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">{formatDate(installment.dueDate)}</Typography>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </TabPanel>
+        </CardContent>
+      </Card>
+
+      {/* Final Confirmation */}
+      <Card sx={{ mt: 3 }}>
+        <CardContent>
+          <Box sx={{ textAlign: 'center', py: 3 }}>
+            <CheckCircle sx={{ fontSize: 64, color: 'success.main', mb: 2 }} />
+            <Typography variant="h5" gutterBottom fontWeight="bold">
+              Ready to Confirm This Booking?
             </Typography>
-            <Typography variant="body2" color="textSecondary" sx={{ mb: 3 }}>
-              Please review all details above before confirming the booking.
+            <Typography variant="body1" color="textSecondary" sx={{ mb: 4, maxWidth: 600, mx: 'auto' }}>
+              Please review all details above carefully. Once confirmed, this unit will be marked as sold,
+              a sale record will be created, and the payment plan will be activated for this customer.
             </Typography>
             
-            <Button
-              variant="contained"
-              size="large"
-              startIcon={<Save />}
-              onClick={onCreateSale}
-              disabled={loading}
-              sx={{ minWidth: 200 }}
-            >
-              {loading ? 'Creating Sale...' : 'Confirm & Book Unit'}
-            </Button>
+            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', alignItems: 'center' }}>
+              <Button
+                variant="outlined"
+                size="large"
+                startIcon={<Print />}
+                onClick={() => window.print()}
+              >
+                Print Summary
+              </Button>
+              
+              <Button
+                variant="contained"
+                size="large"
+                startIcon={<Save />}
+                onClick={onCreateSale}
+                disabled={loading}
+                sx={{ 
+                  minWidth: 220,
+                  py: 1.5,
+                  fontSize: '1.1rem'
+                }}
+              >
+                {loading ? (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <CircularProgress size={20} color="inherit" />
+                    Creating Sale...
+                  </Box>
+                ) : (
+                  'Confirm & Book Unit'
+                )}
+              </Button>
+            </Box>
+
+            <Typography variant="caption" color="textSecondary" sx={{ mt: 2, display: 'block' }}>
+              By clicking "Confirm & Book Unit", you acknowledge that all information is correct
+              and authorize the booking with the selected payment plan.
+            </Typography>
           </Box>
         </CardContent>
       </Card>
@@ -1041,19 +2758,24 @@ const ReviewAndBook = ({
   );
 };
 
-// Main Create Sale Page Component
+// ============================================================================
+// MAIN CREATE SALE PAGE COMPONENT
+// ============================================================================
+
 const CreateSalePage = () => {
   const navigate = useNavigate();
-  const { user, canAccess } = useAuth();
+  const { user, hasPermission } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [searchParams] = useSearchParams();
 
-  // State management - ALL HOOKS MUST BE AT THE TOP
+  // All hooks must be at the top level - no conditional returns before all hooks
   const [activeStep, setActiveStep] = useState(0);
   const [selectedUnit, setSelectedUnit] = useState(null);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [costSheet, setCostSheet] = useState(null);
+  const [selectedPaymentPlan, setSelectedPaymentPlan] = useState(null);
+  const [paymentSchedule, setPaymentSchedule] = useState([]);
   const [discount, setDiscount] = useState({ type: 'percentage', value: 0 });
   
   // Data states
@@ -1062,9 +2784,15 @@ const CreateSalePage = () => {
   const [leads, setLeads] = useState([]);
   
   // UI states
-  const [loading, setLoading] = useState({ projects: true, units: true, leads: true });
+  const [loading, setLoading] = useState({ 
+    projects: false, 
+    units: false, 
+    leads: false, 
+    costSheet: false 
+  });
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -1073,111 +2801,224 @@ const CreateSalePage = () => {
     tower: 'all',
   });
 
+  // Check permissions - this can be done after hooks
+  const canCreateSales = hasPermission && typeof hasPermission === 'function' ? 
+    hasPermission('SALES') || hasPermission('SALES_CREATE') : true;
+
   // Fetch initial data
   useEffect(() => {
     fetchAllData();
   }, []);
 
-  // Check permissions AFTER all hooks are defined
-  if (!canAccess.salesPipeline()) {
-    return (
-      <Box sx={{ p: 3 }}>
-        <Alert severity="error">
-          You don't have permission to create sales.
-        </Alert>
-      </Box>
-    );
-  }
-
   const fetchAllData = async () => {
     try {
       setError(null);
+      setLoading({ projects: true, units: true, leads: true, costSheet: false });
       
       // Fetch all data in parallel
       const [projectsResult, unitsResult, leadsResult] = await Promise.allSettled([
         projectAPI.getProjects(),
-        unitAPI.getUnits(),
-        leadAPI.getLeads(),
+        // FIXED: Ensure we fetch ALL units across all projects
+        unitAPI.getUnits({ limit: 1000, status: 'available' }), // Increase limit and filter
+        leadAPI.getLeads({ limit: 1000 }), // Increase limit to get all leads
       ]);
+
+      // FIXED: Declare validProjects in broader scope
+      let validProjects = [];
 
       // Process projects
       if (projectsResult.status === 'fulfilled') {
         const projectsData = projectsResult.value.data.data || projectsResult.value.data || [];
-        setProjects(Array.isArray(projectsData) ? projectsData : []);
+        validProjects = Array.isArray(projectsData) ? projectsData : [];
+        console.log('✅ Loaded projects:', validProjects.length, 'projects');
+        console.log('Projects data sample:', validProjects.map(p => ({ 
+          id: p._id, 
+          name: p.name, 
+          hasActiveTemplates: p.activePaymentTemplates?.length > 0,
+          templateCount: p.activePaymentTemplates?.length || 0
+        })));
+        setProjects(validProjects);
+      } else {
+        console.error('❌ Failed to fetch projects:', projectsResult.reason);
+        setProjects([]);
       }
 
       // Process units
       if (unitsResult.status === 'fulfilled') {
         const unitsData = unitsResult.value.data.data || unitsResult.value.data || [];
-        setUnits(Array.isArray(unitsData) ? unitsData : []);
+        const validUnits = Array.isArray(unitsData) ? unitsData : [];
+        
+        // FIXED: Log detailed unit distribution by project
+        const unitsByProject = validUnits.reduce((acc, unit) => {
+          const projectId = unit.project?._id || unit.project;
+          const projectName = unit.project?.name || 'Unknown';
+          if (!acc[projectId]) {
+            acc[projectId] = { name: projectName, count: 0, units: [] };
+          }
+          acc[projectId].count++;
+          acc[projectId].units.push(unit.unitNumber);
+          return acc;
+        }, {});
+        
+        console.log('✅ Loaded units:', validUnits.length, 'total units');
+        console.log('📊 Units by project:', Object.entries(unitsByProject).map(([id, data]) => ({
+          projectId: id,
+          projectName: data.name,
+          unitCount: data.count,
+          sampleUnits: data.units.slice(0, 3)
+        })));
+        
+        // FIXED: Merge project data with unit data to ensure payment templates are available
+        const unitsWithEnhancedProjects = validUnits.map(unit => {
+          const projectId = unit.project?._id || unit.project;
+          const fullProject = validProjects.find(p => p._id === projectId);
+          
+          if (fullProject && unit.project) {
+            // Merge full project data into unit's project reference
+            unit.project = {
+              ...unit.project,
+              activePaymentTemplates: fullProject.activePaymentTemplates || [],
+              paymentConfiguration: fullProject.paymentConfiguration
+            };
+          }
+          
+          return unit;
+        });
+        
+        setUnits(unitsWithEnhancedProjects);
+      } else {
+        console.error('❌ Failed to fetch units:', unitsResult.reason);
+        setUnits([]);
       }
 
       // Process leads
       if (leadsResult.status === 'fulfilled') {
-        const leadsData = leadsResult.value.data.data || leadsResult.value.data || [];
-        setLeads(Array.isArray(leadsData) ? leadsData : []);
+        const leadsData = leadsResult.value.data.data?.leads || leadsResult.value.data.leads || leadsResult.value.data || [];
+        const validLeads = Array.isArray(leadsData) ? leadsData : [];
+        
+        // FIXED: Enhance leads with full project data
+        const leadsWithEnhancedProjects = validLeads.map(lead => {
+          const projectId = lead.project?._id || lead.project;
+          const fullProject = validProjects.find(p => p._id === projectId);
+          
+          if (fullProject && lead.project) {
+            lead.project = {
+              ...lead.project,
+              activePaymentTemplates: fullProject.activePaymentTemplates || [],
+              paymentConfiguration: fullProject.paymentConfiguration
+            };
+          }
+          
+          return lead;
+        });
+        
+        console.log('✅ Loaded leads:', validLeads.length, 'leads');
+        setLeads(leadsWithEnhancedProjects);
+      } else {
+        console.error('❌ Failed to fetch leads:', leadsResult.reason);
+        setLeads([]);
       }
 
-      setLoading({ projects: false, units: false, leads: false });
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('❌ Error fetching data:', error);
       setError('Failed to load data. Please try again.');
-      setLoading({ projects: false, units: false, leads: false });
+    } finally {
+      setLoading({ projects: false, units: false, leads: false, costSheet: false });
     }
   };
 
+  // Permission check after hooks
+  if (!canCreateSales) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error">
+          <Typography variant="h6">Access Denied</Typography>
+          <Typography variant="body2">
+            You don't have permission to create sales. Please contact your administrator.
+          </Typography>
+        </Alert>
+        <Button
+          variant="contained"
+          startIcon={<ArrowBack />}
+          onClick={() => navigate('/sales')}
+          sx={{ mt: 2 }}
+        >
+          Back to Sales
+        </Button>
+      </Box>
+    );
+  }
+
   // Handle step navigation
   const handleNext = () => {
-    setActiveStep((prevStep) => prevStep + 1);
+    setActiveStep((prevStep) => Math.min(prevStep + 1, SALE_STEPS.length - 1));
   };
 
   const handleBack = () => {
-    setActiveStep((prevStep) => prevStep - 1);
+    setActiveStep((prevStep) => Math.max(prevStep - 1, 0));
   };
 
   const handleStepClick = (step) => {
-    setActiveStep(step);
+    // Allow navigation only to completed steps
+    if (step <= activeStep || isStepCompleted(step)) {
+      setActiveStep(step);
+    }
+  };
+
+  const isStepCompleted = (step) => {
+    switch (step) {
+      case 0: return !!selectedUnit;
+      case 1: return !!selectedCustomer;
+      case 2: return !!costSheet;
+      case 3: return !!selectedPaymentPlan && !!paymentSchedule?.length;
+      case 4: return !!selectedUnit && !!selectedCustomer && !!costSheet && !!selectedPaymentPlan;
+      default: return false;
+    }
+  };
+
+  const canProceedToNext = () => {
+    return isStepCompleted(activeStep);
   };
 
   // Handle unit selection
   const handleUnitSelect = (unit) => {
     setSelectedUnit(unit);
     setCostSheet(null); // Reset cost sheet when unit changes
+    setSelectedPaymentPlan(null); // Reset payment plan when unit changes
+    setPaymentSchedule([]); // Reset payment schedule when unit changes
   };
 
   // Handle customer selection
   const handleCustomerSelect = (customer) => {
     setSelectedCustomer(customer);
     setCostSheet(null); // Reset cost sheet when customer changes
+    setSelectedPaymentPlan(null); // Reset payment plan when customer changes
+    setPaymentSchedule([]); // Reset payment schedule when customer changes
   };
 
   // Handle cost sheet generation
-  const handleGenerateCostSheet = async () => {
-    if (!selectedUnit) return;
-
-    try {
-      setLoading(prev => ({ ...prev, costSheet: true }));
-      
-      const response = await pricingAPI.generateCostSheet(selectedUnit._id, {
-        discountPercentage: discount.type === 'percentage' ? discount.value : 0,
-        discountAmount: discount.type === 'amount' ? discount.value : 0,
-      });
-
-      const costSheetData = response.data.data || response.data;
-      setCostSheet(costSheetData);
-      
-    } catch (error) {
-      console.error('Error generating cost sheet:', error);
-      setError('Failed to generate cost sheet. Please try again.');
-    } finally {
-      setLoading(prev => ({ ...prev, costSheet: false }));
-    }
+  const handleGenerateCostSheet = (costSheetData) => {
+    setCostSheet(costSheetData);
+    setSelectedPaymentPlan(null); // Reset payment plan when cost sheet changes
+    setPaymentSchedule([]); // Reset payment schedule when cost sheet changes
   };
 
   // Handle discount change
   const handleDiscountChange = (type, value) => {
     setDiscount({ type, value });
     setCostSheet(null); // Reset cost sheet when discount changes
+    setSelectedPaymentPlan(null); // Reset payment plan when discount changes
+    setPaymentSchedule([]); // Reset payment schedule when discount changes
+  };
+
+  // Handle payment plan selection
+  const handlePaymentPlanSelect = (plan) => {
+    setSelectedPaymentPlan(plan);
+  };
+
+  // Handle payment schedule generation
+  const handleGenerateSchedule = (schedule) => {
+    setPaymentSchedule(schedule);
   };
 
   // Handle filter change
@@ -1190,7 +3031,7 @@ const CreateSalePage = () => {
 
   // Handle create sale
   const handleCreateSale = async () => {
-    if (!selectedUnit || !selectedCustomer || !costSheet) return;
+    if (!selectedUnit || !selectedCustomer || !costSheet || !selectedPaymentPlan) return;
 
     try {
       setSubmitting(true);
@@ -1198,16 +3039,26 @@ const CreateSalePage = () => {
       const saleData = {
         unitId: selectedUnit._id,
         leadId: selectedCustomer._id,
-        discountPercentage: discount.type === 'percentage' ? discount.value : 0,
-        discountAmount: discount.type === 'amount' ? discount.value : 0,
+        costSheetSnapshot: costSheet,
+        paymentPlanSnapshot: {
+          templateId: selectedPaymentPlan._id,
+          templateName: selectedPaymentPlan.name,
+          schedule: paymentSchedule,
+        },
       };
+
+      if (discount.type === 'percentage') {
+        saleData.discountPercentage = discount.value;
+      } else {
+        saleData.discountAmount = discount.value;
+      }
 
       const response = await salesAPI.createSale(saleData);
       const createdSale = response.data.data || response.data;
 
       // Navigate to sale detail page
       navigate(`/sales/${createdSale._id}`, {
-        state: { message: 'Sale created successfully!' }
+        state: { message: 'Sale created successfully with payment plan!' }
       });
       
     } catch (error) {
@@ -1242,12 +3093,12 @@ const CreateSalePage = () => {
             leads={leads}
             loading={loading.leads}
             onRefresh={fetchAllData}
-            onCreateNew={() => navigate('/leads/create')}
+            projects={projects}
           />
         );
       case 2:
         return (
-          <CostSheet
+          <EnhancedCostSheet
             selectedUnit={selectedUnit}
             selectedCustomer={selectedCustomer}
             costSheet={costSheet}
@@ -1255,14 +3106,31 @@ const CreateSalePage = () => {
             discount={discount}
             onDiscountChange={handleDiscountChange}
             loading={loading.costSheet}
+            projects={projects}
           />
         );
       case 3:
         return (
-          <ReviewAndBook
+          <PaymentPlanSelection
             selectedUnit={selectedUnit}
             selectedCustomer={selectedCustomer}
             costSheet={costSheet}
+            selectedPaymentPlan={selectedPaymentPlan}
+            onPaymentPlanSelect={handlePaymentPlanSelect}
+            paymentSchedule={paymentSchedule}
+            onGenerateSchedule={handleGenerateSchedule}
+            loading={loading.paymentPlan}
+            projects={projects}
+          />
+        );
+      case 4:
+        return (
+          <EnhancedReviewAndBook
+            selectedUnit={selectedUnit}
+            selectedCustomer={selectedCustomer}
+            costSheet={costSheet}
+            selectedPaymentPlan={selectedPaymentPlan}
+            paymentSchedule={paymentSchedule}
             onCreateSale={handleCreateSale}
             loading={submitting}
             projects={projects}
@@ -1274,7 +3142,7 @@ const CreateSalePage = () => {
   };
 
   return (
-    <Box sx={{ flexGrow: 1, p: 3 }}>
+    <Box sx={{ flexGrow: 1, p: 3, bgcolor: 'background.default', minHeight: '100vh' }}>
       {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -1282,13 +3150,24 @@ const CreateSalePage = () => {
             <ArrowBack />
           </IconButton>
           <Box>
-            <Typography variant="h4" component="h1">
+            <Typography variant="h4" component="h1" fontWeight="bold">
               Create New Sale
             </Typography>
             <Typography variant="body1" color="textSecondary">
-              Book a unit for your customer
+              Follow the steps below to book a unit with comprehensive cost sheet and payment plan
             </Typography>
           </Box>
+        </Box>
+        
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Typography variant="body2" color="textSecondary">
+            Step {activeStep + 1} of {SALE_STEPS.length}
+          </Typography>
+          <LinearProgress 
+            variant="determinate" 
+            value={((activeStep + 1) / SALE_STEPS.length) * 100} 
+            sx={{ width: 100, height: 8, borderRadius: 4 }}
+          />
         </Box>
       </Box>
 
@@ -1299,20 +3178,104 @@ const CreateSalePage = () => {
         </Alert>
       )}
 
+      {/* DIAGNOSTIC: Data Debug Information (remove in production) */}
+      {process.env.NODE_ENV === 'development' && (
+        <Card sx={{ mb: 3, bgcolor: 'info.50', border: '1px solid', borderColor: 'info.200' }}>
+          <CardHeader 
+            title="🔍 Debug Information" 
+            titleTypographyProps={{ variant: 'h6' }}
+            action={
+              <Button size="small" onClick={() => setShowDebug(!showDebug)}>
+                {showDebug ? 'Hide' : 'Show'} Debug
+              </Button>
+            }
+          />
+          {showDebug && (
+            <CardContent>
+              <Grid container spacing={2}>
+                <Grid item xs={12} md={3}>
+                  <Typography variant="subtitle2" color="primary">Projects ({projects.length})</Typography>
+                  {projects.map(p => (
+                    <Typography key={p._id} variant="caption" display="block">
+                      • {p.name} ({p.activePaymentTemplates?.length || 0} templates)
+                    </Typography>
+                  ))}
+                </Grid>
+                <Grid item xs={12} md={3}>
+                  <Typography variant="subtitle2" color="primary">Units ({units.length})</Typography>
+                  {Object.entries(units.reduce((acc, u) => {
+                    const name = u.project?.name || 'Unknown';
+                    acc[name] = (acc[name] || 0) + 1;
+                    return acc;
+                  }, {})).map(([name, count]) => (
+                    <Typography key={name} variant="caption" display="block">
+                      • {name}: {count} units
+                    </Typography>
+                  ))}
+                </Grid>
+                <Grid item xs={12} md={3}>
+                  <Typography variant="subtitle2" color="primary">Leads ({leads.length})</Typography>
+                  {Object.entries(leads.reduce((acc, l) => {
+                    const name = l.project?.name || 'Unknown';
+                    acc[name] = (acc[name] || 0) + 1;
+                    return acc;
+                  }, {})).map(([name, count]) => (
+                    <Typography key={name} variant="caption" display="block">
+                      • {name}: {count} leads
+                    </Typography>
+                  ))}
+                </Grid>
+                <Grid item xs={12} md={3}>
+                  <Typography variant="subtitle2" color="primary">API Status</Typography>
+                  <Typography variant="caption" display="block">
+                    Projects: {loading.projects ? '🔄' : '✅'} Units: {loading.units ? '🔄' : '✅'} Leads: {loading.leads ? '🔄' : '✅'}
+                  </Typography>
+                </Grid>
+              </Grid>
+            </CardContent>
+          )}
+        </Card>
+      )}
+
       {/* Progress Steps */}
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Stepper activeStep={activeStep} alternativeLabel={!isMobile}>
-            {SALE_STEPS.map((step, index) => (
-              <Step key={step.label} completed={index < activeStep}>
-                <StepLabel
-                  onClick={() => handleStepClick(index)}
-                  sx={{ cursor: 'pointer' }}
-                >
-                  {step.label}
-                </StepLabel>
-              </Step>
-            ))}
+            {SALE_STEPS.map((step, index) => {
+              const StepIcon = step.icon;
+              const isCompleted = isStepCompleted(index);
+              const isClickable = index <= activeStep || isCompleted;
+              
+              return (
+                <Step key={step.id} completed={isCompleted}>
+                  <StepLabel
+                    onClick={() => isClickable && handleStepClick(index)}
+                    sx={{ 
+                      cursor: isClickable ? 'pointer' : 'default',
+                      '& .MuiStepLabel-label': {
+                        fontWeight: index === activeStep ? 'bold' : 'normal'
+                      }
+                    }}
+                    icon={
+                      <Avatar 
+                        sx={{ 
+                          bgcolor: isCompleted ? 'success.main' : index === activeStep ? 'primary.main' : 'grey.400',
+                          width: 40,
+                          height: 40
+                        }}
+                      >
+                        {isCompleted ? <Check /> : <StepIcon />}
+                      </Avatar>
+                    }
+                  >
+                    <Typography variant="subtitle1">{step.label}</Typography>
+                    <Typography variant="body2" color="textSecondary">
+                      {step.description}
+                    </Typography>
+                  </StepLabel>
+                </Step>
+              );
+            })}
           </Stepper>
         </CardContent>
       </Card>
@@ -1331,37 +3294,50 @@ const CreateSalePage = () => {
               onClick={handleBack}
               variant="outlined"
               startIcon={<ArrowBack />}
+              size="large"
             >
               Back
             </Button>
 
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              {activeStep === SALE_STEPS.length - 1 ? (
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              {activeStep < SALE_STEPS.length - 1 ? (
                 <Button
                   variant="contained"
-                  onClick={handleCreateSale}
-                  disabled={!selectedUnit || !selectedCustomer || !costSheet || submitting}
-                  startIcon={<Save />}
+                  onClick={handleNext}
+                  disabled={!canProceedToNext()}
+                  endIcon={<ArrowBack sx={{ transform: 'rotate(180deg)' }} />}
+                  size="large"
                 >
-                  {submitting ? 'Creating Sale...' : 'Create Sale'}
+                  Next Step
                 </Button>
               ) : (
                 <Button
                   variant="contained"
-                  onClick={handleNext}
-                  disabled={
-                    (activeStep === 0 && !selectedUnit) ||
-                    (activeStep === 1 && !selectedCustomer) ||
-                    (activeStep === 2 && !costSheet)
-                  }
+                  onClick={handleCreateSale}
+                  disabled={!canProceedToNext() || submitting}
+                  startIcon={submitting ? <CircularProgress size={20} /> : <Save />}
+                  size="large"
+                  sx={{ minWidth: 160 }}
                 >
-                  Next
+                  {submitting ? 'Creating...' : 'Create Sale'}
                 </Button>
               )}
             </Box>
           </Box>
         </CardContent>
       </Card>
+
+      {/* Floating Help Button for Mobile */}
+      {isMobile && (
+        <Fab
+          color="secondary"
+          aria-label="help"
+          sx={{ position: 'fixed', bottom: 16, left: 16 }}
+          onClick={() => setError('Need help? Contact your system administrator.')}
+        >
+          <Info />
+        </Fab>
+      )}
     </Box>
   );
 };

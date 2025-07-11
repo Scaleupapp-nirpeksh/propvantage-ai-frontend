@@ -1,7 +1,7 @@
 /**
  * File: src/pages/sales/SaleDetailPage.js
- * Description: Ultra-safe sale detail page with NO dynamic components
- * Version: 3.3 - Static icons only, completely bulletproof
+ * Description: Enhanced sale detail page with complete data utilization
+ * Version: 4.0 - Full featured with rich data display
  * Location: src/pages/sales/SaleDetailPage.js
  */
 
@@ -46,6 +46,14 @@ import {
   Fab,
   Snackbar,
   Skeleton,
+  Tooltip,
+  Badge,
+  List,
+  ListItem,
+  ListItemAvatar,
+  Tabs,
+  Tab,
+  TabPanel,
 } from '@mui/material';
 import {
   Timeline,
@@ -75,6 +83,26 @@ import {
   ExpandMore,
   Refresh,
   ContentCopy,
+  Person,
+  Business,
+  LocationOn,
+  Schedule,
+  Bed,
+  SquareFoot,
+  DirectionsRun,
+  Pool,
+  FitnessCenter,
+  Security,
+  Elevator,
+  LocalParking,
+  Restaurant,
+  Assignment,
+  Timeline as TimelineIcon,
+  TrendingUp,
+  Info,
+  Star,
+  Visibility,
+  Calculate,
 } from '@mui/icons-material';
 
 import { useAuth } from '../../context/AuthContext';
@@ -96,7 +124,7 @@ try {
 }
 
 // ============================================================================
-// SAFE UTILITY FUNCTIONS
+// UTILITY FUNCTIONS
 // ============================================================================
 
 const safeString = (value) => {
@@ -157,6 +185,25 @@ const getSalespersonName = (sale) => {
   return typeof sale.salesPerson === 'string' ? sale.salesPerson : 'Unassigned';
 };
 
+const getStatusInfo = (status) => {
+  const statusMap = {
+    'booked': { color: 'success', label: 'Booked', icon: CheckCircle },
+    'Booked': { color: 'success', label: 'Booked', icon: CheckCircle },
+    'agreement_signed': { color: 'info', label: 'Agreement Signed', icon: Assignment },
+    'registration_pending': { color: 'warning', label: 'Registration Pending', icon: Schedule },
+    'registration_complete': { color: 'success', label: 'Registration Complete', icon: CheckCircle },
+    'cancelled': { color: 'error', label: 'Cancelled', icon: Delete },
+    'on_hold': { color: 'default', label: 'On Hold', icon: Schedule },
+  };
+  return statusMap[status] || { color: 'default', label: 'Pending', icon: Schedule };
+};
+
+const getBHKFromUnitType = (unitType) => {
+  if (!unitType) return null;
+  const match = unitType.match(/(\d+)BHK/i);
+  return match ? parseInt(match[1]) : null;
+};
+
 // ============================================================================
 // LOADING SKELETON
 // ============================================================================
@@ -186,7 +233,7 @@ const LoadingSkeleton = () => (
 );
 
 // ============================================================================
-// SALE OVERVIEW CARD - STATIC VERSION
+// ENHANCED SALE OVERVIEW CARD
 // ============================================================================
 
 const SaleOverviewCard = ({ sale, onEdit, onCancel, canEdit }) => {
@@ -196,85 +243,56 @@ const SaleOverviewCard = ({ sale, onEdit, onCancel, canEdit }) => {
     }
   };
 
-  // Get status color based on sale status
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'booked': return 'success';
-      case 'agreement_signed': return 'info';
-      case 'registration_pending': return 'warning';
-      case 'registration_complete': return 'success';
-      case 'cancelled': return 'error';
-      default: return 'default';
-    }
-  };
-
-  const getStatusLabel = (status) => {
-    switch (status) {
-      case 'booked': return 'Booked';
-      case 'agreement_signed': return 'Agreement Signed';
-      case 'registration_pending': return 'Registration Pending';
-      case 'registration_complete': return 'Registration Complete';
-      case 'cancelled': return 'Cancelled';
-      case 'on_hold': return 'On Hold';
-      default: return 'Pending';
-    }
-  };
-
-  const getPaymentStatusColor = (status) => {
-    switch (status) {
-      case 'on_track': return 'success';
-      case 'delayed': return 'warning';
-      case 'overdue': return 'error';
-      case 'advance': return 'info';
-      default: return 'default';
-    }
-  };
-
-  const getPaymentStatusLabel = (status) => {
-    switch (status) {
-      case 'on_track': return 'On Track';
-      case 'delayed': return 'Delayed';
-      case 'overdue': return 'Overdue';
-      case 'advance': return 'Advance';
-      default: return 'Pending';
-    }
-  };
+  const statusInfo = getStatusInfo(sale.status);
+  const StatusIcon = statusInfo.icon;
+  
+  // Calculate discount if available in cost sheet
+  const costSheet = sale.costSheetSnapshot || {};
+  const basePrice = costSheet.basePrice || sale.salePrice || 0;
+  const negotiatedPrice = costSheet.negotiatedPrice || sale.salePrice || 0;
+  const discountAmount = basePrice - negotiatedPrice;
   
   return (
-    <Card sx={{ mb: 3 }}>
+    <Card sx={{ mb: 3, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
       <CardHeader
         title={
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Typography variant="h5" component="h2">
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+            <Typography variant="h4" component="h2" sx={{ color: 'white', fontWeight: 'bold' }}>
               Sale #{sale.saleNumber || sale._id?.slice(-6)?.toUpperCase() || 'N/A'}
             </Typography>
             <Chip
-              icon={<CheckCircle sx={{ fontSize: 18 }} />}
-              label={getStatusLabel(sale.status)}
-              color={getStatusColor(sale.status)}
+              icon={<StatusIcon sx={{ fontSize: 18, color: 'inherit' }} />}
+              label={statusInfo.label}
+              sx={{ 
+                bgcolor: 'rgba(255,255,255,0.2)', 
+                color: 'white',
+                border: '1px solid rgba(255,255,255,0.3)'
+              }}
               variant="outlined"
             />
-            <IconButton size="small" onClick={handleCopyId} title="Copy Sale ID">
-              <ContentCopy fontSize="small" />
-            </IconButton>
+            <Tooltip title="Copy Sale ID">
+              <IconButton size="small" onClick={handleCopyId} sx={{ color: 'white' }}>
+                <ContentCopy fontSize="small" />
+              </IconButton>
+            </Tooltip>
           </Box>
         }
         action={
           canEdit && (
             <Box>
               <Button
-                variant="outlined"
+                variant="contained"
                 startIcon={<Edit />}
                 onClick={onEdit}
-                sx={{ mr: 1 }}
+                sx={{ mr: 1, bgcolor: 'rgba(255,255,255,0.2)', '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' } }}
               >
                 Edit Sale
               </Button>
               <Button
                 variant="outlined"
-                color="error"
                 startIcon={<Delete />}
                 onClick={onCancel}
+                sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.5)' }}
               >
                 Cancel Sale
               </Button>
@@ -284,55 +302,52 @@ const SaleOverviewCard = ({ sale, onEdit, onCancel, canEdit }) => {
       />
       <CardContent>
         <Grid container spacing={3}>
-          <Grid item xs={12} md={3}>
+          <Grid item xs={12} sm={6} md={3}>
             <Box sx={{ textAlign: 'center', p: 2 }}>
-              <Typography variant="h4" color="primary" fontWeight="bold">
-                {formatCurrency(sale.salePrice || 0)}
+              <Typography variant="h4" sx={{ color: 'white', fontWeight: 'bold', mb: 1 }}>
+                {formatCurrency(negotiatedPrice || sale.salePrice || 0)}
               </Typography>
-              <Typography variant="body2" color="textSecondary">
-                Total Sale Amount
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>
+                Final Sale Amount
               </Typography>
-              {(sale.discountAmount || 0) > 0 && (
-                <Typography variant="body2" color="success.main">
-                  Discount: -{formatCurrency(sale.discountAmount || 0)}
+              {discountAmount > 0 && (
+                <Typography variant="body2" sx={{ color: '#4caf50', mt: 1 }}>
+                  Saved: {formatCurrency(discountAmount)}
                 </Typography>
               )}
             </Box>
           </Grid>
 
-          <Grid item xs={12} md={3}>
+          <Grid item xs={12} sm={6} md={3}>
             <Box sx={{ textAlign: 'center', p: 2 }}>
-              <Chip
-                icon={<CheckCircle sx={{ fontSize: 18 }} />}
-                label={getPaymentStatusLabel(sale.paymentStatus)}
-                color={getPaymentStatusColor(sale.paymentStatus)}
-                size="medium"
-                sx={{ mb: 1 }}
-              />
-              <Typography variant="body2" color="textSecondary">
-                Payment Status
-              </Typography>
-            </Box>
-          </Grid>
-
-          <Grid item xs={12} md={3}>
-            <Box sx={{ textAlign: 'center', p: 2 }}>
-              <Typography variant="h6" fontWeight="bold">
+              <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold', mb: 1 }}>
                 {formatDate(sale.bookingDate || sale.createdAt)}
               </Typography>
-              <Typography variant="body2" color="textSecondary">
-                Sale Date
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>
+                Booking Date
               </Typography>
             </Box>
           </Grid>
 
-          <Grid item xs={12} md={3}>
+          <Grid item xs={12} sm={6} md={3}>
+            <Box sx={{ textAlign: 'center', p: 2 }}>
+              <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold', mb: 1 }}>
+                {getCustomerName(sale)}
+              </Typography>
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>
+                Customer
+              </Typography>
+            </Box>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
               <Button
                 variant="contained"
                 startIcon={<Receipt />}
                 size="small"
                 fullWidth
+                sx={{ bgcolor: 'rgba(255,255,255,0.2)', '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' } }}
                 onClick={() => console.log('Generate receipt for sale:', sale._id)}
               >
                 Generate Receipt
@@ -342,6 +357,7 @@ const SaleOverviewCard = ({ sale, onEdit, onCancel, canEdit }) => {
                 startIcon={<AccountBalance />}
                 size="small"
                 fullWidth
+                sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.5)' }}
                 onClick={() => window.open(`/payments/plans/${sale._id}`, '_blank')}
               >
                 Payment Plan
@@ -355,103 +371,140 @@ const SaleOverviewCard = ({ sale, onEdit, onCancel, canEdit }) => {
 };
 
 // ============================================================================
-// CUSTOMER INFO CARD
+// ENHANCED CUSTOMER INFO CARD
 // ============================================================================
 
 const CustomerInfoCard = ({ sale }) => {
   const customerName = getCustomerName(sale);
   const leadData = sale.lead || {};
+  const requirements = leadData.requirements || {};
   
   return (
     <Card>
       <CardHeader
         title="Customer Information"
         avatar={
-          <Avatar sx={{ bgcolor: 'primary.main', width: 48, height: 48 }}>
+          <Avatar sx={{ bgcolor: 'primary.main', width: 56, height: 56, fontSize: '1.5rem' }}>
             {customerName?.[0] || 'C'}
           </Avatar>
         }
         action={
           <Box sx={{ display: 'flex', gap: 1 }}>
             {leadData.phone && (
-              <IconButton color="primary" href={`tel:${leadData.phone}`} title="Call">
-                <Phone />
-              </IconButton>
+              <Tooltip title="Call Customer">
+                <IconButton color="primary" href={`tel:${leadData.phone}`}>
+                  <Phone />
+                </IconButton>
+              </Tooltip>
             )}
             {leadData.email && (
-              <IconButton color="primary" href={`mailto:${leadData.email}`} title="Email">
-                <Email />
-              </IconButton>
+              <Tooltip title="Email Customer">
+                <IconButton color="primary" href={`mailto:${leadData.email}`}>
+                  <Email />
+                </IconButton>
+              </Tooltip>
             )}
             {leadData.phone && (
-              <IconButton 
-                color="primary" 
-                href={`https://wa.me/${leadData.phone?.replace(/\D/g, '')}`} 
-                target="_blank"
-                title="WhatsApp"
-              >
-                <WhatsApp />
-              </IconButton>
+              <Tooltip title="WhatsApp">
+                <IconButton 
+                  color="primary" 
+                  href={`https://wa.me/${leadData.phone?.replace(/\D/g, '')}`} 
+                  target="_blank"
+                >
+                  <WhatsApp />
+                </IconButton>
+              </Tooltip>
             )}
           </Box>
         }
       />
       <CardContent>
-        <Grid container spacing={2}>
-          <Grid item xs={12} sm={6}>
-            <Typography variant="body2" color="textSecondary">
-              Customer Name
-            </Typography>
-            <Typography variant="body1" fontWeight="medium">
-              {customerName}
-            </Typography>
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={6}>
+            <Stack spacing={2}>
+              <Box>
+                <Typography variant="body2" color="textSecondary" gutterBottom>
+                  Customer Name
+                </Typography>
+                <Typography variant="h6" fontWeight="medium">
+                  {customerName}
+                </Typography>
+              </Box>
+              
+              <Box>
+                <Typography variant="body2" color="textSecondary" gutterBottom>
+                  Phone Number
+                </Typography>
+                <Typography variant="body1" fontWeight="medium">
+                  {leadData.phone ? formatPhoneNumber(leadData.phone) : '-'}
+                </Typography>
+              </Box>
+              
+              <Box>
+                <Typography variant="body2" color="textSecondary" gutterBottom>
+                  Email Address
+                </Typography>
+                <Typography variant="body1" fontWeight="medium">
+                  {safeString(leadData.email)}
+                </Typography>
+              </Box>
+              
+              <Box>
+                <Typography variant="body2" color="textSecondary" gutterBottom>
+                  Lead Source
+                </Typography>
+                <Chip 
+                  label={safeString(leadData.source)} 
+                  color="primary" 
+                  variant="outlined" 
+                  size="small"
+                />
+              </Box>
+            </Stack>
           </Grid>
           
-          <Grid item xs={12} sm={6}>
-            <Typography variant="body2" color="textSecondary">
-              Phone Number
-            </Typography>
-            <Typography variant="body1" fontWeight="medium">
-              {leadData.phone ? formatPhoneNumber(leadData.phone) : '-'}
-            </Typography>
-          </Grid>
-          
-          <Grid item xs={12} sm={6}>
-            <Typography variant="body2" color="textSecondary">
-              Email Address
-            </Typography>
-            <Typography variant="body1" fontWeight="medium">
-              {safeString(leadData.email)}
-            </Typography>
-          </Grid>
-          
-          <Grid item xs={12} sm={6}>
-            <Typography variant="body2" color="textSecondary">
-              Lead Source
-            </Typography>
-            <Typography variant="body1" fontWeight="medium">
-              {safeString(leadData.source)}
-            </Typography>
-          </Grid>
-          
-          <Grid item xs={12} sm={6}>
-            <Typography variant="body2" color="textSecondary">
-              Priority
-            </Typography>
-            <Chip
-              label={safeString(leadData.priority) || 'Medium'}
-              color={leadData.priority === 'High' ? 'error' : leadData.priority === 'Low' ? 'default' : 'warning'}
-              size="small"
-            />
-          </Grid>
-          
-          <Grid item xs={12} sm={6}>
-            <Typography variant="body2" color="textSecondary">
-              Requirements
-            </Typography>
-            <Typography variant="body1" fontWeight="medium">
-              {safeString(leadData.requirements)}
-            </Typography>
+          <Grid item xs={12} md={6}>
+            <Stack spacing={2}>
+              <Box>
+                <Typography variant="body2" color="textSecondary" gutterBottom>
+                  Priority Level
+                </Typography>
+                <Chip
+                  label={safeString(leadData.priority) || 'Medium'}
+                  color={leadData.priority === 'High' ? 'error' : leadData.priority === 'Low' ? 'default' : 'warning'}
+                  icon={<Star />}
+                />
+              </Box>
+              
+              <Box>
+                <Typography variant="body2" color="textSecondary" gutterBottom>
+                  Purchase Timeline
+                </Typography>
+                <Typography variant="body1" fontWeight="medium">
+                  {requirements.timeline?.replace('_', '-') || '-'}
+                </Typography>
+              </Box>
+              
+              <Box>
+                <Typography variant="body2" color="textSecondary" gutterBottom>
+                  Preferred Unit Type
+                </Typography>
+                <Typography variant="body1" fontWeight="medium">
+                  {safeString(requirements.unitType)}
+                </Typography>
+              </Box>
+              
+              <Box>
+                <Typography variant="body2" color="textSecondary" gutterBottom>
+                  Requirements
+                </Typography>
+                <Typography variant="body2" color="textSecondary">
+                  {requirements.facing && `Facing: ${requirements.facing}`}
+                  {requirements.floor?.preference && ` • Floor: ${requirements.floor.preference}`}
+                  {requirements.amenities?.length > 0 && ` • Amenities: ${requirements.amenities.join(', ')}`}
+                </Typography>
+              </Box>
+            </Stack>
           </Grid>
         </Grid>
       </CardContent>
@@ -460,114 +513,218 @@ const CustomerInfoCard = ({ sale }) => {
 };
 
 // ============================================================================
-// PROPERTY DETAILS CARD - ULTRA SAFE VERSION
+// ENHANCED PROPERTY DETAILS CARD
 // ============================================================================
 
 const PropertyDetailsCard = ({ sale }) => {
   const projectData = sale.project || {};
   const unitData = sale.unit || {};
+  const requirements = sale.lead?.requirements || {};
+  const configuration = projectData.configuration || {};
+  
+  // Use requirements data to fill missing unit info
+  const unitType = requirements.unitType || unitData.unitType;
+  const facing = requirements.facing || unitData.facing;
+  const bedrooms = getBHKFromUnitType(unitType);
   
   return (
     <Card>
       <CardHeader
         title="Property Details"
         avatar={
-          <Avatar sx={{ bgcolor: 'info.main', width: 48, height: 48 }}>
+          <Avatar sx={{ bgcolor: 'info.main', width: 56, height: 56 }}>
             <Home />
           </Avatar>
         }
       />
       <CardContent>
-        <Grid container spacing={2}>
-          <Grid item xs={12} sm={6}>
-            <Typography variant="body2" color="textSecondary">
-              Project Name
-            </Typography>
-            <Typography variant="body1" fontWeight="medium">
-              {getProjectName(sale)}
-            </Typography>
+        <Grid container spacing={3}>
+          {/* Basic Property Info */}
+          <Grid item xs={12} md={6}>
+            <Stack spacing={2}>
+              <Box>
+                <Typography variant="body2" color="textSecondary" gutterBottom>
+                  Project Name
+                </Typography>
+                <Typography variant="h6" fontWeight="medium">
+                  {getProjectName(sale)}
+                </Typography>
+              </Box>
+              
+              <Box>
+                <Typography variant="body2" color="textSecondary" gutterBottom>
+                  Unit Number
+                </Typography>
+                <Typography variant="body1" fontWeight="medium">
+                  {getUnitDisplayName(sale)}
+                </Typography>
+              </Box>
+              
+              <Box>
+                <Typography variant="body2" color="textSecondary" gutterBottom>
+                  Project Type
+                </Typography>
+                <Chip 
+                  label={safeString(projectData.type)} 
+                  color="secondary" 
+                  variant="outlined"
+                />
+              </Box>
+              
+              <Box>
+                <Typography variant="body2" color="textSecondary" gutterBottom>
+                  Project Status
+                </Typography>
+                <Chip 
+                  label={safeString(projectData.status)} 
+                  color={projectData.status === 'planning' ? 'warning' : 'success'} 
+                  variant="outlined"
+                />
+              </Box>
+            </Stack>
           </Grid>
           
-          <Grid item xs={12} sm={6}>
-            <Typography variant="body2" color="textSecondary">
-              Unit Number
-            </Typography>
-            <Typography variant="body1" fontWeight="medium">
-              {getUnitDisplayName(sale)}
-            </Typography>
+          {/* Unit Specifications */}
+          <Grid item xs={12} md={6}>
+            <Stack spacing={2}>
+              <Box>
+                <Typography variant="body2" color="textSecondary" gutterBottom>
+                  Configuration
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  {bedrooms && <Bed fontSize="small" />}
+                  <Typography variant="body1" fontWeight="medium">
+                    {unitType || '-'}
+                  </Typography>
+                </Box>
+              </Box>
+              
+              <Box>
+                <Typography variant="body2" color="textSecondary" gutterBottom>
+                  Floor
+                </Typography>
+                <Typography variant="body1" fontWeight="medium">
+                  {unitData.floor ? `Floor ${unitData.floor}` : '-'}
+                </Typography>
+              </Box>
+              
+              <Box>
+                <Typography variant="body2" color="textSecondary" gutterBottom>
+                  Facing Direction
+                </Typography>
+                <Typography variant="body1" fontWeight="medium">
+                  {facing || '-'}
+                </Typography>
+              </Box>
+              
+              <Box>
+                <Typography variant="body2" color="textSecondary" gutterBottom>
+                  Location
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <LocationOn fontSize="small" color="action" />
+                  <Typography variant="body1" fontWeight="medium">
+                    {projectData.location?.city || safeString(projectData.location) || '-'}
+                  </Typography>
+                </Box>
+              </Box>
+            </Stack>
           </Grid>
           
-          <Grid item xs={12} sm={6}>
-            <Typography variant="body2" color="textSecondary">
-              Project Type
-            </Typography>
-            <Typography variant="body1" fontWeight="medium">
-              {safeString(projectData.type)}
-            </Typography>
-          </Grid>
-          
-          <Grid item xs={12} sm={6}>
-            <Typography variant="body2" color="textSecondary">
-              Unit Area
-            </Typography>
-            <Typography variant="body1" fontWeight="medium">
-              {unitData.area ? `${safeString(unitData.area)} sq ft` : '-'}
-            </Typography>
-          </Grid>
-          
-          <Grid item xs={12} sm={6}>
-            <Typography variant="body2" color="textSecondary">
-              Floor
-            </Typography>
-            <Typography variant="body1" fontWeight="medium">
-              {unitData.floor ? `Floor ${safeString(unitData.floor)}` : '-'}
-            </Typography>
-          </Grid>
-          
-          <Grid item xs={12} sm={6}>
-            <Typography variant="body2" color="textSecondary">
-              Bedrooms
-            </Typography>
-            <Typography variant="body1" fontWeight="medium">
-              {unitData.bedrooms ? `${safeString(unitData.bedrooms)} BHK` : '-'}
-            </Typography>
-          </Grid>
-          
-          <Grid item xs={12} sm={6}>
-            <Typography variant="body2" color="textSecondary">
-              Unit Type
-            </Typography>
-            <Typography variant="body1" fontWeight="medium">
-              {safeString(unitData.unitType)}
-            </Typography>
-          </Grid>
-          
-          <Grid item xs={12} sm={6}>
-            <Typography variant="body2" color="textSecondary">
-              Facing
-            </Typography>
-            <Typography variant="body1" fontWeight="medium">
-              {safeString(unitData.facing)}
-            </Typography>
-          </Grid>
-          
-          <Grid item xs={12}>
-            <Typography variant="body2" color="textSecondary">
-              Project Location
-            </Typography>
-            <Typography variant="body1" fontWeight="medium">
-              {safeString(projectData.location)}
-            </Typography>
-          </Grid>
-          
-          <Grid item xs={12}>
-            <Typography variant="body2" color="textSecondary">
-              Amenities
-            </Typography>
-            <Typography variant="body1" fontWeight="medium">
-              {safeString(unitData.amenities)}
-            </Typography>
-          </Grid>
+          {/* Project Amenities */}
+          {Object.keys(configuration).length > 0 && (
+            <Grid item xs={12}>
+              <Divider sx={{ my: 2 }} />
+              <Typography variant="h6" gutterBottom>
+                Project Amenities & Features
+              </Typography>
+              <Grid container spacing={2}>
+                {configuration.gym && (
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <FitnessCenter color="primary" />
+                      <Box>
+                        <Typography variant="body2" fontWeight="medium">Gym</Typography>
+                        <Typography variant="caption" color="textSecondary">
+                          {configuration.gym}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Grid>
+                )}
+                
+                {configuration.swimmingPool && (
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Pool color="primary" />
+                      <Box>
+                        <Typography variant="body2" fontWeight="medium">Swimming Pool</Typography>
+                        <Typography variant="caption" color="textSecondary">
+                          {configuration.swimmingPool}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Grid>
+                )}
+                
+                {configuration.security && (
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Security color="primary" />
+                      <Box>
+                        <Typography variant="body2" fontWeight="medium">Security</Typography>
+                        <Typography variant="caption" color="textSecondary">
+                          {configuration.security}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Grid>
+                )}
+                
+                {configuration.elevators && (
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Elevator color="primary" />
+                      <Box>
+                        <Typography variant="body2" fontWeight="medium">Elevators</Typography>
+                        <Typography variant="caption" color="textSecondary">
+                          {configuration.elevators}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Grid>
+                )}
+                
+                {configuration.powerBackup && (
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Visibility color="primary" />
+                      <Box>
+                        <Typography variant="body2" fontWeight="medium">Power Backup</Typography>
+                        <Typography variant="caption" color="textSecondary">
+                          {configuration.powerBackup}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Grid>
+                )}
+                
+                {configuration.amenities && (
+                  <Grid item xs={12}>
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                      <Restaurant color="primary" />
+                      <Box>
+                        <Typography variant="body2" fontWeight="medium">Additional Amenities</Typography>
+                        <Typography variant="caption" color="textSecondary">
+                          {configuration.amenities}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Grid>
+                )}
+              </Grid>
+            </Grid>
+          )}
         </Grid>
       </CardContent>
     </Card>
@@ -575,124 +732,214 @@ const PropertyDetailsCard = ({ sale }) => {
 };
 
 // ============================================================================
-// PAYMENT SUMMARY CARD
+// ENHANCED PAYMENT BREAKDOWN CARD
 // ============================================================================
 
-const PaymentSummaryCard = ({ sale }) => {
-  const totalAmount = sale.salePrice || 0;
-  const discountAmount = sale.discountAmount || 0;
-  const finalAmount = totalAmount - discountAmount;
+const PaymentBreakdownCard = ({ sale }) => {
+  const costSheet = sale.costSheetSnapshot || {};
+  const basePrice = costSheet.basePrice || 0;
+  const negotiatedPrice = costSheet.negotiatedPrice || sale.salePrice || 0;
+  const additionalCharges = costSheet.additionalCharges || 0;
+  const gst = costSheet.gst || 0;
+  const totalAmount = costSheet.totalAmount || negotiatedPrice + additionalCharges + gst;
+  const discountAmount = basePrice - negotiatedPrice;
   
   return (
     <Card>
       <CardHeader
-        title="Payment Summary"
+        title="Payment Breakdown"
         avatar={
-          <Avatar sx={{ bgcolor: 'success.main', width: 48, height: 48 }}>
-            <AccountBalanceWallet />
+          <Avatar sx={{ bgcolor: 'success.main', width: 56, height: 56 }}>
+            <Calculate />
           </Avatar>
+        }
+        action={
+          costSheet.timestamp && (
+            <Tooltip title={`Updated: ${formatDateTime(costSheet.timestamp)}`}>
+              <IconButton>
+                <Info />
+              </IconButton>
+            </Tooltip>
+          )
         }
       />
       <CardContent>
-        <Grid container spacing={2}>
-          <Grid item xs={12} sm={4}>
-            <Box sx={{ textAlign: 'center', p: 2 }}>
-              <Typography variant="h6" color="primary" fontWeight="bold">
-                {formatCurrency(totalAmount)}
-              </Typography>
-              <Typography variant="body2" color="textSecondary">
-                Base Amount
+        <Stack spacing={2}>
+          {/* Base Price */}
+          {basePrice > 0 && (
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography variant="body1">Base Price</Typography>
+              <Typography variant="body1" fontWeight="medium">
+                {formatCurrency(basePrice)}
               </Typography>
             </Box>
-          </Grid>
-          
-          {discountAmount > 0 && (
-            <Grid item xs={12} sm={4}>
-              <Box sx={{ textAlign: 'center', p: 2 }}>
-                <Typography variant="h6" color="success.main" fontWeight="bold">
-                  -{formatCurrency(discountAmount)}
-                </Typography>
-                <Typography variant="body2" color="textSecondary">
-                  Discount
-                </Typography>
-              </Box>
-            </Grid>
           )}
           
-          <Grid item xs={12} sm={discountAmount > 0 ? 4 : 12}>
-            <Box sx={{ textAlign: 'center', p: 2 }}>
-              <Typography variant="h6" color="error.main" fontWeight="bold">
-                {formatCurrency(finalAmount)}
-              </Typography>
-              <Typography variant="body2" color="textSecondary">
-                Final Amount
+          {/* Discount */}
+          {discountAmount > 0 && (
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography variant="body1" color="success.main">Discount Applied</Typography>
+              <Typography variant="body1" fontWeight="medium" color="success.main">
+                -{formatCurrency(discountAmount)}
               </Typography>
             </Box>
-          </Grid>
-        </Grid>
+          )}
+          
+          {/* Negotiated Price */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="body1">
+              {basePrice > 0 ? 'Negotiated Price' : 'Sale Price'}
+            </Typography>
+            <Typography variant="body1" fontWeight="medium">
+              {formatCurrency(negotiatedPrice)}
+            </Typography>
+          </Box>
+          
+          {/* Additional Charges */}
+          {additionalCharges > 0 && (
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography variant="body1">Additional Charges</Typography>
+              <Typography variant="body1" fontWeight="medium">
+                {formatCurrency(additionalCharges)}
+              </Typography>
+            </Box>
+          )}
+          
+          {/* GST */}
+          {gst > 0 && (
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography variant="body1">GST</Typography>
+              <Typography variant="body1" fontWeight="medium">
+                {formatCurrency(gst)}
+              </Typography>
+            </Box>
+          )}
+          
+          <Divider />
+          
+          {/* Total Amount */}
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            bgcolor: 'action.hover',
+            p: 2,
+            borderRadius: 1
+          }}>
+            <Typography variant="h6" fontWeight="bold">Total Amount</Typography>
+            <Typography variant="h6" fontWeight="bold" color="primary.main">
+              {formatCurrency(totalAmount)}
+            </Typography>
+          </Box>
+          
+          {/* Savings Summary */}
+          {discountAmount > 0 && (
+            <Alert severity="success" sx={{ mt: 2 }}>
+              <Typography variant="body2">
+                You saved <strong>{formatCurrency(discountAmount)}</strong> on this purchase!
+              </Typography>
+            </Alert>
+          )}
+        </Stack>
       </CardContent>
     </Card>
   );
 };
 
 // ============================================================================
-// SALE TIMELINE
+// ENHANCED SALE TIMELINE
 // ============================================================================
 
 const SaleTimeline = ({ sale }) => {
   const timelineEvents = [
     {
+      date: sale.createdAt,
+      title: 'Sale Created',
+      description: 'Sale record was created in the system',
+      color: 'info',
+      icon: Assignment,
+    },
+    {
       date: sale.bookingDate || sale.createdAt,
       title: 'Sale Booked',
-      description: 'Initial sale booking was created',
+      description: 'Customer confirmed the booking',
       color: 'success',
+      icon: CheckCircle,
+    },
+    sale.costSheetSnapshot?.timestamp && {
+      date: sale.costSheetSnapshot.timestamp,
+      title: 'Cost Sheet Finalized',
+      description: `Final amount: ${formatCurrency(sale.costSheetSnapshot.totalAmount || 0)}`,
+      color: 'info',
+      icon: Calculate,
     },
     sale.agreementDate && {
       date: sale.agreementDate,
       title: 'Agreement Signed',
       description: 'Sale agreement was signed by customer',
       color: 'info',
+      icon: Assignment,
     },
     sale.registrationDate && {
       date: sale.registrationDate,
       title: 'Registration Complete',
       description: 'Property registration was completed',
       color: 'success',
+      icon: CheckCircle,
     },
     sale.cancelledAt && {
       date: sale.cancelledAt,
       title: 'Sale Cancelled',
       description: safeString(sale.cancellationReason) || 'Sale was cancelled',
       color: 'error',
+      icon: Delete,
     },
   ].filter(Boolean);
 
   return (
     <Card>
-      <CardHeader title="Sale Timeline" />
+      <CardHeader 
+        title="Sale Timeline" 
+        avatar={
+          <Avatar sx={{ bgcolor: 'warning.main', width: 56, height: 56 }}>
+            <TimelineIcon />
+          </Avatar>
+        }
+      />
       <CardContent>
         <Timeline>
-          {timelineEvents.map((event, index) => (
-            <TimelineItem key={index}>
-              <TimelineOppositeContent color="textSecondary">
-                {formatDateTime(event.date)}
-              </TimelineOppositeContent>
-              <TimelineSeparator>
-                <TimelineDot color={event.color}>
-                  <CheckCircle />
-                </TimelineDot>
-                {index < timelineEvents.length - 1 && <TimelineConnector />}
-              </TimelineSeparator>
-              <TimelineContent>
-                <Typography variant="h6" component="span">
-                  {event.title}
-                </Typography>
-                <Typography variant="body2" color="textSecondary">
-                  {event.description}
-                </Typography>
-              </TimelineContent>
-            </TimelineItem>
-          ))}
+          {timelineEvents.map((event, index) => {
+            const EventIcon = event.icon;
+            return (
+              <TimelineItem key={index}>
+                <TimelineOppositeContent color="textSecondary" sx={{ maxWidth: '120px' }}>
+                  <Typography variant="body2">
+                    {formatDate(event.date)}
+                  </Typography>
+                  <Typography variant="caption">
+                    {new Date(event.date).toLocaleTimeString([], { 
+                      hour: '2-digit', 
+                      minute: '2-digit' 
+                    })}
+                  </Typography>
+                </TimelineOppositeContent>
+                <TimelineSeparator>
+                  <TimelineDot color={event.color}>
+                    <EventIcon fontSize="small" />
+                  </TimelineDot>
+                  {index < timelineEvents.length - 1 && <TimelineConnector />}
+                </TimelineSeparator>
+                <TimelineContent>
+                  <Typography variant="h6" component="span">
+                    {event.title}
+                  </Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    {event.description}
+                  </Typography>
+                </TimelineContent>
+              </TimelineItem>
+            );
+          })}
         </Timeline>
       </CardContent>
     </Card>
@@ -700,7 +947,7 @@ const SaleTimeline = ({ sale }) => {
 };
 
 // ============================================================================
-// SALESPERSON CARD
+// ENHANCED SALESPERSON CARD
 // ============================================================================
 
 const SalesPersonCard = ({ sale }) => {
@@ -710,42 +957,65 @@ const SalesPersonCard = ({ sale }) => {
   return (
     <Card>
       <CardHeader
-        title="Sales Person"
+        title="Sales Representative"
         avatar={
-          <Avatar sx={{ bgcolor: 'info.main', width: 48, height: 48 }}>
+          <Avatar sx={{ bgcolor: 'secondary.main', width: 56, height: 56, fontSize: '1.5rem' }}>
             {salespersonName?.[0] || 'S'}
           </Avatar>
         }
+        action={
+          salespersonData.email && (
+            <Tooltip title="Email Sales Rep">
+              <IconButton color="primary" href={`mailto:${salespersonData.email}`}>
+                <Email />
+              </IconButton>
+            </Tooltip>
+          )
+        }
       />
       <CardContent>
-        <Grid container spacing={2}>
-          <Grid item xs={12} sm={6}>
-            <Typography variant="body2" color="textSecondary">
+        <Stack spacing={2}>
+          <Box>
+            <Typography variant="body2" color="textSecondary" gutterBottom>
               Name
             </Typography>
-            <Typography variant="body1" fontWeight="medium">
+            <Typography variant="h6" fontWeight="medium">
               {salespersonName}
             </Typography>
-          </Grid>
+          </Box>
           
-          <Grid item xs={12} sm={6}>
-            <Typography variant="body2" color="textSecondary">
+          <Box>
+            <Typography variant="body2" color="textSecondary" gutterBottom>
               Role
             </Typography>
-            <Typography variant="body1" fontWeight="medium">
-              {safeString(salespersonData.role)}
-            </Typography>
-          </Grid>
+            <Chip 
+              label={safeString(salespersonData.role)} 
+              color="primary" 
+              variant="outlined" 
+              size="small"
+            />
+          </Box>
           
-          <Grid item xs={12}>
-            <Typography variant="body2" color="textSecondary">
+          <Box>
+            <Typography variant="body2" color="textSecondary" gutterBottom>
               Email
             </Typography>
             <Typography variant="body1" fontWeight="medium">
               {safeString(salespersonData.email)}
             </Typography>
-          </Grid>
-        </Grid>
+          </Box>
+          
+          {salespersonData.phone && (
+            <Box>
+              <Typography variant="body2" color="textSecondary" gutterBottom>
+                Phone
+              </Typography>
+              <Typography variant="body1" fontWeight="medium">
+                {formatPhoneNumber(salespersonData.phone)}
+              </Typography>
+            </Box>
+          )}
+        </Stack>
       </CardContent>
     </Card>
   );
@@ -898,7 +1168,7 @@ const SaleDetailPage = () => {
   }
 
   return (
-    <Box sx={{ flexGrow: 1, p: 3 }}>
+    <Box sx={{ flexGrow: 1, p: 3, bgcolor: 'background.default', minHeight: '100vh' }}>
       {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -906,11 +1176,11 @@ const SaleDetailPage = () => {
             <ArrowBack />
           </IconButton>
           <Box>
-            <Typography variant="h4" component="h1">
+            <Typography variant="h4" component="h1" fontWeight="bold">
               Sale Details
             </Typography>
             <Typography variant="body1" color="textSecondary">
-              {getCustomerName(sale)} • {formatDate(sale.bookingDate || sale.createdAt)}
+              {getCustomerName(sale)} • {getProjectName(sale)} • {formatDate(sale.bookingDate || sale.createdAt)}
             </Typography>
           </Box>
         </Box>
@@ -956,7 +1226,7 @@ const SaleDetailPage = () => {
         {/* Right Column */}
         <Grid item xs={12} lg={4}>
           <Stack spacing={3}>
-            <PaymentSummaryCard sale={sale} />
+            <PaymentBreakdownCard sale={sale} />
             <SalesPersonCard sale={sale} />
             
             {/* Quick Actions */}
@@ -965,7 +1235,7 @@ const SaleDetailPage = () => {
               <CardContent>
                 <Stack spacing={2}>
                   <Button
-                    variant="outlined"
+                    variant="contained"
                     startIcon={<Receipt />}
                     fullWidth
                     onClick={handleGenerateDocuments}
@@ -997,6 +1267,22 @@ const SaleDetailPage = () => {
                   >
                     Email Customer
                   </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<Share />}
+                    fullWidth
+                    onClick={() => {
+                      if (navigator.share) {
+                        navigator.share({
+                          title: `Sale #${sale.saleNumber || sale._id?.slice(-6)}`,
+                          text: `Sale details for ${getCustomerName(sale)}`,
+                          url: window.location.href
+                        });
+                      }
+                    }}
+                  >
+                    Share Details
+                  </Button>
                 </Stack>
               </CardContent>
             </Card>
@@ -1027,6 +1313,10 @@ const SaleDetailPage = () => {
         <MenuItem onClick={() => window.print()}>
           <ListItemIcon><Print fontSize="small" /></ListItemIcon>
           <ListItemText>Print Details</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => navigator.clipboard?.writeText(window.location.href)}>
+          <ListItemIcon><Share fontSize="small" /></ListItemIcon>
+          <ListItemText>Copy Link</ListItemText>
         </MenuItem>
         <Divider />
         {canEditSales && (
