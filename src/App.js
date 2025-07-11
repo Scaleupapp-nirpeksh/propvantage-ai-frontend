@@ -57,6 +57,9 @@ const SaleDetailPage = React.lazy(() => import('./pages/sales/SaleDetailPage'));
 const CreateSalePage = React.lazy(() => import('./pages/sales/CreateSalePage'));
 const EditSalePage = React.lazy(() => import('./pages/sales/EditSalePage')); // Added EditSalePage
 const PaymentPlanManagementPage = React.lazy(() => import('./pages/payments/PaymentPlanManagementPage'));
+const PaymentPlanPage = React.lazy(() => import('./pages/payments/PaymentPlanPage'));
+
+
 
 // Analytics Pages
 const AnalyticsDashboard = React.lazy(() => import('./pages/analytics/AnalyticsDashboard'));
@@ -455,6 +458,15 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
 
+<Route path="/payments/plans/:saleId" element={
+  <ProtectedRoute requiredPermission="SALES">
+    <DashboardLayout>
+      <Suspense fallback={<LoadingFallback message="Loading payment plan..." />}>
+        <PaymentPlanPage />
+      </Suspense>
+    </DashboardLayout>
+  </ProtectedRoute>
+} />
       {/* ========================================= */}
       {/* ANALYTICS ROUTES */}
       {/* ========================================= */}
