@@ -1,11 +1,11 @@
 /**
  * File: src/pages/payments/PaymentPlanPage.js
- * Description: Comprehensive payment plan management page with installments and transactions
- * Version: 1.1 - Fixed financial summary data handling
+ * Description: COMPLETE FIXED - Comprehensive payment plan management page with installments and transactions
+ * Version: 2.0 - Fixed payment plan creation flow and API integration
  * Location: src/pages/payments/PaymentPlanPage.js
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
@@ -102,6 +102,8 @@ import {
   VisibilityOff,
   Settings,
   Build,
+  ArrowForward,
+  Clear,
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -146,27 +148,511 @@ const TabPanel = ({ children, value, index, ...other }) => (
 );
 
 // ============================================================================
-// PAYMENT PLAN OVERVIEW COMPONENT - FIXED VERSION
+// FIXED CREATE PAYMENT PLAN COMPONENT - FOLLOWING CreateSalePage.js PATTERN
+// ============================================================================
+
+const CreatePaymentPlan = ({ 
+  sale, 
+  onPlanCreated, 
+  onClose,
+  open = false 
+}) => {
+  const [step, setStep] = useState(0);
+  const [templates, setTemplates] = useState([]);
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [paymentSchedule, setPaymentSchedule] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [loadingTemplates, setLoadingTemplates] = useState(true);
+  const [error, setError] = useState('');
+
+  const steps = [
+    'Select Payment Template',
+    'Review Payment Schedule', 
+    'Confirm & Create Plan'
+  ];
+
+  // Load payment templates when component mounts or sale changes
+  useEffect(() => {
+    if (sale && open) {
+      loadPaymentTemplates();
+    }
+  }, [sale, open]);
+
+  const loadPaymentTemplates = async () => {
+    try {
+      setLoadingTemplates(true);
+      setError('');
+      
+      console.log('🔄 Loading payment templates for sale:', sale._id, 'project:', sale.project);
+      
+      // Get project ID - handle both populated and non-populated project
+      const projectId = sale.project?._id || sale.project;
+      
+      if (!projectId) {
+        throw new Error('Project information not found for this sale');
+      }
+      
+      // FIXED: Use the correct API method that matches your CreateSalePage.js
+      const response = await projectPaymentAPI.getPaymentPlanTemplates(projectId);
+      const templatesData = response.data?.data || response.data || [];
+      
+      console.log('📊 Templates loaded:', templatesData.length);
+      setTemplates(templatesData);
+      
+    } catch (error) {
+      console.error('❌ Error loading templates:', error);
+      setError(error.response?.data?.message || error.message || 'Failed to load payment templates');
+      setTemplates([]);
+    } finally {
+      setLoadingTemplates(false);
+    }
+  };
+
+  // Generate payment schedule when template is selected
+  const generatePaymentSchedule = useCallback((template) => {
+    if (!template || !sale) return [];
+
+    const totalAmount = sale.salePrice || sale.finalAmount || 0;
+    const startDate = new Date();
+
+    return template.installments.map((installment, index) => {
+      const amount = Math.round((totalAmount * installment.percentage) / 100);
+      const dueDate = new Date(startDate);
+      dueDate.setDate(dueDate.getDate() + (installment.dueAfterDays || 0));
+
+      return {
+        installmentNumber: installment.installmentNumber || index + 1,
+        description: installment.description,
+        percentage: installment.percentage,
+        amount: amount,
+        dueDate: dueDate,
+        milestoneType: installment.milestoneType,
+        status: 'pending',
+        isOptional: installment.isOptional || false,
+      };
+    });
+  }, [sale]);
+
+  // Handle template selection
+  const handleTemplateSelect = (template) => {
+    setSelectedTemplate(template);
+    const schedule = generatePaymentSchedule(template);
+    setPaymentSchedule(schedule);
+  };
+
+  // Handle payment plan creation
+  const handleCreatePlan = async () => {
+    if (!selectedTemplate || !paymentSchedule.length) {
+      setError('Please select a payment template first');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError('');
+      
+      // FIXED: Use the correct API method and data structure
+      const planData = {
+        saleId: sale._id,
+        templateName: selectedTemplate.name,
+        paymentPlanSnapshot: {
+          templateId: selectedTemplate._id,
+          templateName: selectedTemplate.name,
+          planType: selectedTemplate.planType,
+          installments: paymentSchedule,
+          gracePeriodDays: selectedTemplate.gracePeriodDays || 7,
+          lateFeeRate: selectedTemplate.lateFeeRate || 0,
+        }
+      };
+
+      console.log('📝 Creating payment plan with data:', planData);
+      
+      // FIXED: Use the correct API method name that exists in your backend
+      const response = await paymentAPI.createPaymentPlan(planData);
+      
+      console.log('✅ Payment plan created successfully:', response.data);
+      
+      // Call the callback to refresh parent data
+      if (onPlanCreated) {
+        onPlanCreated();
+      }
+      
+      // Close the dialog
+      if (onClose) {
+        onClose();
+      }
+      
+    } catch (error) {
+      console.error('❌ Error creating payment plan:', error);
+      setError(error.response?.data?.message || error.message || 'Failed to create payment plan');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleNext = () => {
+    if (step === 0 && !selectedTemplate) {
+      setError('Please select a payment template');
+      return;
+    }
+    setStep(prev => prev + 1);
+    setError('');
+  };
+
+  const handleBack = () => {
+    setStep(prev => prev - 1);
+    setError('');
+  };
+
+  const renderStepContent = (stepIndex) => {
+    switch (stepIndex) {
+      case 0: // Select Payment Template
+        if (loadingTemplates) {
+          return (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+              <CircularProgress />
+              <Typography sx={{ ml: 2 }}>Loading payment templates...</Typography>
+            </Box>
+          );
+        }
+
+        if (templates.length === 0) {
+          return (
+            <Alert severity="warning">
+              <Typography variant="h6" gutterBottom>No Payment Templates Available</Typography>
+              <Typography variant="body2">
+                This project doesn't have any active payment plan templates. 
+                Please contact your administrator to set up payment templates for this project.
+              </Typography>
+            </Alert>
+          );
+        }
+
+        return (
+          <Grid container spacing={2}>
+            {templates.map(template => (
+              <Grid item xs={12} sm={6} md={4} key={template._id}>
+                <Card 
+                  sx={{ 
+                    cursor: 'pointer',
+                    border: selectedTemplate?._id === template._id ? 2 : 1,
+                    borderColor: selectedTemplate?._id === template._id ? 'primary.main' : 'divider',
+                    '&:hover': { borderColor: 'primary.main' }
+                  }}
+                  onClick={() => handleTemplateSelect(template)}
+                >
+                  <CardHeader
+                    avatar={
+                      <Avatar sx={{ bgcolor: selectedTemplate?._id === template._id ? 'primary.main' : 'grey.400' }}>
+                        {selectedTemplate?._id === template._id ? <CheckCircle /> : <AccountBalance />}
+                      </Avatar>
+                    }
+                    title={template.name}
+                    subheader={template.planType?.replace('_', ' ')}
+                  />
+                  <CardContent>
+                    <Typography variant="body2" color="textSecondary" gutterBottom>
+                      {template.description || 'Payment plan with structured installments'}
+                    </Typography>
+                    
+                    <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+                      <Chip 
+                        label={`${template.installments?.length || 0} installments`} 
+                        size="small" 
+                        variant="outlined"
+                      />
+                      <Chip 
+                        label={`${template.gracePeriodDays || 0} days grace`} 
+                        size="small" 
+                        variant="outlined"
+                      />
+                    </Stack>
+
+                    <Typography variant="caption" color="textSecondary" gutterBottom>
+                      Key Installments:
+                    </Typography>
+                    {template.installments?.slice(0, 3).map((installment, index) => (
+                      <Box key={index} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                        <Typography variant="caption" noWrap sx={{ maxWidth: '70%' }}>
+                          {installment.description}
+                        </Typography>
+                        <Typography variant="caption" fontWeight="medium">
+                          {formatPercentage(installment.percentage)}
+                        </Typography>
+                      </Box>
+                    ))}
+                    {(template.installments?.length || 0) > 3 && (
+                      <Typography variant="caption" color="textSecondary">
+                        +{(template.installments?.length || 0) - 3} more...
+                      </Typography>
+                    )}
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        );
+
+      case 1: // Review Payment Schedule
+        if (!selectedTemplate || !paymentSchedule.length) {
+          return (
+            <Alert severity="warning">
+              No payment schedule generated. Please go back and select a template.
+            </Alert>
+          );
+        }
+
+        return (
+          <Box>
+            <Typography variant="h6" gutterBottom>
+              Payment Schedule Preview
+            </Typography>
+            <Typography variant="body2" color="textSecondary" gutterBottom>
+              Template: {selectedTemplate.name} • Total Amount: {formatCurrency(sale.salePrice || 0)}
+            </Typography>
+
+            <TableContainer component={Paper} variant="outlined" sx={{ mt: 2 }}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>#</TableCell>
+                    <TableCell>Description</TableCell>
+                    <TableCell>Milestone</TableCell>
+                    <TableCell align="right">Percentage</TableCell>
+                    <TableCell align="right">Amount</TableCell>
+                    <TableCell>Due Date</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {paymentSchedule.map((installment, index) => (
+                    <TableRow key={index}>
+                      <TableCell>#{installment.installmentNumber}</TableCell>
+                      <TableCell>{installment.description}</TableCell>
+                      <TableCell>
+                        <Chip 
+                          label={installment.milestoneType?.replace('_', ' ')} 
+                          size="small" 
+                          variant="outlined"
+                          sx={{ textTransform: 'capitalize' }}
+                        />
+                      </TableCell>
+                      <TableCell align="right">{formatPercentage(installment.percentage)}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+                        {formatCurrency(installment.amount)}
+                      </TableCell>
+                      <TableCell>{formatDate(installment.dueDate)}</TableCell>
+                    </TableRow>
+                  ))}
+                  
+                  {/* Total Row */}
+                  <TableRow sx={{ bgcolor: 'primary.50' }}>
+                    <TableCell colSpan={3} align="right">
+                      <Typography variant="h6" fontWeight="bold">Total</Typography>
+                    </TableCell>
+                    <TableCell align="right">
+                      <Typography variant="h6" fontWeight="bold">100%</Typography>
+                    </TableCell>
+                    <TableCell align="right">
+                      <Typography variant="h6" fontWeight="bold" color="primary">
+                        {formatCurrency(paymentSchedule.reduce((sum, inst) => sum + inst.amount, 0))}
+                      </Typography>
+                    </TableCell>
+                    <TableCell></TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Box>
+        );
+
+      case 2: // Confirm & Create
+        return (
+          <Box>
+            <Typography variant="h6" gutterBottom>
+              Confirm Payment Plan Creation
+            </Typography>
+            
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={6}>
+                <Card variant="outlined">
+                  <CardContent>
+                    <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                      Sale Information
+                    </Typography>
+                    <Typography variant="body2">
+                      Sale ID: {sale.saleNumber || sale._id}
+                    </Typography>
+                    <Typography variant="body2">
+                      Customer: {sale.lead?.firstName} {sale.lead?.lastName}
+                    </Typography>
+                    <Typography variant="body2">
+                      Unit: {sale.unit?.unitNumber}
+                    </Typography>
+                    <Typography variant="body2">
+                      Sale Amount: {formatCurrency(sale.salePrice || 0)}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              
+              <Grid item xs={12} md={6}>
+                <Card variant="outlined">
+                  <CardContent>
+                    <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                      Payment Plan Details
+                    </Typography>
+                    <Typography variant="body2">
+                      Template: {selectedTemplate?.name}
+                    </Typography>
+                    <Typography variant="body2">
+                      Plan Type: {selectedTemplate?.planType?.replace('_', ' ')}
+                    </Typography>
+                    <Typography variant="body2">
+                      Total Installments: {paymentSchedule.length}
+                    </Typography>
+                    <Typography variant="body2">
+                      Grace Period: {selectedTemplate?.gracePeriodDays || 0} days
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+            </Grid>
+
+            <Alert severity="info" sx={{ mt: 2 }}>
+              <Typography variant="body2">
+                <strong>Confirmation:</strong> You are about to create a payment plan for this sale. 
+                This will generate {paymentSchedule.length} installments with the payment schedule shown above.
+                This action cannot be undone.
+              </Typography>
+            </Alert>
+          </Box>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <Dialog 
+      open={open} 
+      onClose={onClose} 
+      maxWidth="lg" 
+      fullWidth
+      PaperProps={{ sx: { minHeight: '70vh' } }}
+    >
+      <DialogTitle>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box>
+            <Typography variant="h5">
+              Create Payment Plan
+            </Typography>
+            <Typography variant="body2" color="textSecondary">
+              Set up installment schedule for sale: {sale?.saleNumber || sale?._id}
+            </Typography>
+          </Box>
+          <IconButton onClick={onClose}>
+            <Clear />
+          </IconButton>
+        </Box>
+      </DialogTitle>
+      
+      <DialogContent>
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
+
+        <Stepper activeStep={step} orientation="horizontal" sx={{ mb: 3 }}>
+          {steps.map((label) => (
+            <Step key={label}>
+              <StepLabel>{label}</StepLabel>
+            </Step>
+          ))}
+        </Stepper>
+        
+        <Box sx={{ minHeight: 400 }}>
+          {renderStepContent(step)}
+        </Box>
+      </DialogContent>
+      
+      <DialogActions sx={{ p: 3 }}>
+        <Button onClick={onClose}>
+          Cancel
+        </Button>
+        
+        {step > 0 && (
+          <Button
+            onClick={handleBack}
+            startIcon={<ArrowBack />}
+          >
+            Back
+          </Button>
+        )}
+        
+        {step < steps.length - 1 ? (
+          <Button
+            variant="contained"
+            onClick={handleNext}
+            endIcon={<ArrowForward />}
+            disabled={step === 0 && !selectedTemplate}
+          >
+            Next
+          </Button>
+        ) : (
+          <Button
+            variant="contained"
+            onClick={handleCreatePlan}
+            disabled={loading || !selectedTemplate}
+            startIcon={loading ? <CircularProgress size={20} /> : <Save />}
+          >
+            {loading ? 'Creating Plan...' : 'Create Payment Plan'}
+          </Button>
+        )}
+      </DialogActions>
+    </Dialog>
+  );
+};
+
+// ============================================================================
+// FIXED PAYMENT PLAN OVERVIEW COMPONENT
 // ============================================================================
 
 const PaymentPlanOverview = ({ paymentPlan, sale, onRefresh, financialSummary, installments }) => {
-  const navigate = useNavigate();
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
   
+  // FIXED: If no payment plan exists, show the create option with dialog
   if (!paymentPlan) {
     return (
-      <Alert severity="info" sx={{ mb: 3 }}>
-        <Typography variant="h6" gutterBottom>No Payment Plan Available</Typography>
-        <Typography variant="body2" sx={{ mb: 2 }}>
-          This sale doesn't have a payment plan configured yet. You can create one now.
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<Add />}
-          onClick={() => navigate(`/payments/plans/${sale._id}/create`)}
-        >
-          Create Payment Plan
-        </Button>
-      </Alert>
+      <>
+        <Alert severity="info" sx={{ mb: 3 }}>
+          <Typography variant="h6" gutterBottom>No Payment Plan Available</Typography>
+          <Typography variant="body2" sx={{ mb: 2 }}>
+            This sale doesn't have a payment plan configured yet. You can create one now using 
+            the available payment plan templates for this project.
+          </Typography>
+          <Button
+            variant="contained"
+            startIcon={<Add />}
+            onClick={() => setShowCreateDialog(true)}
+            size="large"
+          >
+            Create Payment Plan
+          </Button>
+        </Alert>
+
+        {/* FIXED: Use the corrected CreatePaymentPlan component */}
+        <CreatePaymentPlan
+          open={showCreateDialog}
+          onClose={() => setShowCreateDialog(false)}
+          sale={sale}
+          onPlanCreated={() => {
+            setShowCreateDialog(false);
+            onRefresh(); // Refresh the parent component to load the new payment plan
+          }}
+        />
+      </>
     );
   }
 
@@ -192,17 +678,6 @@ const PaymentPlanOverview = ({ paymentPlan, sale, onRefresh, financialSummary, i
   }
 
   const completionPercentage = totalAmount > 0 ? (totalPaid / totalAmount) * 100 : 0;
-
-  // Debug logging
-  console.log('=== PAYMENT OVERVIEW DEBUG ===');
-  console.log('Using financialSummary:', financialSummary);
-  console.log('Total Amount:', totalAmount);
-  console.log('Total Paid:', totalPaid);
-  console.log('Total Outstanding:', totalOutstanding);
-  console.log('Completion %:', completionPercentage);
-  console.log('Next Due Date:', nextDueDate);
-  console.log('Next Due Amount:', nextDueAmount);
-  console.log('=== END DEBUG ===');
 
   return (
     <Grid container spacing={3}>
@@ -387,7 +862,7 @@ const PaymentPlanOverview = ({ paymentPlan, sale, onRefresh, financialSummary, i
                   color="warning"
                   startIcon={<Payment />}
                   fullWidth
-                  onClick={() => navigate(`/payments/plans/${sale._id}/record-payment`)}
+                  onClick={() => {/* Switch to transactions tab */}}
                 >
                   Record Payment
                 </Button>
@@ -1007,197 +1482,6 @@ const PaymentTransactions = ({ saleId, paymentPlan, transactions, onRefresh }) =
 };
 
 // ============================================================================
-// CREATE PAYMENT PLAN COMPONENT
-// ============================================================================
-
-const CreatePaymentPlan = ({ sale, onPlanCreated }) => {
-  const [step, setStep] = useState(0);
-  const [templates, setTemplates] = useState([]);
-  const [selectedTemplate, setSelectedTemplate] = useState(null);
-  const [customPlan, setCustomPlan] = useState({
-    name: '',
-    planType: 'time_based',
-    installments: []
-  });
-  const [loading, setLoading] = useState(false);
-  const [loadingTemplates, setLoadingTemplates] = useState(true);
-
-  useEffect(() => {
-    loadPaymentTemplates();
-  }, [sale]);
-
-  const loadPaymentTemplates = async () => {
-    try {
-      setLoadingTemplates(true);
-      const response = await projectPaymentAPI.getPaymentPlanTemplates(sale.project._id || sale.project);
-      setTemplates(response.data.data || []);
-    } catch (error) {
-      console.error('Error loading templates:', error);
-      setTemplates([]);
-    } finally {
-      setLoadingTemplates(false);
-    }
-  };
-
-  const handleCreatePlan = async () => {
-    try {
-      setLoading(true);
-      
-      const planData = {
-        saleId: sale._id,
-        templateName: selectedTemplate?.name || customPlan.name,
-        customizations: selectedTemplate ? null : customPlan
-      };
-
-      await paymentAPI.createNewPaymentPlan(planData);
-      onPlanCreated();
-    } catch (error) {
-      console.error('Error creating payment plan:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loadingTemplates) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  return (
-    <Box>
-      <Stepper activeStep={step} orientation="vertical">
-        <Step>
-          <StepLabel>Choose Payment Plan Option</StepLabel>
-          <StepContent>
-            <Grid container spacing={2}>
-              {templates.length > 0 ? (
-                templates.map(template => (
-                  <Grid item xs={12} sm={6} md={4} key={template._id}>
-                    <Card 
-                      sx={{ 
-                        cursor: 'pointer',
-                        border: selectedTemplate?._id === template._id ? 2 : 1,
-                        borderColor: selectedTemplate?._id === template._id ? 'primary.main' : 'divider'
-                      }}
-                      onClick={() => setSelectedTemplate(template)}
-                    >
-                      <CardContent>
-                        <Typography variant="h6" gutterBottom>
-                          {template.name}
-                        </Typography>
-                        <Typography variant="body2" color="textSecondary" gutterBottom>
-                          {template.description}
-                        </Typography>
-                        <Chip 
-                          label={template.planType?.replace('_', ' ')} 
-                          size="small" 
-                          color="primary"
-                        />
-                        <Typography variant="body2" sx={{ mt: 1 }}>
-                          {template.installments?.length} installments
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                ))
-              ) : (
-                <Grid item xs={12}>
-                  <Alert severity="warning" sx={{ mb: 2 }}>
-                    <Typography variant="h6" gutterBottom>No Payment Templates Found</Typography>
-                    <Typography variant="body2" sx={{ mb: 2 }}>
-                      There are no payment plan templates configured for this project. 
-                      You'll need to create a template first or contact your administrator.
-                    </Typography>
-                    <Button
-                      variant="contained"
-                      startIcon={<Build />}
-                      onClick={() => window.open(`/projects/${sale.project._id || sale.project}/payment-config`, '_blank')}
-                    >
-                      Create Payment Template
-                    </Button>
-                  </Alert>
-                </Grid>
-              )}
-            </Grid>
-            <Box sx={{ mt: 2 }}>
-              <Button
-                variant="contained"
-                onClick={() => setStep(1)}
-                disabled={!selectedTemplate && templates.length > 0}
-              >
-                Continue
-              </Button>
-            </Box>
-          </StepContent>
-        </Step>
-
-        <Step>
-          <StepLabel>Review & Create</StepLabel>
-          <StepContent>
-            {selectedTemplate && (
-              <Card sx={{ mb: 2 }}>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    Selected Template: {selectedTemplate.name}
-                  </Typography>
-                  <Typography variant="body2" color="textSecondary" gutterBottom>
-                    {selectedTemplate.description}
-                  </Typography>
-                  
-                  <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>
-                    Installment Schedule:
-                  </Typography>
-                  
-                  <TableContainer component={Paper} variant="outlined">
-                    <Table size="small">
-                      <TableHead>
-                        <TableRow>
-                          <TableCell>#</TableCell>
-                          <TableCell>Description</TableCell>
-                          <TableCell align="right">Percentage</TableCell>
-                          <TableCell align="right">Amount</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {selectedTemplate.installments?.map((installment, index) => (
-                          <TableRow key={index}>
-                            <TableCell>{installment.installmentNumber}</TableCell>
-                            <TableCell>{installment.description}</TableCell>
-                            <TableCell align="right">{installment.percentage}%</TableCell>
-                            <TableCell align="right">
-                              {formatCurrency((sale.salePrice * installment.percentage) / 100)}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                </CardContent>
-              </Card>
-            )}
-            
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <Button onClick={() => setStep(0)}>Back</Button>
-              <Button
-                variant="contained"
-                onClick={handleCreatePlan}
-                disabled={loading}
-                startIcon={loading ? <CircularProgress size={20} /> : <Save />}
-              >
-                {loading ? 'Creating...' : 'Create Payment Plan'}
-              </Button>
-            </Box>
-          </StepContent>
-        </Step>
-      </Stepper>
-    </Box>
-  );
-};
-
-// ============================================================================
 // MAIN PAYMENT PLAN PAGE COMPONENT - FIXED VERSION
 // ============================================================================
 
@@ -1257,11 +1541,16 @@ const PaymentPlanPage = () => {
         
       } catch (planError) {
         console.error('Payment plan loading error:', planError);
-        // Payment plan doesn't exist
-        setPaymentPlan(null);
-        setInstallments([]);
-        setTransactions([]);
-        setFinancialSummary(null);
+        // Payment plan doesn't exist - this is expected for new sales
+        if (planError.response?.status === 404) {
+          console.log('📝 No payment plan exists yet - showing creation option');
+          setPaymentPlan(null);
+          setInstallments([]);
+          setTransactions([]);
+          setFinancialSummary(null);
+        } else {
+          throw planError; // Re-throw other errors
+        }
       }
 
     } catch (error) {
@@ -1396,11 +1685,9 @@ const PaymentPlanPage = () => {
       {refreshing && <LinearProgress sx={{ mb: 2 }} />}
 
       {/* Main Content */}
-      {!paymentPlan ? (
-        <CreatePaymentPlan sale={sale} onPlanCreated={handlePlanCreated} />
-      ) : (
-        <Box>
-          {/* Tabs */}
+      <Box>
+        {/* Tabs - Only show if payment plan exists */}
+        {paymentPlan && (
           <Card sx={{ mb: 3 }}>
             <Tabs value={activeTab} onChange={(e, v) => setActiveTab(v)} variant="fullWidth">
               <Tab label="Overview" icon={<Assessment />} />
@@ -1409,48 +1696,52 @@ const PaymentPlanPage = () => {
               <Tab label="Reports" icon={<BarChart />} />
             </Tabs>
           </Card>
+        )}
 
-          {/* Tab Content - PASS CORRECT DATA */}
-          <TabPanel value={activeTab} index={0}>
-            <PaymentPlanOverview 
-              paymentPlan={paymentPlan} 
-              sale={sale} 
-              onRefresh={handleRefresh}
-              financialSummary={financialSummary} // PASS THE ROOT LEVEL DATA
-              installments={installments} // PASS INSTALLMENTS FOR NEXT DUE CALCULATION
-            />
-          </TabPanel>
+        {/* Tab Content - PASS CORRECT DATA */}
+        <TabPanel value={activeTab} index={0}>
+          <PaymentPlanOverview 
+            paymentPlan={paymentPlan} 
+            sale={sale} 
+            onRefresh={handleRefresh}
+            financialSummary={financialSummary} // PASS THE ROOT LEVEL DATA
+            installments={installments} // PASS INSTALLMENTS FOR NEXT DUE CALCULATION
+          />
+        </TabPanel>
 
-          <TabPanel value={activeTab} index={1}>
-            <InstallmentsManagement 
-              saleId={saleId}
-              paymentPlan={paymentPlan}
-              installments={installments}
-              onRefresh={handleRefresh}
-            />
-          </TabPanel>
+        {paymentPlan && (
+          <>
+            <TabPanel value={activeTab} index={1}>
+              <InstallmentsManagement 
+                saleId={saleId}
+                paymentPlan={paymentPlan}
+                installments={installments}
+                onRefresh={handleRefresh}
+              />
+            </TabPanel>
 
-          <TabPanel value={activeTab} index={2}>
-            <PaymentTransactions 
-              saleId={saleId}
-              paymentPlan={paymentPlan}
-              transactions={transactions}
-              onRefresh={handleRefresh}
-            />
-          </TabPanel>
+            <TabPanel value={activeTab} index={2}>
+              <PaymentTransactions 
+                saleId={saleId}
+                paymentPlan={paymentPlan}
+                transactions={transactions}
+                onRefresh={handleRefresh}
+              />
+            </TabPanel>
 
-          <TabPanel value={activeTab} index={3}>
-            <Card>
-              <CardHeader title="Payment Reports" />
-              <CardContent>
-                <Typography variant="body2" color="textSecondary">
-                  Payment reports and analytics will be available here.
-                </Typography>
-              </CardContent>
-            </Card>
-          </TabPanel>
-        </Box>
-      )}
+            <TabPanel value={activeTab} index={3}>
+              <Card>
+                <CardHeader title="Payment Reports" />
+                <CardContent>
+                  <Typography variant="body2" color="textSecondary">
+                    Payment reports and analytics will be available here.
+                  </Typography>
+                </CardContent>
+              </Card>
+            </TabPanel>
+          </>
+        )}
+      </Box>
 
       {/* Floating Action Button for Mobile */}
       {isMobile && paymentPlan && canEditPayments && (
