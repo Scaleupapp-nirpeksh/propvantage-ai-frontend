@@ -1,6 +1,6 @@
 // File: src/App.js
 // Description: Main App component with routing, theme, and authentication setup for PropVantage AI
-// Version: 1.5 - Added Payment Dashboard and complete Payment Management routes
+// Version: 1.6 - ENHANCED for Phase 1 Analytics Implementation (ADDITIVE ONLY)
 // Location: src/App.js
 
 import React, { Suspense } from 'react';
@@ -17,20 +17,20 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import AuthLayout from './components/layout/AuthLayout';
 import DashboardLayout from './components/layout/DashboardLayout';
 
-// Auth Pages
+// Auth Pages - UNCHANGED
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 
-// Dashboard Pages (Lazy loaded for performance)
+// Dashboard Pages (Lazy loaded for performance) - UNCHANGED
 const BusinessHeadDashboard = React.lazy(() => import('./pages/dashboard/BusinessHeadDashboard'));
 const SalesExecutiveDashboard = React.lazy(() => import('./pages/dashboard/SalesExecutiveDashboard'));
 const SalesManagerDashboard = React.lazy(() => import('./pages/dashboard/SalesManagerDashboard'));
 const FinanceHeadDashboard = React.lazy(() => import('./pages/dashboard/FinanceHeadDashboard'));
 const ProjectDirectorDashboard = React.lazy(() => import('./pages/dashboard/ProjectDirectorDashboard'));
 
-// Project Management Pages
+// Project Management Pages - UNCHANGED
 const ProjectsListPage = React.lazy(() => import('./pages/projects/ProjectsListPage'));
 const ProjectDetailPage = React.lazy(() => import('./pages/projects/ProjectDetailPage'));
 const TowerDetailPage = React.lazy(() => import('./pages/projects/TowerDetailPage'));
@@ -39,30 +39,30 @@ const CreateProjectPage = React.lazy(() => import('./pages/projects/CreateProjec
 const CreateTowerPage = React.lazy(() => import('./pages/projects/CreateTowerPage'));
 const CreateUnitPage = React.lazy(() => import('./pages/projects/CreateUnitPage'));
 
-// Edit Pages - Complete Edit/Delete Functionality
+// Edit Pages - Complete Edit/Delete Functionality - UNCHANGED
 const EditProjectPage = React.lazy(() => import('./pages/projects/EditProjectPage'));
 const EditTowerPage = React.lazy(() => import('./pages/projects/EditTowerPage'));
 const EditUnitPage = React.lazy(() => import('./pages/projects/EditUnitPage'));
 
-// Lead Management Pages
+// Lead Management Pages - UNCHANGED
 const LeadsListPage = React.lazy(() => import('./pages/leads/LeadsListPage'));
 const LeadDetailPage = React.lazy(() => import('./pages/leads/LeadDetailPage'));
 const CreateLeadPage = React.lazy(() => import('./pages/leads/CreateLeadPage'));
-const EditLeadPage = React.lazy(() => import('./pages/leads/EditLeadPage')); // Added EditLeadPage
+const EditLeadPage = React.lazy(() => import('./pages/leads/EditLeadPage'));
 const LeadsPipelinePage = React.lazy(() => import('./pages/leads/LeadsPipelinePage'));
 
-// Sales Management Pages
+// Sales Management Pages - UNCHANGED
 const SalesListPage = React.lazy(() => import('./pages/sales/SalesListPage'));
 const SaleDetailPage = React.lazy(() => import('./pages/sales/SaleDetailPage'));
 const CreateSalePage = React.lazy(() => import('./pages/sales/CreateSalePage'));
-const EditSalePage = React.lazy(() => import('./pages/sales/EditSalePage')); // Added EditSalePage
+const EditSalePage = React.lazy(() => import('./pages/sales/EditSalePage'));
 const PaymentPlanManagementPage = React.lazy(() => import('./pages/payments/PaymentPlanManagementPage'));
 const PaymentPlanPage = React.lazy(() => import('./pages/payments/PaymentPlanPage'));
 
 const SalesReportsPage = React.lazy(() => import('./pages/sales/SalesReportsPage'));
 const SalesPipelinePage = React.lazy(() => import('./pages/sales/SalesPipelinePage'));
 
-// Commission Management Pages
+// Commission Management Pages - UNCHANGED
 const CommissionDashboardPage = React.lazy(() => import('./pages/sales/CommissionDashboardPage'));
 const CommissionListPage = React.lazy(() => import('./pages/sales/CommissionListPage'));
 const CommissionDetailPage = React.lazy(() => import('./pages/sales/CommissionDetailPage'));
@@ -70,7 +70,7 @@ const CommissionStructurePage = React.lazy(() => import('./pages/sales/Commissio
 const CommissionPaymentsPage = React.lazy(() => import('./pages/sales/CommissionPaymentsPage'));
 const CommissionReportsPage = React.lazy(() => import('./pages/sales/CommissionReportsPage'));
 
-// NEW: Payment Management Pages
+// Payment Management Pages - UNCHANGED
 const PaymentDashboardPage = React.lazy(() => import('./pages/payments/PaymentDashboardPage'));
 const DueTodayPage = React.lazy(() => import('./pages/payments/DueTodayPage'));
 const OverduePaymentsPage = React.lazy(() => import('./pages/payments/OverduePaymentsPage'));
@@ -78,28 +78,52 @@ const CollectionPerformancePage = React.lazy(() => import('./pages/payments/Coll
 const PaymentReportsPage = React.lazy(() => import('./pages/payments/PaymentReportsPage'));
 const RecordPaymentPage = React.lazy(() => import('./pages/payments/RecordPaymentPage'));
 
-// Analytics Pages
+// =============================================================================
+// ANALYTICS PAGES - EXISTING + NEW FOR PHASE 1
+// =============================================================================
+
+// EXISTING Analytics Pages - UNCHANGED
 const AnalyticsDashboard = React.lazy(() => import('./pages/analytics/AnalyticsDashboard'));
 const SalesAnalytics = React.lazy(() => import('./pages/analytics/SalesAnalytics'));
 const RevenueAnalytics = React.lazy(() => import('./pages/analytics/RevenueAnalytics'));
 const LeadAnalytics = React.lazy(() => import('./pages/analytics/LeadAnalytics'));
 
+// NEW: Phase 1 Analytics Pages - ENHANCED ANALYTICS CAPABILITIES
+const BudgetVsActualDashboard = React.lazy(() => import('./pages/analytics/BudgetVsActualDashboard'));
+const RealTimeFinancialDashboard = React.lazy(() => import('./pages/analytics/RealTimeFinancialDashboard'));
+const AnalyticsReportsCenter = React.lazy(() => import('./pages/analytics/AnalyticsReportsCenter'));
+const KPIDashboard = React.lazy(() => import('./pages/analytics/KPIDashboard'));
+
+// NEW: Phase 2 Preparation - AI & Intelligence Pages (to be implemented in Phase 2)
+// These imports will be uncommented when Phase 2 components are created
+// const AIInsightsDashboard = React.lazy(() => import('./pages/ai/AIInsightsDashboard'));
+// const ConversationAnalytics = React.lazy(() => import('./pages/ai/ConversationAnalytics'));
+// const PredictiveAnalytics = React.lazy(() => import('./pages/ai/PredictiveAnalytics'));
+// const SmartRecommendations = React.lazy(() => import('./pages/ai/SmartRecommendations'));
+
+// Invoice Management Pages - UNCHANGED
 const InvoiceListPage = React.lazy(() => import('./pages/sales/InvoiceListPage'));
 const InvoiceDetailPage = React.lazy(() => import('./pages/sales/InvoiceDetailPage'));
 const GenerateInvoicePage = React.lazy(() => import('./pages/sales/GenerateInvoicePage'));
 
-
-// Settings and Profile Pages
+// Settings and Profile Pages - UNCHANGED
 const ProfilePage = React.lazy(() => import('./pages/profile/ProfilePage'));
 const SettingsPage = React.lazy(() => import('./pages/settings/SettingsPage'));
 const UserManagementPage = React.lazy(() => import('./pages/settings/UserManagementPage'));
 
-// Error Pages
+// Error Pages - UNCHANGED
 const NotFoundPage = React.lazy(() => import('./pages/error/NotFoundPage'));
 const UnauthorizedPage = React.lazy(() => import('./pages/error/UnauthorizedPage'));
 
-// Loading Component
-const LoadingFallback = ({ message = 'Loading...' }) => (
+// =============================================================================
+// LOADING COMPONENT - ENHANCED FOR PHASE 1
+// =============================================================================
+
+/**
+ * Enhanced Loading Component with contextual messages for different sections
+ * ENHANCED: Added specific loading messages for analytics components
+ */
+const LoadingFallback = ({ message = 'Loading...', section = null }) => (
   <Box
     sx={{
       display: 'flex',
@@ -112,12 +136,18 @@ const LoadingFallback = ({ message = 'Loading...' }) => (
   >
     <CircularProgress size={40} />
     <Typography variant="body1" color="text.secondary">
-      {message}
+      {section === 'analytics' ? 'Loading analytics dashboard...' : 
+       section === 'budget' ? 'Loading financial data...' :
+       section === 'realtime' ? 'Connecting to real-time data...' :
+       message}
     </Typography>
   </Box>
 );
 
-// Protected Route Component
+// =============================================================================
+// PROTECTED ROUTE COMPONENT - UNCHANGED
+// =============================================================================
+
 const ProtectedRoute = ({ children, requiredPermission, fallback = <UnauthorizedPage /> }) => {
   const { isAuthenticated, isLoading, hasPermission, canAccess } = useAuth();
 
@@ -145,7 +175,10 @@ const ProtectedRoute = ({ children, requiredPermission, fallback = <Unauthorized
   return children;
 };
 
-// Role-based Dashboard Router
+// =============================================================================
+// ROLE-BASED DASHBOARD ROUTER - UNCHANGED
+// =============================================================================
+
 const DashboardRouter = () => {
   const { user } = useAuth();
   
@@ -173,7 +206,10 @@ const DashboardRouter = () => {
   return getDashboardComponent();
 };
 
-// Public Route Component (redirects if already authenticated)
+// =============================================================================
+// PUBLIC ROUTE COMPONENT - UNCHANGED
+// =============================================================================
+
 const PublicRoute = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
 
@@ -188,11 +224,17 @@ const PublicRoute = ({ children }) => {
   return children;
 };
 
-// Main App Routes Component
+// =============================================================================
+// MAIN APP ROUTES COMPONENT - ENHANCED FOR PHASE 1
+// =============================================================================
+
 const AppRoutes = () => {
   return (
     <Routes>
-      {/* Public Routes */}
+      {/* ========================================= */}
+      {/* PUBLIC ROUTES - UNCHANGED */}
+      {/* ========================================= */}
+
       <Route path="/login" element={
         <PublicRoute>
           <AuthLayout>
@@ -225,7 +267,10 @@ const AppRoutes = () => {
         </PublicRoute>
       } />
 
-      {/* Protected Routes */}
+      {/* ========================================= */}
+      {/* PROTECTED DASHBOARD ROUTE - UNCHANGED */}
+      {/* ========================================= */}
+
       <Route path="/dashboard" element={
         <ProtectedRoute>
           <DashboardLayout>
@@ -237,7 +282,7 @@ const AppRoutes = () => {
       } />
 
       {/* ========================================= */}
-      {/* PROJECT MANAGEMENT ROUTES */}
+      {/* PROJECT MANAGEMENT ROUTES - UNCHANGED */}
       {/* ========================================= */}
 
       <Route path="/projects" element={
@@ -371,7 +416,7 @@ const AppRoutes = () => {
       } />
 
       {/* ========================================= */}
-      {/* LEAD MANAGEMENT ROUTES */}
+      {/* LEAD MANAGEMENT ROUTES - UNCHANGED */}
       {/* ========================================= */}
 
       <Route path="/leads" element={
@@ -404,7 +449,6 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
       
-      {/* ADDED: Edit Lead Page Route */}
       <Route path="/leads/:leadId/edit" element={
         <ProtectedRoute requiredPermission="SALES">
           <DashboardLayout>
@@ -426,7 +470,7 @@ const AppRoutes = () => {
       } />
 
       {/* ========================================= */}
-      {/* SALES MANAGEMENT ROUTES */}
+      {/* SALES MANAGEMENT ROUTES - UNCHANGED */}
       {/* ========================================= */}
 
       <Route path="/sales" element={
@@ -469,9 +513,8 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
 
-
-            {/* Invoice List - Main invoice management page */}
-            <Route path="/sales/invoices" element={
+      {/* Invoice Management Routes - UNCHANGED */}
+      <Route path="/sales/invoices" element={
         <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesPipeline() || canAccess.viewFinancials()}>
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback message="Loading invoices..." />}>
@@ -481,7 +524,6 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
 
-      {/* Generate Invoice from Sale */}
       <Route path="/sales/invoices/generate/:saleId" element={
         <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesPipeline()}>
           <DashboardLayout>
@@ -492,10 +534,6 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
 
-      
-
-
-      {/* Invoice Detail - Must be last to avoid route conflicts */}
       <Route path="/sales/invoices/:invoiceId" element={
         <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesPipeline() || canAccess.viewFinancials()}>
           <DashboardLayout>
@@ -506,7 +544,7 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
 
-      {/* Main Payment Plan Template Management */}
+      {/* Payment Plan Management Routes - UNCHANGED */}
       <Route path="/sales/payment-plans" element={
         <ProtectedRoute requiredPermission="SALES">
           <DashboardLayout>
@@ -527,7 +565,7 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
 
-      {/* Sales Pipeline Route */}
+      {/* Sales Pipeline & Reports Routes - UNCHANGED */}
       <Route path="/sales/pipeline" element={
         <ProtectedRoute requiredPermission="SALES">
           <DashboardLayout>
@@ -538,7 +576,6 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
 
-      {/* Sales Reports Route */}
       <Route path="/sales/reports" element={
         <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesReports()}>
           <DashboardLayout>
@@ -550,10 +587,9 @@ const AppRoutes = () => {
       } />
 
       {/* ========================================= */}
-      {/* COMMISSION MANAGEMENT ROUTES */}
+      {/* COMMISSION MANAGEMENT ROUTES - UNCHANGED */}
       {/* ========================================= */}
 
-      {/* Commission Dashboard */}
       <Route path="/sales/commissions" element={
         <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesPipeline()}>
           <DashboardLayout>
@@ -564,7 +600,6 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
 
-      {/* Commission List */}
       <Route path="/sales/commissions/list" element={
         <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesPipeline()}>
           <DashboardLayout>
@@ -575,7 +610,6 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
 
-      {/* Commission Detail */}
       <Route path="/sales/commissions/list/:commissionId" element={
         <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesPipeline()}>
           <DashboardLayout>
@@ -586,7 +620,6 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
 
-      {/* Commission Edit (if you implement it later) */}
       <Route path="/sales/commissions/list/:commissionId/edit" element={
         <ProtectedRoute requiredPermission={(canAccess) => canAccess.projectManagement()}>
           <DashboardLayout>
@@ -597,7 +630,6 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
 
-      {/* Commission Structures Management */}
       <Route path="/sales/commissions/structures" element={
         <ProtectedRoute requiredPermission={(canAccess) => canAccess.projectManagement()}>
           <DashboardLayout>
@@ -608,7 +640,6 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
 
-      {/* Commission Payments */}
       <Route path="/sales/commissions/payments" element={
         <ProtectedRoute requiredPermission={(canAccess) => canAccess.viewFinancials()}>
           <DashboardLayout>
@@ -619,7 +650,6 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
 
-      {/* Commission Payment for Specific Commission */}
       <Route path="/sales/commissions/payments/:commissionId" element={
         <ProtectedRoute requiredPermission={(canAccess) => canAccess.viewFinancials()}>
           <DashboardLayout>
@@ -630,7 +660,6 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
 
-      {/* Commission Reports */}
       <Route path="/sales/commissions/reports" element={
         <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesReports()}>
           <DashboardLayout>
@@ -642,10 +671,9 @@ const AppRoutes = () => {
       } />
 
       {/* ========================================= */}
-      {/* NEW: PAYMENT MANAGEMENT ROUTES */}
+      {/* PAYMENT MANAGEMENT ROUTES - UNCHANGED */}
       {/* ========================================= */}
 
-      {/* Payment Dashboard - Main dashboard for payment overview */}
       <Route path="/payments/dashboard" element={
         <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesPipeline() || canAccess.viewFinancials()}>
           <DashboardLayout>
@@ -656,10 +684,8 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
 
-      {/* Fallback route - redirect /payments to /payments/dashboard */}
       <Route path="/payments" element={<Navigate to="/payments/dashboard" replace />} />
 
-      {/* Due Today - Show all payments due today */}
       <Route path="/payments/due-today" element={
         <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesPipeline()}>
           <DashboardLayout>
@@ -670,7 +696,6 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
 
-      {/* Overdue Payments - Show all overdue payments */}
       <Route path="/payments/overdue" element={
         <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesPipeline()}>
           <DashboardLayout>
@@ -681,7 +706,6 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
 
-      {/* Collection Performance - Analytics and performance metrics */}
       <Route path="/payments/collections" element={
         <ProtectedRoute requiredPermission={(canAccess) => canAccess.viewFinancials()}>
           <DashboardLayout>
@@ -692,7 +716,6 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
 
-      {/* Payment Reports - Generate and view payment reports */}
       <Route path="/payments/reports" element={
         <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesReports()}>
           <DashboardLayout>
@@ -703,7 +726,6 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
 
-      {/* Record Payment - General payment recording interface */}
       <Route path="/payments/record" element={
         <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesPipeline()}>
           <DashboardLayout>
@@ -714,7 +736,6 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
 
-      {/* Record Payment for Specific Sale */}
       <Route path="/payments/plans/:saleId/record-payment" element={
         <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesPipeline()}>
           <DashboardLayout>
@@ -726,13 +747,14 @@ const AppRoutes = () => {
       } />
 
       {/* ========================================= */}
-      {/* ANALYTICS ROUTES */}
+      {/* ANALYTICS ROUTES - ENHANCED FOR PHASE 1 */}
       {/* ========================================= */}
 
+      {/* EXISTING Analytics Routes - UNCHANGED */}
       <Route path="/analytics" element={
         <ProtectedRoute requiredPermission="MANAGEMENT">
           <DashboardLayout>
-            <Suspense fallback={<LoadingFallback />}>
+            <Suspense fallback={<LoadingFallback section="analytics" />}>
               <AnalyticsDashboard />
             </Suspense>
           </DashboardLayout>
@@ -742,7 +764,7 @@ const AppRoutes = () => {
       <Route path="/analytics/sales" element={
         <ProtectedRoute requiredPermission="MANAGEMENT">
           <DashboardLayout>
-            <Suspense fallback={<LoadingFallback />}>
+            <Suspense fallback={<LoadingFallback section="analytics" />}>
               <SalesAnalytics />
             </Suspense>
           </DashboardLayout>
@@ -752,7 +774,7 @@ const AppRoutes = () => {
       <Route path="/analytics/revenue" element={
         <ProtectedRoute requiredPermission="FINANCE">
           <DashboardLayout>
-            <Suspense fallback={<LoadingFallback />}>
+            <Suspense fallback={<LoadingFallback section="analytics" />}>
               <RevenueAnalytics />
             </Suspense>
           </DashboardLayout>
@@ -762,15 +784,130 @@ const AppRoutes = () => {
       <Route path="/analytics/leads" element={
         <ProtectedRoute requiredPermission="SALES">
           <DashboardLayout>
-            <Suspense fallback={<LoadingFallback />}>
+            <Suspense fallback={<LoadingFallback section="analytics" />}>
               <LeadAnalytics />
             </Suspense>
           </DashboardLayout>
         </ProtectedRoute>
       } />
 
+      {/* NEW: Phase 1 Enhanced Analytics Routes */}
+      
+      {/* Budget vs Actual Dashboard - NEW for Phase 1 */}
+      <Route path="/analytics/budget" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.viewFinancials()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback section="budget" message="Loading budget analysis..." />}>
+              <BudgetVsActualDashboard />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* Real-Time Financial Dashboard - NEW for Phase 1 */}
+      <Route path="/analytics/financial" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.viewFinancials()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback section="realtime" message="Loading real-time financial data..." />}>
+              <RealTimeFinancialDashboard />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* Analytics Reports Center - NEW for Phase 1 */}
+      <Route path="/analytics/reports" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesReports()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback section="analytics" message="Loading reports center..." />}>
+              <AnalyticsReportsCenter />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* KPI Dashboard - NEW for Phase 1 */}
+      <Route path="/analytics/kpis" element={
+        <ProtectedRoute requiredPermission="MANAGEMENT">
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback section="analytics" message="Loading KPI dashboard..." />}>
+              <KPIDashboard />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* Enhanced Budget Analysis Routes - NEW for Phase 1 */}
+      <Route path="/analytics/budget/variance" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.viewFinancials()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback section="budget" message="Loading variance analysis..." />}>
+              <BudgetVsActualDashboard />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/analytics/budget/projects" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.viewFinancials()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback section="budget" message="Loading project budget analysis..." />}>
+              <BudgetVsActualDashboard />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
       {/* ========================================= */}
-      {/* PROFILE AND SETTINGS ROUTES */}
+      {/* PHASE 2 PREPARATION - AI ROUTES (COMMENTED OUT) */}
+      {/* ========================================= */}
+
+      {/* 
+      These routes will be uncommented in Phase 2 when AI components are implemented
+      
+      <Route path="/ai-insights" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.leadManagement()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback section="ai" message="Loading AI insights..." />}>
+              <AIInsightsDashboard />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/ai-insights/conversation" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.leadManagement()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback section="ai" message="Loading conversation analysis..." />}>
+              <ConversationAnalytics />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/ai-insights/predictions" element={
+        <ProtectedRoute requiredPermission="MANAGEMENT">
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback section="ai" message="Loading predictive analytics..." />}>
+              <PredictiveAnalytics />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/ai-insights/recommendations" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.leadManagement()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback section="ai" message="Loading smart recommendations..." />}>
+              <SmartRecommendations />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      */}
+
+      {/* ========================================= */}
+      {/* PROFILE AND SETTINGS ROUTES - UNCHANGED */}
       {/* ========================================= */}
 
       <Route path="/profile" element={
@@ -804,7 +941,7 @@ const AppRoutes = () => {
       } />
 
       {/* ========================================= */}
-      {/* ERROR ROUTES */}
+      {/* ERROR ROUTES - UNCHANGED */}
       {/* ========================================= */}
 
       <Route path="/unauthorized" element={
@@ -819,7 +956,7 @@ const AppRoutes = () => {
       } />
 
       {/* ========================================= */}
-      {/* REDIRECT ROUTES */}
+      {/* REDIRECT ROUTES - UNCHANGED */}
       {/* ========================================= */}
 
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -828,7 +965,10 @@ const AppRoutes = () => {
   );
 };
 
-// Main App Component
+// =============================================================================
+// MAIN APP COMPONENT - UNCHANGED
+// =============================================================================
+
 const App = () => {
   return (
     <ThemeProvider theme={theme}>

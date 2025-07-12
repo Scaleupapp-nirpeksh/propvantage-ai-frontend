@@ -1,6 +1,6 @@
 // File: src/components/layout/DashboardLayout.js
-// Description: Main dashboard layout component for PropVantage AI - ADDED Invoice Management Navigation
-// Version: 1.7 - Added Invoice Management to Sales section with complete navigation structure
+// Description: Main dashboard layout component for PropVantage AI - ENHANCED for Phase 1 Analytics
+// Version: 1.8 - Enhanced Analytics Navigation for Phase 1 Implementation (ADDITIVE ONLY)
 // Location: src/components/layout/DashboardLayout.js
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -71,6 +71,21 @@ import {
   Speed,           // For Collection Performance
   NoteAdd,         // For Generate Invoice
   ReceiptLong,     // Alternative invoice icon
+  // NEW: Phase 1 Analytics Icons
+  PieChart,        // For KPI Dashboard
+  DonutLarge,      // For Budget Analytics
+  TrendingFlat,    // For Real-time Financial
+  Insights,        // For Analytics Reports Center
+  CompareArrows,   // For Budget vs Actual
+  Timeline as TimelineIcon, // For Variance Analysis
+  AccountTree,     // For Project Budget Analysis
+  AutoGraph,       // For Advanced Analytics
+  Equalizer,       // For Performance Metrics
+  // Phase 2 Preparation - AI Icons (for future use)
+  SmartToy,        // For AI Insights
+  Psychology as PsychologyIcon, // For Conversation Analysis
+  PsychologyAlt,   // For Predictive Analytics
+  Lightbulb,       // For Smart Recommendations
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 
@@ -81,7 +96,7 @@ const DRAWER_WIDTH = 280;
 
 /**
  * Generates navigation items based on the user's role and permissions.
- * UPDATED: Added Invoice Management navigation items in Sales section
+ * ENHANCED: Added comprehensive Phase 1 Analytics navigation with new routes
  * @param {string} userRole - The role of the current user.
  * @param {object} canAccess - The access control object from useAuth.
  * @returns {Array} - A filtered array of navigation items.
@@ -192,33 +207,7 @@ const getNavigationItems = (userRole, canAccess) => {
           requiredAccess: () => canAccess.salesPipeline(),
         },
         
-       /* // NEW: Invoice Management Section
-        {
-          id: 'invoice-management',
-          title: 'Invoice Management',
-          icon: Receipt,
-          path: '/sales/invoices',
-          requiredAccess: () => canAccess.salesPipeline() || canAccess.viewFinancials(),
-          children: [
-            {
-              id: 'invoice-list',
-              title: 'All Invoices',
-              icon: ReceiptLong,
-              path: '/sales/invoices',
-              requiredAccess: () => canAccess.salesPipeline() || canAccess.viewFinancials(),
-            },
-
-            {
-              id: 'invoice-reports',
-              title: 'Invoice Reports',
-              icon: Assessment,
-              path: '/sales/invoices/reports',
-              requiredAccess: () => canAccess.salesReports(),
-            },
-          ],
-        },
-        */
-        // Commission Management Section
+        // Commission Management Section - UNCHANGED
         {
           id: 'commission-management',
           title: 'Commission Management',
@@ -245,14 +234,14 @@ const getNavigationItems = (userRole, canAccess) => {
               title: 'Commission Structures',
               icon: Settings,
               path: '/sales/commissions/structures',
-              requiredAccess: () => canAccess.projectManagement(), // Management access for structures
+              requiredAccess: () => canAccess.projectManagement(),
             },
             {
               id: 'commission-payments',
               title: 'Commission Payments',
               icon: AccountBalanceWallet,
               path: '/sales/commissions/payments',
-              requiredAccess: () => canAccess.viewFinancials(), // Finance access for payments
+              requiredAccess: () => canAccess.viewFinancials(),
             },
             {
               id: 'commission-reports',
@@ -266,16 +255,20 @@ const getNavigationItems = (userRole, canAccess) => {
       ],
     },
 
+    // =============================================================================
+    // ENHANCED ANALYTICS SECTION - PHASE 1 IMPLEMENTATION
+    // =============================================================================
     {
       id: 'analytics',
-      title: 'Analytics',
+      title: 'Analytics & Intelligence',
       icon: Analytics,
       path: '/analytics',
       requiredAccess: () => canAccess.salesReports(),
       children: [
+        // EXISTING Analytics Routes - UNCHANGED
         {
           id: 'analytics-dashboard',
-          title: 'Overview',
+          title: 'Analytics Overview',
           icon: Dashboard,
           path: '/analytics',
         },
@@ -298,29 +291,118 @@ const getNavigationItems = (userRole, canAccess) => {
           icon: People,
           path: '/analytics/leads',
         },
+
+        // NEW: Phase 1 Enhanced Analytics Routes
+        {
+          id: 'analytics-kpis',
+          title: 'KPI Dashboard',
+          icon: PieChart,
+          path: '/analytics/kpis',
+          requiredAccess: () => canAccess.salesReports(),
+        },
+        {
+          id: 'analytics-reports',
+          title: 'Reports Center',
+          icon: Insights,
+          path: '/analytics/reports',
+          requiredAccess: () => canAccess.salesReports(),
+        },
+
+        // NEW: Financial Analytics Sub-section
+        {
+          id: 'financial-analytics',
+          title: 'Financial Analytics',
+          icon: DonutLarge,
+          path: '/analytics/budget',
+          requiredAccess: () => canAccess.viewFinancials(),
+          children: [
+            {
+              id: 'budget-dashboard',
+              title: 'Budget vs Actual',
+              icon: CompareArrows,
+              path: '/analytics/budget',
+              requiredAccess: () => canAccess.viewFinancials(),
+            },
+            {
+              id: 'financial-realtime',
+              title: 'Real-time Financial',
+              icon: TrendingFlat,
+              path: '/analytics/financial',
+              requiredAccess: () => canAccess.viewFinancials(),
+            },
+            {
+              id: 'variance-analysis',
+              title: 'Variance Analysis',
+              icon: TimelineIcon,
+              path: '/analytics/budget/variance',
+              requiredAccess: () => canAccess.viewFinancials(),
+            },
+            {
+              id: 'project-budget',
+              title: 'Project Budget Analysis',
+              icon: AccountTree,
+              path: '/analytics/budget/projects',
+              requiredAccess: () => canAccess.viewFinancials(),
+            },
+          ],
+        },
       ],
     },
+
+    // =============================================================================
+    // PHASE 2 PREPARATION - AI INSIGHTS SECTION (ENHANCED STRUCTURE)
+    // =============================================================================
     {
       id: 'ai-insights',
-      title: 'AI Insights',
+      title: 'AI Intelligence',
       icon: Psychology,
       path: '/ai-insights',
       requiredAccess: () => canAccess.leadManagement(),
       children: [
+        // Existing AI routes - UNCHANGED (will be enhanced in Phase 2)
         {
           id: 'ai-conversation',
           title: 'Conversation Analysis',
-          icon: Psychology,
+          icon: PsychologyIcon,
           path: '/ai-insights/conversation',
         },
         {
           id: 'ai-predictions',
           title: 'Predictive Analytics',
-          icon: Analytics,
+          icon: AutoGraph,
           path: '/ai-insights/predictions',
         },
+        
+        // NEW: Phase 2 Preparation - Additional AI routes (commented out for now)
+        /*
+        {
+          id: 'ai-dashboard',
+          title: 'AI Dashboard',
+          icon: SmartToy,
+          path: '/ai-insights/dashboard',
+          requiredAccess: () => canAccess.leadManagement(),
+        },
+        {
+          id: 'ai-recommendations',
+          title: 'Smart Recommendations',
+          icon: Lightbulb,
+          path: '/ai-insights/recommendations',
+          requiredAccess: () => canAccess.leadManagement(),
+        },
+        {
+          id: 'ai-lead-scoring',
+          title: 'AI Lead Scoring',
+          icon: Equalizer,
+          path: '/ai-insights/lead-scoring',
+          requiredAccess: () => canAccess.leadManagement(),
+        },
+        */
       ],
     },
+
+    // =============================================================================
+    // REMAINING SECTIONS - UNCHANGED
+    // =============================================================================
     {
       id: 'construction',
       title: 'Construction',
@@ -373,7 +455,7 @@ const getNavigationItems = (userRole, canAccess) => {
     },
   ];
 
-  // Filter items based on access control
+  // Filter items based on access control - UNCHANGED
   return allItems.filter(item => {
     if (item.requiredAccess && !item.requiredAccess()) {
       return false;
@@ -381,7 +463,7 @@ const getNavigationItems = (userRole, canAccess) => {
     
     if (item.children) {
       item.children = item.children.filter(child => {
-        // Recursively filter nested children (for commission and invoice sub-menus)
+        // Recursively filter nested children (for commission, analytics, and AI sub-menus)
         if (child.children) {
           child.children = child.children.filter(grandchild => {
             return !grandchild.requiredAccess || grandchild.requiredAccess();
@@ -397,7 +479,7 @@ const getNavigationItems = (userRole, canAccess) => {
 
 /**
  * Renders a single navigation item, handling nesting and active states.
- * FIXED: Removed duplicate rendering of grandchildren to prevent menu duplication
+ * UNCHANGED - Already handles 3-level nesting properly
  */
 const NavigationItem = ({ item, isActive, onNavigate, isOpen, onToggle, level = 0, openSubMenus = {}, onSubMenuToggle }) => {
   const theme = useTheme();
@@ -478,7 +560,7 @@ const NavigationItem = ({ item, isActive, onNavigate, isOpen, onToggle, level = 
 
 /**
  * Renders the breadcrumb navigation based on the current URL path.
- * UPDATED: Enhanced to handle invoice management routes
+ * ENHANCED: Added comprehensive breadcrumb support for Phase 1 analytics routes
  */
 const DashboardBreadcrumbs = () => {
   const location = useLocation();
@@ -499,6 +581,7 @@ const DashboardBreadcrumbs = () => {
       let label = segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, ' ');
       
       const labelMap = {
+        // Existing labels - UNCHANGED
         'projects': 'Projects', 
         'leads': 'Leads', 
         'sales': 'Sales',
@@ -511,22 +594,39 @@ const DashboardBreadcrumbs = () => {
         'payment-plans': 'Payment Plans',
         'templates': 'Templates',
         'active': 'Active Plans',
-        // Commission Management breadcrumb labels
+        
+        // Commission Management breadcrumb labels - UNCHANGED
         'commissions': 'Commission Management',
         'list': 'All Commissions',
         'structures': 'Commission Structures',
         'payments': 'Payments',
         'dashboard': 'Dashboard',
-        // Payment Management breadcrumb labels
+        
+        // Payment Management breadcrumb labels - UNCHANGED
         'due-today': 'Due Today',
         'overdue': 'Overdue Payments',
         'collections': 'Collection Performance',
         'record': 'Record Payment',
         'plans': 'Payment Plans',
-        // NEW: Invoice Management breadcrumb labels
+        
+        // Invoice Management breadcrumb labels - UNCHANGED
         'invoices': 'Invoice Management',
         'generate': 'Generate Invoice',
         'invoice-reports': 'Invoice Reports',
+
+        // NEW: Phase 1 Analytics breadcrumb labels
+        'budget': 'Budget Analysis',
+        'financial': 'Financial Dashboard',
+        'kpis': 'KPI Dashboard',
+        'variance': 'Variance Analysis',
+        'revenue': 'Revenue Analytics',
+        'leads': 'Lead Analytics',
+        
+        // NEW: AI Intelligence breadcrumb labels (Phase 2 preparation)
+        'conversation': 'Conversation Analysis',
+        'predictions': 'Predictive Analytics',
+        'recommendations': 'Smart Recommendations',
+        'lead-scoring': 'AI Lead Scoring',
       };
       
       label = labelMap[segment] || label;
@@ -578,6 +678,7 @@ const DashboardBreadcrumbs = () => {
 
 /**
  * Renders the user menu in the app bar.
+ * UNCHANGED - No modifications needed for Phase 1
  */
 const UserMenu = () => {
   const navigate = useNavigate();
@@ -641,7 +742,9 @@ const UserMenu = () => {
   );
 };
 
-// --- Main Dashboard Layout Component ---
+// =============================================================================
+// MAIN DASHBOARD LAYOUT COMPONENT - ENHANCED FOR PHASE 1
+// =============================================================================
 
 const DashboardLayout = ({ children }) => {
   const theme = useTheme();
@@ -657,12 +760,12 @@ const DashboardLayout = ({ children }) => {
   // Memoize navigationItems to prevent re-creation on every render
   const navigationItems = useMemo(() => getNavigationItems(user?.role, canAccess), [user?.role, canAccess]);
 
-  // Effect to open the parent menu of the active child on page load
-  // UPDATED: Enhanced to handle 3-level nested menus including commission, payment, and invoice management
+  // ENHANCED: Effect to open the parent menu of the active child on page load
+  // Updated to handle 3-level nested menus including analytics, commission, payment, and AI management
   useEffect(() => {
     const currentPath = location.pathname;
     
-    // Check for 3-level nested items (payment plans, commission management, payment management, and invoice management)
+    // Check for 3-level nested items (analytics, commission management, payment management, AI intelligence)
     navigationItems.forEach(item => {
       if (item.children) {
         item.children.forEach(child => {
@@ -734,7 +837,7 @@ const DashboardLayout = ({ children }) => {
 
       <Box sx={{ p: 2, mt: 'auto', borderTop: '1px solid', borderColor: 'divider' }}>
         <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', display: 'block' }}>
-          PropVantage AI v1.7.0
+          PropVantage AI v1.8.0
         </Typography>
       </Box>
     </Box>

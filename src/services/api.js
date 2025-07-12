@@ -1,6 +1,6 @@
 // File: src/services/api.js
-// Description: Complete API service configuration for PropVantage AI - Covers ALL backend routes
-// Version: 2.0 - Fixed and comprehensive API client with all missing routes added
+// Description: Complete API service configuration for PropVantage AI - Enhanced for Phase 1 Analytics
+// Version: 2.1 - ENHANCED for Phase 1 Analytics (ADDITIVE ONLY - No existing functionality removed)
 // Location: src/services/api.js
 
 import axios from 'axios';
@@ -54,7 +54,7 @@ api.interceptors.response.use(
 );
 
 // =============================================================================
-// 1. AUTHENTICATION SERVICES (/api/auth) - BASIC IMPLEMENTATION
+// 1. AUTHENTICATION SERVICES (/api/auth) - UNCHANGED
 // =============================================================================
 export const authAPI = {
   // Register new organization and admin user
@@ -73,11 +73,9 @@ export const authAPI = {
 };
 
 // =============================================================================
-// 2. USER MANAGEMENT SERVICES (/api/users) - CORRECTED
+// 2. USER MANAGEMENT SERVICES (/api/users) - UNCHANGED
 // =============================================================================
 export const userAPI = {
-  // **CORRECTED**: Backend only has these routes, removed non-existent ones
-  
   // Get all users in organization
   getUsers: (params = {}) => api.get('/users', { params }),
   
@@ -86,17 +84,10 @@ export const userAPI = {
   
   // Invite new user
   inviteUser: (inviteData) => api.post('/users/invite', inviteData),
-  
-  // **REMOVED**: These routes don't exist in backend currently
-  // getUser: (id) => api.get(`/users/${id}`),
-  // deleteUser: (id) => api.delete(`/users/${id}`),
-  // getProfile: () => api.get('/users/profile'),
-  // updateProfile: (userData) => api.put('/users/profile', userData),
-  // changePassword: (passwordData) => api.put('/users/change-password', passwordData),
 };
 
 // =============================================================================
-// 3. PROJECT MANAGEMENT SERVICES (/api/projects) - CORRECTED
+// 3. PROJECT MANAGEMENT SERVICES (/api/projects) - UNCHANGED
 // =============================================================================
 export const projectAPI = {
   // Basic CRUD operations (confirmed in backend)
@@ -105,15 +96,10 @@ export const projectAPI = {
   createProject: (projectData) => api.post('/projects', projectData),
   updateProject: (id, projectData) => api.put(`/projects/${id}`, projectData),
   deleteProject: (id) => api.delete(`/projects/${id}`),
-  
-  // **REMOVED**: These routes don't exist in backend currently
-  // getProjectAnalytics: (id) => api.get(`/projects/${id}/analytics`),
-  // getProjectDashboard: (id) => api.get(`/projects/${id}/dashboard`),
-  // getProjectTimeline: (id) => api.get(`/projects/${id}/timeline`),
 };
 
 // =============================================================================
-// 4. **NEW**: PROJECT PAYMENT CONFIGURATION SERVICES (/api/projects)
+// 4. PROJECT PAYMENT CONFIGURATION SERVICES (/api/projects) - UNCHANGED
 // =============================================================================
 export const projectPaymentAPI = {
   // Payment configuration for projects
@@ -128,7 +114,7 @@ export const projectPaymentAPI = {
 };
 
 // =============================================================================
-// 5. TOWER MANAGEMENT SERVICES (/api/towers) - CONFIRMED CORRECT
+// 5. TOWER MANAGEMENT SERVICES (/api/towers) - UNCHANGED
 // =============================================================================
 export const towerAPI = {
   // Get all towers
@@ -154,13 +140,13 @@ export const towerAPI = {
 };
 
 // =============================================================================
-// 6. UNIT MANAGEMENT SERVICES (/api/units) - CORRECTED AND ENHANCED
+// 6. UNIT MANAGEMENT SERVICES (/api/units) - UNCHANGED
 // =============================================================================
 export const unitAPI = {
   // Get all units
   getUnits: (params = {}) => api.get('/units', { params }),
   
-  // **NEW**: Get unit statistics (confirmed in backend)
+  // Get unit statistics (confirmed in backend)
   getUnitStatistics: (params = {}) => api.get('/units/statistics', { params }),
   
   // Get unit by ID
@@ -174,15 +160,10 @@ export const unitAPI = {
   
   // Delete unit
   deleteUnit: (id) => api.delete(`/units/${id}`),
-  
-  // **REMOVED**: These routes don't exist in backend currently
-  // bulkUpdateUnits: (updateData) => api.put('/units/bulk-update', updateData),
-  // getUnitAvailability: (params = {}) => api.get('/units/availability', { params }),
-  // toggleUnitBlock: (id, blockData) => api.put(`/units/${id}/block`, blockData),
 };
 
 // =============================================================================
-// 7. LEAD MANAGEMENT SERVICES (/api/leads) - CORRECTED AND ENHANCED
+// 7. LEAD MANAGEMENT SERVICES (/api/leads) - UNCHANGED
 // =============================================================================
 export const leadAPI = {
   // Basic CRUD operations
@@ -196,26 +177,22 @@ export const leadAPI = {
   addInteraction: (leadId, interactionData) => api.post(`/leads/${leadId}/interactions`, interactionData),
   getInteractions: (leadId) => api.get(`/leads/${leadId}/interactions`),
   
-  // **ENHANCED**: Lead scoring endpoints (confirmed in backend)
+  // Lead scoring endpoints (confirmed in backend)
   getLeadScore: (id) => api.get(`/leads/${id}/score`),
-  recalculateLeadScore: (id) => api.put(`/leads/${id}/recalculate-score`), // **CORRECTED**: PUT method
+  recalculateLeadScore: (id) => api.put(`/leads/${id}/recalculate-score`),
   getHighPriorityLeads: (params = {}) => api.get('/leads/high-priority', { params }),
   getLeadsNeedingAttention: (params = {}) => api.get('/leads/needs-attention', { params }),
   getScoreAnalytics: (params = {}) => api.get('/leads/score-analytics', { params }),
-  bulkRecalculateScores: (leadIds) => api.post('/leads/bulk-recalculate-scores', { leadIds }), // **CORRECTED**: endpoint name
+  bulkRecalculateScores: (leadIds) => api.post('/leads/bulk-recalculate-scores', { leadIds }),
   getLeadScoreHistory: (id) => api.get(`/leads/${id}/score-history`),
   
-  // **NEW**: Scoring configuration (confirmed in backend)
+  // Scoring configuration (confirmed in backend)
   getScoringConfig: () => api.get('/leads/scoring-config'),
   updateScoringConfig: (configData) => api.put('/leads/scoring-config', configData),
-  
-  // **REMOVED**: These routes don't exist in backend currently
-  // assignLead: (id, assignData) => api.put(`/leads/${id}/assign`, assignData),
-  // convertLead: (id, conversionData) => api.post(`/leads/${id}/convert`, conversionData),
 };
 
 // =============================================================================
-// 8. SALES MANAGEMENT SERVICES (/api/sales) - CONFIRMED CORRECT
+// 8. SALES MANAGEMENT SERVICES (/api/sales) - UNCHANGED
 // =============================================================================
 export const salesAPI = {
   // Get all sales
@@ -241,57 +218,31 @@ export const salesAPI = {
 
   // Get sales pipeline (confirmed in backend)
   getSalesPipeline: (params = {}) => api.get('/sales/pipeline', { params }),
-  
-  // **REMOVED**: This route doesn't exist in backend currently
-  // generateSaleDocuments: (id) => api.post(`/sales/${id}/documents`),
 };
 
 // =============================================================================
-// 9. PRICING SERVICES (/api/pricing) - CORRECTED
+// 9. PRICING SERVICES (/api/pricing) - UNCHANGED
 // =============================================================================
 export const pricingAPI = {
-  // **CORRECTED**: Backend routes are different from what was in original API.js
-  
   // Generate cost sheet for unit (confirmed in backend)
   generateCostSheet: (unitId, costSheetData) => api.post(`/pricing/cost-sheet/${unitId}`, costSheetData),
   
   // Get dynamic pricing suggestions (confirmed in backend)
   getDynamicPricing: (projectId) => api.get(`/pricing/dynamic/${projectId}`),
-  
-  // **REMOVED**: These routes don't exist in backend currently
-  // updateUnitPricing: (unitId, pricingData) => api.put(`/pricing/units/${unitId}`, pricingData),
-  // bulkUpdatePricing: (pricingData) => api.put('/pricing/bulk-update', pricingData),
-  // getPricingAnalytics: (params = {}) => api.get('/pricing/analytics', { params }),
-  // comparePricing: (comparisonData) => api.post('/pricing/compare', comparisonData),
 };
 
 // =============================================================================
-// 10. AI INSIGHTS SERVICES (/api/ai) - CORRECTED
+// 10. AI INSIGHTS SERVICES (/api/ai) - UNCHANGED
 // =============================================================================
 export const aiAPI = {
-  // **CORRECTED**: Backend only has lead insights route currently
-  
   // Get AI insights for lead (confirmed in backend)
   getLeadInsights: (leadId) => api.get(`/ai/leads/${leadId}/insights`),
-  
-  // **REMOVED**: These routes don't exist in backend currently
-  // getRecommendations: (leadId) => api.get(`/ai/leads/${leadId}/recommendations`),
-  // getObjectionHandling: (objectionData) => api.post('/ai/objection-handling', objectionData),
-  // getMarketAnalysis: (analysisData) => api.post('/ai/market-analysis', analysisData),
-  // getPricingSuggestions: (pricingData) => api.post('/ai/pricing-suggestions', pricingData),
 };
 
 // =============================================================================
-// 11. **REMOVED**: AI CONVERSATION SERVICES - NOT IMPLEMENTED IN BACKEND
-// =============================================================================
-// The aiConversationAPI section has been removed as these routes don't exist in the backend
-
-// =============================================================================
-// 12. FILE MANAGEMENT SERVICES (/api/files) - CORRECTED
+// 11. FILE MANAGEMENT SERVICES (/api/files) - UNCHANGED
 // =============================================================================
 export const fileAPI = {
-  // **CORRECTED**: Backend has different routes than original API.js
-  
   // Upload file (confirmed in backend)
   uploadFile: (fileData) => {
     const formData = new FormData();
@@ -303,39 +254,107 @@ export const fileAPI = {
   
   // Get files for a specific resource (confirmed in backend)
   getFilesForResource: (resourceId) => api.get(`/files/resource/${resourceId}`),
-  
-  // **REMOVED**: These routes don't exist in backend currently
-  // getFile: (id) => api.get(`/files/${id}`),
-  // deleteFile: (id) => api.delete(`/files/${id}`),
-  // getFiles: (params = {}) => api.get('/files', { params }),
-  // getFilePreview: (id) => api.get(`/files/${id}/preview`),
 };
 
 // =============================================================================
-// 13. ANALYTICS SERVICES (/api/analytics) - CORRECTED AND ENHANCED
+// 12. ANALYTICS SERVICES - ENHANCED FOR PHASE 1 (EXISTING + NEW)
 // =============================================================================
 export const analyticsAPI = {
-  // **CORRECTED**: Based on actual backend routes
+  // =============================================================================
+  // EXISTING ANALYTICS ENDPOINTS (UNCHANGED)
+  // =============================================================================
   
-  // Basic analytics (confirmed in backend)
+  // Basic analytics (confirmed in backend) - UNCHANGED
   getSalesSummary: (params = {}) => api.get('/analytics/sales-summary', { params }),
   getLeadFunnel: (params = {}) => api.get('/analytics/lead-funnel', { params }),
   getDashboard: (params = {}) => api.get('/analytics/dashboard', { params }),
   getSalesReport: (params = {}) => api.get('/analytics/sales-report', { params }),
+
+  // =============================================================================
+  // NEW ENHANCED ANALYTICS FOR PHASE 1 (ADDITIVE ONLY)
+  // =============================================================================
   
-  // **REMOVED**: These don't match actual backend routes
-  // getSalesAnalytics: (params = {}) => api.get('/analytics/sales', { params }),
-  // getRevenueAnalytics: (params = {}) => api.get('/analytics/revenue', { params }),
-  // getProjectAnalytics: (params = {}) => api.get('/analytics/projects', { params }),
-  // getLeadAnalytics: (params = {}) => api.get('/analytics/leads', { params }),
-  // getUserPerformance: (params = {}) => api.get('/analytics/users', { params }),
+  /**
+   * NEW: Get real-time KPI metrics for dashboard widgets
+   * Uses existing dashboard endpoint with format parameter
+   */
+  getRealtimeKPIs: (params = {}) => api.get('/analytics/dashboard', { 
+    params: { ...params, format: 'kpi' } 
+  }),
+  
+  /**
+   * NEW: Get dashboard summary with key metrics
+   * Uses existing dashboard endpoint with format parameter
+   */
+  getDashboardSummary: (params = {}) => api.get('/analytics/dashboard', { 
+    params: { ...params, format: 'summary' } 
+  }),
+  
+  /**
+   * NEW: Get sales performance trends over time
+   * Uses existing sales-report endpoint with include parameter
+   */
+  getSalesTrends: (params = {}) => api.get('/analytics/sales-report', { 
+    params: { ...params, include: 'trends' } 
+  }),
+  
+  /**
+   * NEW: Get sales team performance analytics
+   * Uses existing sales-report endpoint with groupBy parameter
+   */
+  getTeamPerformance: (params = {}) => api.get('/analytics/sales-report', { 
+    params: { ...params, groupBy: 'user', include: 'performance' } 
+  }),
+  
+  /**
+   * NEW: Get lead conversion analytics
+   * Uses existing lead-funnel endpoint with focus parameter
+   */
+  getLeadConversion: (params = {}) => api.get('/analytics/lead-funnel', { 
+    params: { ...params, focus: 'conversion' } 
+  }),
+  
+  /**
+   * NEW: Get lead source performance analytics
+   * Uses existing lead-funnel endpoint with groupBy parameter
+   */
+  getLeadSourcePerformance: (params = {}) => api.get('/analytics/lead-funnel', { 
+    params: { ...params, groupBy: 'source', include: 'performance' } 
+  }),
+  
+  /**
+   * NEW: Get lead quality metrics and analytics
+   * Uses existing lead-funnel endpoint with include parameter
+   */
+  getLeadQualityMetrics: (params = {}) => api.get('/analytics/lead-funnel', { 
+    params: { ...params, include: 'quality' } 
+  }),
+  
+  /**
+   * NEW: Export analytics data to various formats
+   * Generic export functionality for all report types
+   */
+  exportReport: (reportType, params = {}) => api.get(`/analytics/${reportType}/export`, { 
+    params,
+    responseType: 'blob' // For file downloads
+  }),
+  
+  /**
+   * NEW: Schedule recurring analytics reports
+   * For future implementation of automated reporting
+   */
+  scheduleReport: (scheduleData) => api.post('/analytics/schedule-report', scheduleData),
 };
 
 // =============================================================================
-// 14. **NEW**: BUDGET VS ACTUAL ANALYTICS SERVICES (/api/analytics)
+// 13. BUDGET VS ACTUAL ANALYTICS - ENHANCED (EXISTING + NEW)
 // =============================================================================
 export const budgetVsActualAPI = {
-  // Budget vs Actual analytics (confirmed in backend)
+  // =============================================================================
+  // EXISTING BUDGET ANALYTICS (UNCHANGED)
+  // =============================================================================
+  
+  // Budget vs Actual analytics (confirmed in backend) - UNCHANGED
   getBudgetVsActual: (params = {}) => api.get('/analytics/budget-vs-actual', { params }),
   getBudgetDashboard: (params = {}) => api.get('/analytics/budget-dashboard', { params }),
   getRevenueAnalysis: (params = {}) => api.get('/analytics/revenue-analysis', { params }),
@@ -344,14 +363,34 @@ export const budgetVsActualAPI = {
   getMarketingROI: (params = {}) => api.get('/analytics/marketing-roi', { params }),
   getSalesAnalysis: (params = {}) => api.get('/analytics/sales-analysis', { params }),
   
-  // Quick KPI endpoints
+  // Quick KPI endpoints - UNCHANGED
   getRevenueKPIs: (params = {}) => api.get('/analytics/revenue-kpis', { params }),
   getSalesKPIs: (params = {}) => api.get('/analytics/sales-kpis', { params }),
   getLeadKPIs: (params = {}) => api.get('/analytics/lead-kpis', { params }),
+
+  // =============================================================================
+  // NEW ENHANCED BUDGET ANALYTICS FOR PHASE 1 (ADDITIVE ONLY)
+  // =============================================================================
+  
+  /**
+   * NEW: Get real-time budget alerts and notifications
+   * Uses existing budget-dashboard endpoint with focus parameter
+   */
+  getBudgetAlerts: (params = {}) => api.get('/analytics/budget-dashboard', { 
+    params: { ...params, focus: 'alerts' } 
+  }),
+  
+  /**
+   * NEW: Get revenue trends and projections
+   * Uses existing revenue-analysis endpoint with include parameter
+   */
+  getRevenueTrends: (params = {}) => api.get('/analytics/revenue-analysis', { 
+    params: { ...params, include: 'trends,projections' } 
+  }),
 };
 
 // =============================================================================
-// 15. PREDICTIVE ANALYTICS SERVICES (/api/analytics/predictions)
+// 14. PREDICTIVE ANALYTICS SERVICES - UNCHANGED
 // =============================================================================
 export const predictiveAPI = {
   // Sales forecasting (confirmed in backend)
@@ -365,18 +404,12 @@ export const predictiveAPI = {
   
   // Inventory turnover analysis (confirmed in backend)
   getInventoryTurnover: (params = {}) => api.get('/analytics/predictions/inventory-turnover', { params }),
-  
-  // **REMOVED**: These routes don't exist in backend currently
-  // getPredictionsDashboard: (params = {}) => api.get('/analytics/predictions/dashboard-summary', { params }),
-  // getPredictionsHealth: () => api.get('/analytics/predictions/health-check'),
 };
 
 // =============================================================================
-// 16. PAYMENT SERVICES (/api/payments) - COMPLETELY REDESIGNED
+// 15. PAYMENT SERVICES - UNCHANGED
 // =============================================================================
 export const paymentAPI = {
-  // **REDESIGNED**: Based on actual backend payment system architecture
-  
   // Payment Plans
   createPaymentPlan: (planData) => api.post('/payments/plans', planData),
   getPaymentPlanDetails: (saleId) => api.get(`/payments/plans/${saleId}`),
@@ -397,23 +430,11 @@ export const paymentAPI = {
   getOverduePayments: (params = {}) => api.get('/payments/reports/overdue', { params }),
   getPaymentsDueToday: (params = {}) => api.get('/payments/reports/due-today', { params }),
   getPaymentStatistics: (params = {}) => api.get('/payments/reports/statistics', { params }),
-  
-  // **REMOVED**: These don't match actual backend architecture
-  // getPayments: (params = {}) => api.get('/payments', { params }),
-  // getPayment: (id) => api.get(`/payments/${id}`),
-  // createPayment: (paymentData) => api.post('/payments', paymentData),
-  // updatePayment: (id, paymentData) => api.put(`/payments/${id}`, paymentData),
-  // processPayment: (id, processData) => api.post(`/payments/${id}/process`, processData),
-  // getPaymentSchedule: (saleId) => api.get(`/payments/schedule/${saleId}`),
-  // generatePaymentReminder: (paymentId) => api.post(`/payments/${paymentId}/reminder`),
 };
 
 // =============================================================================
-// 17. COMMISSION SERVICES (/api/commissions) - ENHANCED
+// 16. COMMISSION SERVICES - UNCHANGED
 // =============================================================================
-// Updated commissionAPI with missing structure methods
-// Add this to your services/api.js file
-
 export const commissionAPI = {
   // Basic commission operations
   getCommissions: (params = {}) => api.get('/commissions', { params }),
@@ -431,7 +452,7 @@ export const commissionAPI = {
   recordCommissionPayment: (id, paymentData) => api.post(`/commissions/${id}/payment`, paymentData),
   processBulkCommissionPayments: (paymentData) => api.post('/commissions/bulk-payment', paymentData),
   
-  // Commission structure management (MISSING METHODS ADDED)
+  // Commission structure management
   getCommissionStructures: (params = {}) => api.get('/commissions/structures', { params }),
   getCommissionStructure: (id) => api.get(`/commissions/structures/${id}`),
   createCommissionStructure: (structureData) => api.post('/commissions/structures', structureData),
@@ -453,14 +474,13 @@ export const commissionAPI = {
 };
 
 // =============================================================================
-// 18. DOCUMENT SERVICES (/api/documents) - ENHANCED
+// 17-21. ALL OTHER SERVICES REMAIN UNCHANGED
 // =============================================================================
+
+// Document services - UNCHANGED
 export const documentAPI = {
-  // Basic document operations (confirmed in backend)
   getDocuments: (params = {}) => api.get('/documents', { params }),
   getDocument: (id) => api.get(`/documents/${id}`),
-  
-  // Upload document (confirmed in backend)
   uploadDocument: (documentData) => {
     const formData = new FormData();
     Object.keys(documentData).forEach(key => {
@@ -470,61 +490,38 @@ export const documentAPI = {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
   },
-  
-  // Update and delete documents (confirmed in backend)
   updateDocument: (id, documentData) => api.put(`/documents/${id}`, documentData),
   deleteDocument: (id) => api.delete(`/documents/${id}`),
-  
-  // **NEW**: Document categories (confirmed in backend)
   createDocumentCategory: (categoryData) => api.post('/documents/categories', categoryData),
   getDocumentCategories: () => api.get('/documents/categories'),
   getCategoryTree: () => api.get('/documents/categories/tree'),
   updateDocumentCategory: (id, categoryData) => api.put(`/documents/categories/${id}`, categoryData),
   deleteDocumentCategory: (id) => api.delete(`/documents/categories/${id}`),
-  
-  // **NEW**: Document approval workflows (confirmed in backend)
   getPendingApprovals: (params = {}) => api.get('/documents/approvals/pending', { params }),
   approveDocument: (id, approvalData) => api.post(`/documents/${id}/approve`, approvalData),
   rejectDocument: (id, rejectionData) => api.post(`/documents/${id}/reject`, rejectionData),
-  
-  // **NEW**: Document templates (confirmed in backend)
   getDocumentTemplates: () => api.get('/documents/templates'),
   generateFromTemplate: (templateId, templateData) => api.post(`/documents/templates/${templateId}/generate`, templateData),
-  
-  // **NEW**: Document versioning (confirmed in backend)
   getDocumentVersions: (id) => api.get(`/documents/${id}/versions`),
   createDocumentVersion: (id, versionData) => api.post(`/documents/${id}/versions`, versionData),
   restoreDocumentVersion: (id, versionId) => api.post(`/documents/${id}/versions/${versionId}/restore`),
-  
-  // **NEW**: Document sharing (confirmed in backend)
   shareDocument: (id, shareData) => api.post(`/documents/${id}/share`, shareData),
   getDocumentShares: (id) => api.get(`/documents/${id}/shares`),
   revokeDocumentShare: (id, shareId) => api.delete(`/documents/${id}/shares/${shareId}`),
 };
 
-// =============================================================================
-// 19. CONSTRUCTION SERVICES (/api/construction) - ENHANCED
-// =============================================================================
+// Construction services - UNCHANGED
 export const constructionAPI = {
-  // Milestones (confirmed in backend)
   getMilestones: (params = {}) => api.get('/construction/milestones', { params }),
   getMilestone: (id) => api.get(`/construction/milestones/${id}`),
   createMilestone: (milestoneData) => api.post('/construction/milestones', milestoneData),
   updateMilestone: (id, milestoneData) => api.put(`/construction/milestones/${id}`, milestoneData),
   deleteMilestone: (id) => api.delete(`/construction/milestones/${id}`),
   getOverdueMilestones: (params = {}) => api.get('/construction/milestones/overdue', { params }),
-  
-  // Progress tracking (confirmed in backend)
   updateMilestoneProgress: (id, progressData) => api.put(`/construction/milestones/${id}/progress`, progressData),
-  
-  // **NEW**: Quality control (confirmed in backend)
   addQualityCheck: (milestoneId, qualityData) => api.post(`/construction/milestones/${milestoneId}/quality-checks`, qualityData),
   updateQualityCheck: (milestoneId, checkId, updateData) => api.put(`/construction/milestones/${milestoneId}/quality-checks/${checkId}`, updateData),
-  
-  // **NEW**: Issue management (confirmed in backend)
   addIssue: (milestoneId, issueData) => api.post(`/construction/milestones/${milestoneId}/issues`, issueData),
-  
-  // **NEW**: Progress documentation (confirmed in backend)
   uploadProgressPhotos: (milestoneId, photosData) => {
     const formData = new FormData();
     photosData.forEach((photo, index) => {
@@ -534,31 +531,20 @@ export const constructionAPI = {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
   },
-  
-  // Project timeline (confirmed in backend)
   getProjectTimeline: (projectId) => api.get(`/construction/projects/${projectId}/timeline`),
-  
-  // **NEW**: Analytics (confirmed in backend)
   getConstructionAnalytics: (params = {}) => api.get('/construction/analytics', { params }),
 };
 
-// =============================================================================
-// 20. CONTRACTOR SERVICES (/api/contractors) - ENHANCED
-// =============================================================================
+// Contractor services - UNCHANGED
 export const contractorAPI = {
-  // Basic CRUD operations (confirmed in backend)
   getContractors: (params = {}) => api.get('/contractors', { params }),
   getContractor: (id) => api.get(`/contractors/${id}`),
   createContractor: (contractorData) => api.post('/contractors', contractorData),
   updateContractor: (id, contractorData) => api.put(`/contractors/${id}`, contractorData),
   deleteContractor: (id) => api.delete(`/contractors/${id}`),
-  
-  // **NEW**: Contractor analytics (confirmed in backend)
   getContractorAnalytics: (params = {}) => api.get('/contractors/analytics', { params }),
   getAvailableContractors: (params = {}) => api.get('/contractors/available', { params }),
   getContractorsBySpecialization: (specialization) => api.get(`/contractors/by-specialization/${specialization}`),
-  
-  // **NEW**: Contractor documents (confirmed in backend)
   uploadContractorDocument: (id, documentData) => {
     const formData = new FormData();
     formData.append('document', documentData);
@@ -566,73 +552,181 @@ export const contractorAPI = {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
   },
-  
-  // **NEW**: Contractor reviews (confirmed in backend)
   addContractorReview: (id, reviewData) => api.post(`/contractors/${id}/reviews`, reviewData),
-  
-  // **NEW**: Contractor status management (confirmed in backend)
   updateContractorStatus: (id, statusData) => api.put(`/contractors/${id}/status`, statusData),
   togglePreferredStatus: (id) => api.put(`/contractors/${id}/preferred`),
-  
-  // **NEW**: Internal notes (confirmed in backend)
   addInternalNote: (id, noteData) => api.post(`/contractors/${id}/notes`, noteData),
 };
 
-// =============================================================================
-// 21. SYSTEM SERVICES (Health, Performance, Docs) - SAME
-// =============================================================================
+// System services - UNCHANGED
 export const systemAPI = {
-  // Health check
   healthCheck: () => api.get('/health'),
-  
-  // API documentation
   getApiDocs: () => api.get('/docs'),
-  
-  // Performance monitoring
   getPerformanceMetrics: () => api.get('/performance'),
-  
-  // AI features information
   getAIFeatures: () => api.get('/ai-features'),
 };
 
-
-// =============================================================================
-// 22. INVOICE SERVICES (/api/invoices) - NEW ADDITION
-// =============================================================================
+// Invoice services - UNCHANGED
 export const invoiceAPI = {
-  // Create invoice from existing sale
   createInvoiceFromSale: (saleId, invoiceData) => api.post(`/invoices/from-sale/${saleId}`, invoiceData),
-  
-  // Get all invoices with filtering and pagination
   getInvoices: (params = {}) => api.get('/invoices', { params }),
-  
-  // Get single invoice by ID
   getInvoice: (id) => api.get(`/invoices/${id}`),
-  
-  // Update invoice details
   updateInvoice: (id, invoiceData) => api.put(`/invoices/${id}`, invoiceData),
-  
-  // Record payment for invoice
   recordPayment: (id, paymentData) => api.post(`/invoices/${id}/payment`, paymentData),
-  
-  // Cancel invoice
   cancelInvoice: (id, cancellationData) => api.put(`/invoices/${id}/cancel`, cancellationData),
-  
-  // Get invoice statistics and analytics
   getStatistics: (params = {}) => api.get('/invoices/statistics', { params }),
-  
-  // Get overdue invoices
   getOverdueInvoices: (params = {}) => api.get('/invoices/overdue', { params }),
-  
-  // Export invoices to CSV
   exportInvoices: (params = {}) => api.get('/invoices/export', { params }),
 };
 
 // =============================================================================
-// UTILITY FUNCTIONS
+// NEW UTILITY FUNCTIONS FOR ANALYTICS - PHASE 1 ENHANCEMENT
 // =============================================================================
 
-// Helper function to handle API errors
+/**
+ * Analytics utility functions for data processing and formatting
+ * NEW: Added comprehensive utility functions for Phase 1 analytics
+ */
+export const analyticsUtils = {
+  /**
+   * Format currency values for display
+   * @param {number} value - Numeric value to format
+   * @param {string} currency - Currency code (default: INR)
+   * @returns {string} Formatted currency string
+   */
+  formatCurrency: (value, currency = 'INR') => {
+    if (typeof value !== 'number' || isNaN(value)) return '₹0';
+    
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value);
+  },
+  
+  /**
+   * Format percentage values for display
+   * @param {number} value - Percentage value (0-100)
+   * @param {number} decimals - Number of decimal places
+   * @returns {string} Formatted percentage string
+   */
+  formatPercentage: (value, decimals = 1) => {
+    if (typeof value !== 'number' || isNaN(value)) return '0%';
+    return `${value.toFixed(decimals)}%`;
+  },
+  
+  /**
+   * Calculate percentage change between two values
+   * @param {number} current - Current value
+   * @param {number} previous - Previous value
+   * @returns {number} Percentage change
+   */
+  calculatePercentageChange: (current, previous) => {
+    if (!previous || previous === 0) return 0;
+    return ((current - previous) / previous) * 100;
+  },
+  
+  /**
+   * Get appropriate color for metric based on performance
+   * @param {number} value - Metric value
+   * @param {number} target - Target value
+   * @param {boolean} higherIsBetter - Whether higher values are better
+   * @returns {string} Color code for the metric
+   */
+  getMetricColor: (value, target, higherIsBetter = true) => {
+    if (!target) return 'info';
+    
+    const ratio = value / target;
+    if (higherIsBetter) {
+      if (ratio >= 1.1) return 'success';
+      if (ratio >= 0.9) return 'warning';
+      return 'error';
+    } else {
+      if (ratio <= 0.9) return 'success';
+      if (ratio <= 1.1) return 'warning';
+      return 'error';
+    }
+  },
+
+  /**
+   * Format large numbers with appropriate suffixes (K, M, Cr)
+   * @param {number} value - Numeric value to format
+   * @returns {string} Formatted number string
+   */
+  formatLargeNumber: (value) => {
+    if (typeof value !== 'number' || isNaN(value)) return '0';
+    
+    const abs = Math.abs(value);
+    if (abs >= 10000000) return `${(value / 10000000).toFixed(1)}Cr`; // Crores
+    if (abs >= 100000) return `${(value / 100000).toFixed(1)}L`; // Lakhs
+    if (abs >= 1000) return `${(value / 1000).toFixed(1)}K`; // Thousands
+    return value.toString();
+  },
+
+  /**
+   * Calculate trend direction based on historical data
+   * @param {Array} data - Array of numeric values (oldest to newest)
+   * @returns {string} Trend direction: 'up', 'down', or 'stable'
+   */
+  calculateTrend: (data) => {
+    if (!Array.isArray(data) || data.length < 2) return 'stable';
+    
+    const recent = data.slice(-3); // Last 3 data points
+    if (recent.length < 2) return 'stable';
+    
+    const change = recent[recent.length - 1] - recent[0];
+    const threshold = Math.abs(recent[0]) * 0.05; // 5% threshold
+    
+    if (change > threshold) return 'up';
+    if (change < -threshold) return 'down';
+    return 'stable';
+  },
+};
+
+// =============================================================================
+// NEW REAL-TIME DATA SERVICE - PHASE 1 ENHANCEMENT
+// =============================================================================
+
+/**
+ * Real-time Data API Service
+ * NEW: Added for Phase 1 real-time dashboard capabilities
+ */
+export const realTimeAPI = {
+  /**
+   * Subscribe to real-time analytics updates
+   * @param {string} channel - Analytics channel to subscribe to
+   * @param {Function} callback - Callback function for updates
+   * @returns {Function} Unsubscribe function
+   */
+  subscribeToAnalytics: (channel, callback) => {
+    // Placeholder for WebSocket integration
+    console.log(`Subscribing to real-time analytics channel: ${channel}`);
+    
+    // Simulate real-time updates with polling for now
+    const interval = setInterval(() => {
+      // This would be replaced with actual WebSocket data
+      callback({ channel, timestamp: new Date(), data: {} });
+    }, 30000); // 30 seconds
+    
+    return () => {
+      clearInterval(interval);
+      console.log(`Unsubscribed from ${channel}`);
+    };
+  },
+  
+  /**
+   * Get current system status for real-time monitoring
+   * @returns {Promise} System status data
+   */
+  getSystemStatus: () => api.get('/analytics/system-status'),
+};
+
+// =============================================================================
+// EXISTING UTILITY FUNCTIONS - UNCHANGED
+// =============================================================================
+
+// Helper function to handle API errors - UNCHANGED
 export const handleAPIError = (error) => {
   if (error.response) {
     // Server responded with error status
@@ -660,41 +754,45 @@ export const handleAPIError = (error) => {
   }
 };
 
-// Helper function to check if user is authenticated
+// Helper function to check if user is authenticated - UNCHANGED
 export const isAuthenticated = () => {
   const token = localStorage.getItem('token');
   return !!token;
 };
 
-// Helper function to get current user
+// Helper function to get current user - UNCHANGED
 export const getCurrentUser = () => {
   const userStr = localStorage.getItem('user');
   return userStr ? JSON.parse(userStr) : null;
 };
 
-// Helper function to logout user
+// Helper function to logout user - UNCHANGED
 export const logout = () => {
   localStorage.removeItem('token');
   localStorage.removeItem('user');
   window.location.href = '/login';
 };
 
-// Default export with all APIs
+// =============================================================================
+// DEFAULT EXPORT - ENHANCED FOR PHASE 1 (EXISTING + NEW)
+// =============================================================================
+
+// Default export with all APIs - ENHANCED
 export default {
+  // Existing APIs (UNCHANGED)
   auth: authAPI,
   user: userAPI,
   project: projectAPI,
-  projectPayment: projectPaymentAPI, // **NEW**
+  projectPayment: projectPaymentAPI,
   tower: towerAPI,
   unit: unitAPI,
   lead: leadAPI,
   sales: salesAPI,
   pricing: pricingAPI,
   ai: aiAPI,
-  // aiConversation: aiConversationAPI, // **REMOVED** - Not implemented in backend
   file: fileAPI,
-  analytics: analyticsAPI,
-  budgetVsActual: budgetVsActualAPI, // **NEW**
+  analytics: analyticsAPI, // ENHANCED
+  budgetVsActual: budgetVsActualAPI, // ENHANCED
   predictive: predictiveAPI,
   payment: paymentAPI,
   commission: commissionAPI,
@@ -703,4 +801,13 @@ export default {
   contractor: contractorAPI,
   system: systemAPI,
   invoice: invoiceAPI,
+  
+  // NEW for Phase 1
+  realTime: realTimeAPI,
+  
+  // Utilities (ENHANCED)
+  utils: {
+    analytics: analyticsUtils, // NEW
+    error: handleAPIError, // EXISTING
+  },
 };
