@@ -409,10 +409,12 @@ const SalesTableRow = ({ sale, onAction, index }) => {
           <ListItemIcon><AccountBalance fontSize="small" /></ListItemIcon>
           <ListItemText>Payment Plan</ListItemText>
         </MenuItem>
-        <MenuItem onClick={() => handleAction('receipt')}>
+        {/*
+        <MenuItem onClick={() => handleAction('invoice')}>
           <ListItemIcon><Receipt fontSize="small" /></ListItemIcon>
           <ListItemText>Generate Receipt</ListItemText>
         </MenuItem>
+        */}
         <Divider />
         <MenuItem onClick={() => handleAction('contact')}>
           <ListItemIcon><Phone fontSize="small" /></ListItemIcon>
@@ -671,10 +673,8 @@ const SalesListPage = () => {
         case 'payment':
           navigate(`/payments/plans/${sale._id}`);
           break;
-        case 'receipt':
-          // Generate receipt
-          await salesAPI.generateSaleDocuments(sale._id);
-          setSnackbar({ open: true, message: 'Receipt generated successfully', severity: 'success' });
+        case 'invoice':
+          navigate(`/sales/invoices/generate/${sale._id}`);
           break;
         case 'contact':
           if (sale.lead?.phone) {

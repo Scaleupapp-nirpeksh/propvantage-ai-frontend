@@ -595,6 +595,39 @@ export const systemAPI = {
   getAIFeatures: () => api.get('/ai-features'),
 };
 
+
+// =============================================================================
+// 22. INVOICE SERVICES (/api/invoices) - NEW ADDITION
+// =============================================================================
+export const invoiceAPI = {
+  // Create invoice from existing sale
+  createInvoiceFromSale: (saleId, invoiceData) => api.post(`/invoices/from-sale/${saleId}`, invoiceData),
+  
+  // Get all invoices with filtering and pagination
+  getInvoices: (params = {}) => api.get('/invoices', { params }),
+  
+  // Get single invoice by ID
+  getInvoice: (id) => api.get(`/invoices/${id}`),
+  
+  // Update invoice details
+  updateInvoice: (id, invoiceData) => api.put(`/invoices/${id}`, invoiceData),
+  
+  // Record payment for invoice
+  recordPayment: (id, paymentData) => api.post(`/invoices/${id}/payment`, paymentData),
+  
+  // Cancel invoice
+  cancelInvoice: (id, cancellationData) => api.put(`/invoices/${id}/cancel`, cancellationData),
+  
+  // Get invoice statistics and analytics
+  getStatistics: (params = {}) => api.get('/invoices/statistics', { params }),
+  
+  // Get overdue invoices
+  getOverdueInvoices: (params = {}) => api.get('/invoices/overdue', { params }),
+  
+  // Export invoices to CSV
+  exportInvoices: (params = {}) => api.get('/invoices/export', { params }),
+};
+
 // =============================================================================
 // UTILITY FUNCTIONS
 // =============================================================================
@@ -669,4 +702,5 @@ export default {
   construction: constructionAPI,
   contractor: contractorAPI,
   system: systemAPI,
+  invoice: invoiceAPI,
 };

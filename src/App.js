@@ -84,6 +84,11 @@ const SalesAnalytics = React.lazy(() => import('./pages/analytics/SalesAnalytics
 const RevenueAnalytics = React.lazy(() => import('./pages/analytics/RevenueAnalytics'));
 const LeadAnalytics = React.lazy(() => import('./pages/analytics/LeadAnalytics'));
 
+const InvoiceListPage = React.lazy(() => import('./pages/sales/InvoiceListPage'));
+const InvoiceDetailPage = React.lazy(() => import('./pages/sales/InvoiceDetailPage'));
+const GenerateInvoicePage = React.lazy(() => import('./pages/sales/GenerateInvoicePage'));
+
+
 // Settings and Profile Pages
 const ProfilePage = React.lazy(() => import('./pages/profile/ProfilePage'));
 const SettingsPage = React.lazy(() => import('./pages/settings/SettingsPage'));
@@ -459,6 +464,43 @@ const AppRoutes = () => {
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback message="Loading sale editor..." />}>
               <EditSalePage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+
+            {/* Invoice List - Main invoice management page */}
+            <Route path="/sales/invoices" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesPipeline() || canAccess.viewFinancials()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading invoices..." />}>
+              <InvoiceListPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* Generate Invoice from Sale */}
+      <Route path="/sales/invoices/generate/:saleId" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesPipeline()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading invoice generator..." />}>
+              <GenerateInvoicePage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      
+
+
+      {/* Invoice Detail - Must be last to avoid route conflicts */}
+      <Route path="/sales/invoices/:invoiceId" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesPipeline() || canAccess.viewFinancials()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading invoice details..." />}>
+              <InvoiceDetailPage />
             </Suspense>
           </DashboardLayout>
         </ProtectedRoute>

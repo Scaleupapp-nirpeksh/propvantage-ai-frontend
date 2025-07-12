@@ -1,6 +1,6 @@
 // File: src/components/layout/DashboardLayout.js
-// Description: Main dashboard layout component for PropVantage AI - ADDED Payment Dashboard Navigation
-// Version: 1.6 - Added Payment Dashboard to Sales section and enhanced financial navigation
+// Description: Main dashboard layout component for PropVantage AI - ADDED Invoice Management Navigation
+// Version: 1.7 - Added Invoice Management to Sales section with complete navigation structure
 // Location: src/components/layout/DashboardLayout.js
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -69,6 +69,8 @@ import {
   Today,           // For Due Payments
   Warning,         // For Overdue Payments
   Speed,           // For Collection Performance
+  NoteAdd,         // For Generate Invoice
+  ReceiptLong,     // Alternative invoice icon
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 
@@ -79,7 +81,7 @@ const DRAWER_WIDTH = 280;
 
 /**
  * Generates navigation items based on the user's role and permissions.
- * UPDATED: Added Payment Dashboard navigation items in Sales section
+ * UPDATED: Added Invoice Management navigation items in Sales section
  * @param {string} userRole - The role of the current user.
  * @param {object} canAccess - The access control object from useAuth.
  * @returns {Array} - A filtered array of navigation items.
@@ -190,7 +192,32 @@ const getNavigationItems = (userRole, canAccess) => {
           requiredAccess: () => canAccess.salesPipeline(),
         },
         
-        
+       /* // NEW: Invoice Management Section
+        {
+          id: 'invoice-management',
+          title: 'Invoice Management',
+          icon: Receipt,
+          path: '/sales/invoices',
+          requiredAccess: () => canAccess.salesPipeline() || canAccess.viewFinancials(),
+          children: [
+            {
+              id: 'invoice-list',
+              title: 'All Invoices',
+              icon: ReceiptLong,
+              path: '/sales/invoices',
+              requiredAccess: () => canAccess.salesPipeline() || canAccess.viewFinancials(),
+            },
+
+            {
+              id: 'invoice-reports',
+              title: 'Invoice Reports',
+              icon: Assessment,
+              path: '/sales/invoices/reports',
+              requiredAccess: () => canAccess.salesReports(),
+            },
+          ],
+        },
+        */
         // Commission Management Section
         {
           id: 'commission-management',
@@ -354,7 +381,7 @@ const getNavigationItems = (userRole, canAccess) => {
     
     if (item.children) {
       item.children = item.children.filter(child => {
-        // Recursively filter nested children (for commission sub-menu)
+        // Recursively filter nested children (for commission and invoice sub-menus)
         if (child.children) {
           child.children = child.children.filter(grandchild => {
             return !grandchild.requiredAccess || grandchild.requiredAccess();
@@ -451,7 +478,7 @@ const NavigationItem = ({ item, isActive, onNavigate, isOpen, onToggle, level = 
 
 /**
  * Renders the breadcrumb navigation based on the current URL path.
- * UPDATED: Enhanced to handle payment management routes
+ * UPDATED: Enhanced to handle invoice management routes
  */
 const DashboardBreadcrumbs = () => {
   const location = useLocation();
@@ -490,12 +517,16 @@ const DashboardBreadcrumbs = () => {
         'structures': 'Commission Structures',
         'payments': 'Payments',
         'dashboard': 'Dashboard',
-        // NEW: Payment Management breadcrumb labels
+        // Payment Management breadcrumb labels
         'due-today': 'Due Today',
         'overdue': 'Overdue Payments',
         'collections': 'Collection Performance',
         'record': 'Record Payment',
         'plans': 'Payment Plans',
+        // NEW: Invoice Management breadcrumb labels
+        'invoices': 'Invoice Management',
+        'generate': 'Generate Invoice',
+        'invoice-reports': 'Invoice Reports',
       };
       
       label = labelMap[segment] || label;
@@ -627,11 +658,11 @@ const DashboardLayout = ({ children }) => {
   const navigationItems = useMemo(() => getNavigationItems(user?.role, canAccess), [user?.role, canAccess]);
 
   // Effect to open the parent menu of the active child on page load
-  // UPDATED: Enhanced to handle 3-level nested menus including commission and payment management
+  // UPDATED: Enhanced to handle 3-level nested menus including commission, payment, and invoice management
   useEffect(() => {
     const currentPath = location.pathname;
     
-    // Check for 3-level nested items (payment plans, commission management, and payment management)
+    // Check for 3-level nested items (payment plans, commission management, payment management, and invoice management)
     navigationItems.forEach(item => {
       if (item.children) {
         item.children.forEach(child => {
@@ -703,7 +734,7 @@ const DashboardLayout = ({ children }) => {
 
       <Box sx={{ p: 2, mt: 'auto', borderTop: '1px solid', borderColor: 'divider' }}>
         <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', display: 'block' }}>
-          PropVantage AI v1.6.0
+          PropVantage AI v1.7.0
         </Typography>
       </Box>
     </Box>

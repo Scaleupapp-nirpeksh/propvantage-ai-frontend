@@ -342,6 +342,7 @@ const SaleOverviewCard = ({ sale, onEdit, onCancel, canEdit }) => {
 
           <Grid item xs={12} sm={6} md={3}>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+             {/*
               <Button
                 variant="contained"
                 startIcon={<Receipt />}
@@ -352,6 +353,7 @@ const SaleOverviewCard = ({ sale, onEdit, onCancel, canEdit }) => {
               >
                 Generate Receipt
               </Button>
+              */}
               <Button
                 variant="outlined"
                 startIcon={<AccountBalance />}
@@ -1234,6 +1236,7 @@ const SaleDetailPage = () => {
               <CardHeader title="Quick Actions" />
               <CardContent>
                 <Stack spacing={2}>
+                 {/*}
                   <Button
                     variant="contained"
                     startIcon={<Receipt />}
@@ -1242,6 +1245,7 @@ const SaleDetailPage = () => {
                   >
                     Generate Documents
                   </Button>
+                  */}
                   <Button
                     variant="outlined"
                     startIcon={<AccountBalance />}
@@ -1267,6 +1271,7 @@ const SaleDetailPage = () => {
                   >
                     Email Customer
                   </Button>
+                  {/*}
                   <Button
                     variant="outlined"
                     startIcon={<Share />}
@@ -1283,6 +1288,7 @@ const SaleDetailPage = () => {
                   >
                     Share Details
                   </Button>
+                  */}
                 </Stack>
               </CardContent>
             </Card>
