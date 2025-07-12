@@ -91,8 +91,8 @@ const LeadAnalytics = React.lazy(() => import('./pages/analytics/LeadAnalytics')
 // NEW: Phase 1 Analytics Pages - ENHANCED ANALYTICS CAPABILITIES
 const BudgetVsActualDashboard = React.lazy(() => import('./pages/analytics/BudgetVsActualDashboard'));
 const RealTimeFinancialDashboard = React.lazy(() => import('./pages/analytics/RealTimeFinancialDashboard'));
-const AnalyticsReportsCenter = React.lazy(() => import('./pages/analytics/AnalyticsReportsCenter'));
-const KPIDashboard = React.lazy(() => import('./pages/analytics/KPIDashboard'));
+
+
 
 // NEW: Phase 2 Preparation - AI & Intelligence Pages (to be implemented in Phase 2)
 // These imports will be uncommented when Phase 2 components are created
@@ -815,27 +815,9 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
 
-      {/* Analytics Reports Center - NEW for Phase 1 */}
-      <Route path="/analytics/reports" element={
-        <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesReports()}>
-          <DashboardLayout>
-            <Suspense fallback={<LoadingFallback section="analytics" message="Loading reports center..." />}>
-              <AnalyticsReportsCenter />
-            </Suspense>
-          </DashboardLayout>
-        </ProtectedRoute>
-      } />
+      
 
-      {/* KPI Dashboard - NEW for Phase 1 */}
-      <Route path="/analytics/kpis" element={
-        <ProtectedRoute requiredPermission="MANAGEMENT">
-          <DashboardLayout>
-            <Suspense fallback={<LoadingFallback section="analytics" message="Loading KPI dashboard..." />}>
-              <KPIDashboard />
-            </Suspense>
-          </DashboardLayout>
-        </ProtectedRoute>
-      } />
+      
 
       {/* Enhanced Budget Analysis Routes - NEW for Phase 1 */}
       <Route path="/analytics/budget/variance" element={

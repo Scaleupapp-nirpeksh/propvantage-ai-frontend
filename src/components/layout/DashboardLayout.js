@@ -292,21 +292,7 @@ const getNavigationItems = (userRole, canAccess) => {
           path: '/analytics/leads',
         },
 
-        // NEW: Phase 1 Enhanced Analytics Routes
-        {
-          id: 'analytics-kpis',
-          title: 'KPI Dashboard',
-          icon: PieChart,
-          path: '/analytics/kpis',
-          requiredAccess: () => canAccess.salesReports(),
-        },
-        {
-          id: 'analytics-reports',
-          title: 'Reports Center',
-          icon: Insights,
-          path: '/analytics/reports',
-          requiredAccess: () => canAccess.salesReports(),
-        },
+       
 
         // NEW: Financial Analytics Sub-section
         {
@@ -400,37 +386,12 @@ const getNavigationItems = (userRole, canAccess) => {
       ],
     },
 
+    
     // =============================================================================
     // REMAINING SECTIONS - UNCHANGED
     // =============================================================================
-    {
-      id: 'construction',
-      title: 'Construction',
-      icon: Construction,
-      path: '/construction',
-      requiredAccess: () => canAccess.constructionManagement(),
-      children: [
-        {
-          id: 'construction-milestones',
-          title: 'Milestones',
-          icon: Assignment,
-          path: '/construction/milestones',
-        },
-        {
-          id: 'construction-contractors',
-          title: 'Contractors',
-          icon: People,
-          path: '/construction/contractors',
-        },
-      ],
-    },
-    {
-      id: 'documents',
-      title: 'Documents',
-      icon: Description,
-      path: '/documents',
-      requiredAccess: () => canAccess.viewAllProjects(),
-    },
+    
+    
     {
       id: 'settings',
       title: 'Settings',
