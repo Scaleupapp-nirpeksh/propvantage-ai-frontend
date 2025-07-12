@@ -1,6 +1,6 @@
 // File: src/App.js
 // Description: Main App component with routing, theme, and authentication setup for PropVantage AI
-// Version: 1.4 - Added EditLeadPage route for complete lead management
+// Version: 1.5 - Added Payment Dashboard and complete Payment Management routes
 // Location: src/App.js
 
 import React, { Suspense } from 'react';
@@ -59,7 +59,24 @@ const EditSalePage = React.lazy(() => import('./pages/sales/EditSalePage')); // 
 const PaymentPlanManagementPage = React.lazy(() => import('./pages/payments/PaymentPlanManagementPage'));
 const PaymentPlanPage = React.lazy(() => import('./pages/payments/PaymentPlanPage'));
 
+const SalesReportsPage = React.lazy(() => import('./pages/sales/SalesReportsPage'));
+const SalesPipelinePage = React.lazy(() => import('./pages/sales/SalesPipelinePage'));
 
+// Commission Management Pages
+const CommissionDashboardPage = React.lazy(() => import('./pages/sales/CommissionDashboardPage'));
+const CommissionListPage = React.lazy(() => import('./pages/sales/CommissionListPage'));
+const CommissionDetailPage = React.lazy(() => import('./pages/sales/CommissionDetailPage'));
+const CommissionStructurePage = React.lazy(() => import('./pages/sales/CommissionStructurePage'));
+const CommissionPaymentsPage = React.lazy(() => import('./pages/sales/CommissionPaymentsPage'));
+const CommissionReportsPage = React.lazy(() => import('./pages/sales/CommissionReportsPage'));
+
+// NEW: Payment Management Pages
+const PaymentDashboardPage = React.lazy(() => import('./pages/payments/PaymentDashboardPage'));
+const DueTodayPage = React.lazy(() => import('./pages/payments/DueTodayPage'));
+const OverduePaymentsPage = React.lazy(() => import('./pages/payments/OverduePaymentsPage'));
+const CollectionPerformancePage = React.lazy(() => import('./pages/payments/CollectionPerformancePage'));
+const PaymentReportsPage = React.lazy(() => import('./pages/payments/PaymentReportsPage'));
+const RecordPaymentPage = React.lazy(() => import('./pages/payments/RecordPaymentPage'));
 
 // Analytics Pages
 const AnalyticsDashboard = React.lazy(() => import('./pages/analytics/AnalyticsDashboard'));
@@ -447,8 +464,8 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
 
-           {/* Main Payment Plan Template Management */}
-           <Route path="/sales/payment-plans" element={
+      {/* Main Payment Plan Template Management */}
+      <Route path="/sales/payment-plans" element={
         <ProtectedRoute requiredPermission="SALES">
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback message="Loading payment plan templates..." />}>
@@ -458,15 +475,214 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
 
-<Route path="/payments/plans/:saleId" element={
-  <ProtectedRoute requiredPermission="SALES">
-    <DashboardLayout>
-      <Suspense fallback={<LoadingFallback message="Loading payment plan..." />}>
-        <PaymentPlanPage />
-      </Suspense>
-    </DashboardLayout>
-  </ProtectedRoute>
-} />
+      <Route path="/payments/plans/:saleId" element={
+        <ProtectedRoute requiredPermission="SALES">
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading payment plan..." />}>
+              <PaymentPlanPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* Sales Pipeline Route */}
+      <Route path="/sales/pipeline" element={
+        <ProtectedRoute requiredPermission="SALES">
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading sales pipeline..." />}>
+              <SalesPipelinePage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* Sales Reports Route */}
+      <Route path="/sales/reports" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesReports()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading sales reports..." />}>
+              <SalesReportsPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* ========================================= */}
+      {/* COMMISSION MANAGEMENT ROUTES */}
+      {/* ========================================= */}
+
+      {/* Commission Dashboard */}
+      <Route path="/sales/commissions" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesPipeline()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading commission dashboard..." />}>
+              <CommissionDashboardPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* Commission List */}
+      <Route path="/sales/commissions/list" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesPipeline()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading commission list..." />}>
+              <CommissionListPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* Commission Detail */}
+      <Route path="/sales/commissions/list/:commissionId" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesPipeline()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading commission details..." />}>
+              <CommissionDetailPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* Commission Edit (if you implement it later) */}
+      <Route path="/sales/commissions/list/:commissionId/edit" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.projectManagement()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading commission editor..." />}>
+              <CommissionDetailPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* Commission Structures Management */}
+      <Route path="/sales/commissions/structures" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.projectManagement()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading commission structures..." />}>
+              <CommissionStructurePage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* Commission Payments */}
+      <Route path="/sales/commissions/payments" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.viewFinancials()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading commission payments..." />}>
+              <CommissionPaymentsPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* Commission Payment for Specific Commission */}
+      <Route path="/sales/commissions/payments/:commissionId" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.viewFinancials()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading commission payment..." />}>
+              <CommissionPaymentsPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* Commission Reports */}
+      <Route path="/sales/commissions/reports" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesReports()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading commission reports..." />}>
+              <CommissionReportsPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* ========================================= */}
+      {/* NEW: PAYMENT MANAGEMENT ROUTES */}
+      {/* ========================================= */}
+
+      {/* Payment Dashboard - Main dashboard for payment overview */}
+      <Route path="/payments/dashboard" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesPipeline() || canAccess.viewFinancials()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading payment dashboard..." />}>
+              <PaymentDashboardPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* Fallback route - redirect /payments to /payments/dashboard */}
+      <Route path="/payments" element={<Navigate to="/payments/dashboard" replace />} />
+
+      {/* Due Today - Show all payments due today */}
+      <Route path="/payments/due-today" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesPipeline()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading due payments..." />}>
+              <DueTodayPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* Overdue Payments - Show all overdue payments */}
+      <Route path="/payments/overdue" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesPipeline()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading overdue payments..." />}>
+              <OverduePaymentsPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* Collection Performance - Analytics and performance metrics */}
+      <Route path="/payments/collections" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.viewFinancials()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading collection performance..." />}>
+              <CollectionPerformancePage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* Payment Reports - Generate and view payment reports */}
+      <Route path="/payments/reports" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesReports()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading payment reports..." />}>
+              <PaymentReportsPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* Record Payment - General payment recording interface */}
+      <Route path="/payments/record" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesPipeline()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading payment recorder..." />}>
+              <RecordPaymentPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* Record Payment for Specific Sale */}
+      <Route path="/payments/plans/:saleId/record-payment" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesPipeline()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading payment recorder..." />}>
+              <RecordPaymentPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
       {/* ========================================= */}
       {/* ANALYTICS ROUTES */}
       {/* ========================================= */}

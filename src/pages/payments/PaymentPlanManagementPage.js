@@ -1,7 +1,7 @@
 /**
  * File: src/pages/payments/PaymentPlanManagementPage.js
  * Description: Enhanced Payment Plan Management with project selection and validation in wizard
- * Version: 5.0 - Added project selection and validation as first step in template creation
+ * Version: 5.1 - FIXED: Data access patterns and enhanced error handling
  * Location: src/pages/payments/PaymentPlanManagementPage.js
  */
 
@@ -113,6 +113,42 @@ const calculateTemplateStats = (templates) => {
         ) 
       : null,
   };
+};
+
+// Enhanced data extraction utility
+const extractApiData = (response, path = 'data') => {
+  console.log('🔍 Extracting data from API response:', { response, path });
+  
+  if (!response) {
+    console.warn('⚠️ No response provided');
+    return [];
+  }
+
+  // Handle different response structures
+  const responseData = response.data || response;
+  
+  if (path === 'data') {
+    // For template and project APIs: {success: true, data: [...], count: X}
+    if (responseData?.data && Array.isArray(responseData.data)) {
+      console.log('✅ Found array at response.data.data:', responseData.data.length, 'items');
+      return responseData.data;
+    }
+    
+    // Fallback: Direct array
+    if (Array.isArray(responseData)) {
+      console.log('✅ Found direct array:', responseData.length, 'items');
+      return responseData;
+    }
+    
+    // For statistics API: {success: true, data: {...}}
+    if (responseData?.data && typeof responseData.data === 'object') {
+      console.log('✅ Found object at response.data.data');
+      return responseData.data;
+    }
+  }
+  
+  console.warn('⚠️ Could not extract data, returning empty array/object');
+  return Array.isArray(responseData?.data) ? [] : {};
 };
 
 // Validate if project has all required fields for payment plan templates
@@ -976,7 +1012,7 @@ const TemplateWizard = ({ open, onClose, template = null, preSelectedProject, on
 };
 
 // ============================================================================
-// TEMPLATE PREVIEW DIALOG (UNCHANGED)
+// TEMPLATE PREVIEW DIALOG
 // ============================================================================
 
 const TemplatePreviewDialog = ({ open, onClose, template }) => {
@@ -1080,12 +1116,24 @@ const TemplatePreviewDialog = ({ open, onClose, template }) => {
 };
 
 // ============================================================================
-// TEMPLATE CARD COMPONENT (UNCHANGED)
+// ENHANCED TEMPLATE CARD COMPONENT WITH BETTER ERROR HANDLING
 // ============================================================================
 
 const TemplateCard = ({ template, onEdit, onDelete, onPreview }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
+
+  // Validate template data
+  if (!template || typeof template !== 'object') {
+    console.error('❌ Invalid template passed to TemplateCard:', template);
+    return (
+      <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <CardContent sx={{ textAlign: 'center', color: 'error.main' }}>
+          <Typography>Invalid template data</Typography>
+        </CardContent>
+      </Card>
+    );
+  }
 
   const handleMenuClick = (event) => {
     setAnchorEl(event.currentTarget);
@@ -1110,6 +1158,16 @@ const TemplateCard = ({ template, onEdit, onDelete, onPreview }) => {
     }
   };
 
+  // Safely access template properties with fallbacks
+  const templateName = template.name || 'Unnamed Template';
+  const templateDescription = template.description || 'No description provided';
+  const planTypeLabel = PLAN_TYPES.find(t => t.value === template.planType)?.label || template.planType || 'Unknown';
+  const installmentsCount = template.installments?.length || 0;
+  const gracePeriodDays = template.gracePeriodDays || 0;
+  const lateFeeRate = template.lateFeeRate || 0;
+  const usageCount = template.usageCount || 0;
+  const isActive = template.isActive !== undefined ? template.isActive : true;
+
   return (
     <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <CardHeader
@@ -1119,13 +1177,13 @@ const TemplateCard = ({ template, onEdit, onDelete, onPreview }) => {
           </Avatar>
         }
         title={
-          <Typography variant="h6" component="div" noWrap>
-            {template.name}
+          <Typography variant="h6" component="div" noWrap title={templateName}>
+            {templateName}
           </Typography>
         }
         subheader={
           <Chip 
-            label={PLAN_TYPES.find(t => t.value === template.planType)?.label || template.planType} 
+            label={planTypeLabel}
             size="small" 
             color="primary" 
             variant="outlined" 
@@ -1140,23 +1198,23 @@ const TemplateCard = ({ template, onEdit, onDelete, onPreview }) => {
       
       <CardContent sx={{ flexGrow: 1 }}>
         <Typography variant="body2" color="textSecondary" paragraph>
-          {template.description || 'No description provided'}
+          {templateDescription}
         </Typography>
         
         <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap' }}>
           <Chip 
-            label={`${template.installments?.length || 0} installments`} 
+            label={`${installmentsCount} installments`} 
             size="small" 
             variant="outlined"
           />
           <Chip 
-            label={`${template.gracePeriodDays || 0} days grace`} 
+            label={`${gracePeriodDays} days grace`} 
             size="small" 
             variant="outlined"
           />
-          {(template.lateFeeRate || 0) > 0 && (
+          {lateFeeRate > 0 && (
             <Chip 
-              label={`${formatPercentage(template.lateFeeRate)} late fee`} 
+              label={`${formatPercentage(lateFeeRate)} late fee`} 
               size="small" 
               variant="outlined"
               color="warning"
@@ -1170,16 +1228,16 @@ const TemplateCard = ({ template, onEdit, onDelete, onPreview }) => {
         {template.installments?.slice(0, 3).map((installment, index) => (
           <Box key={index} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
             <Typography variant="caption" noWrap sx={{ maxWidth: '70%' }}>
-              {installment.description}
+              {installment.description || `Installment ${index + 1}`}
             </Typography>
             <Typography variant="caption" fontWeight="medium">
-              {formatPercentage(installment.percentage)}
+              {formatPercentage(installment.percentage || 0)}
             </Typography>
           </Box>
         ))}
-        {(template.installments?.length || 0) > 3 && (
+        {installmentsCount > 3 && (
           <Typography variant="caption" color="textSecondary">
-            +{(template.installments?.length || 0) - 3} more installments
+            +{installmentsCount - 3} more installments
           </Typography>
         )}
       </CardContent>
@@ -1187,13 +1245,13 @@ const TemplateCard = ({ template, onEdit, onDelete, onPreview }) => {
       <Box sx={{ p: 2, pt: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Box>
           <Typography variant="caption" color="textSecondary">
-            Used {template.usageCount || 0} times
+            Used {usageCount} times
           </Typography>
           <br />
           <Chip 
-            label={template.isActive ? 'Active' : 'Inactive'} 
+            label={isActive ? 'Active' : 'Inactive'} 
             size="small"
-            color={template.isActive ? 'success' : 'default'}
+            color={isActive ? 'success' : 'default'}
             variant="outlined"
           />
         </Box>
@@ -1226,7 +1284,7 @@ const TemplateCard = ({ template, onEdit, onDelete, onPreview }) => {
 };
 
 // ============================================================================
-// MAIN PAYMENT PLAN MANAGEMENT COMPONENT (ENHANCED)
+// MAIN PAYMENT PLAN MANAGEMENT COMPONENT WITH FIXED DATA ACCESS
 // ============================================================================
 
 const PaymentPlanManagementPage = () => {
@@ -1261,8 +1319,15 @@ const PaymentPlanManagementPage = () => {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
+        console.log('🔄 Fetching projects...');
         const response = await projectAPI.getProjects();
-        const projectsData = response?.data?.data || response?.data || [];
+        const projectsData = extractApiData(response, 'data');
+        
+        console.log('📊 Projects loaded:', {
+          count: projectsData.length,
+          projects: projectsData.map(p => ({ id: p._id, name: p.name, hasTemplates: p.activePaymentTemplates?.length > 0 }))
+        });
+        
         setProjects(projectsData);
         
         // Set first project as default if none selected
@@ -1270,7 +1335,7 @@ const PaymentPlanManagementPage = () => {
           setSelectedProject(projectsData[0]._id);
         }
       } catch (error) {
-        console.error('Error fetching projects:', error);
+        console.error('❌ Error fetching projects:', error);
         setError('Failed to load projects');
       } finally {
         setLoading(false);
@@ -1280,9 +1345,12 @@ const PaymentPlanManagementPage = () => {
     fetchProjects();
   }, [selectedProject]);
 
-  // Fetch templates when project changes
+  // FIXED: Enhanced fetch templates function with proper data access
   const fetchTemplates = useCallback(async () => {
-    if (!selectedProject) return;
+    if (!selectedProject) {
+      console.log('⚠️ No project selected, skipping template fetch');
+      return;
+    }
     
     setTemplatesLoading(true);
     try {
@@ -1291,26 +1359,52 @@ const PaymentPlanManagementPage = () => {
         params.active = filterActive === 'active' ? 'true' : 'false';
       }
 
+      console.log('🔄 Fetching templates for project:', selectedProject, 'with params:', params);
+      
       const response = await projectPaymentAPI.getPaymentPlanTemplates(selectedProject, params);
-      const templatesData = response?.data?.data || response?.data || [];
+      
+      // FIXED: Use enhanced data extraction utility
+      const templatesData = extractApiData(response, 'data');
+      
+      console.log('📊 Templates loaded:', {
+        count: templatesData.length,
+        templates: templatesData.map(t => ({
+          id: t._id,
+          name: t.name,
+          planType: t.planType,
+          installments: t.installments?.length,
+          isActive: t.isActive
+        }))
+      });
+      
       setTemplates(templatesData);
       setError(null);
     } catch (error) {
-      console.error('Error fetching templates:', error);
-      setError('Failed to load payment templates');
+      console.error('❌ Error fetching templates:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      
+      setError(`Failed to load payment templates: ${error.response?.data?.message || error.message}`);
       setTemplates([]);
     } finally {
       setTemplatesLoading(false);
     }
   }, [selectedProject, filterActive]);
 
-  // Fetch payment statistics
+  // FIXED: Enhanced fetch payment statistics
   const fetchPaymentStats = useCallback(async () => {
     try {
+      console.log('🔄 Fetching payment statistics...');
       const response = await paymentAPI.getPaymentStatistics();
-      setPaymentStats(response?.data?.data || response?.data || {});
+      const statsData = extractApiData(response, 'data');
+      
+      console.log('📊 Payment stats loaded:', statsData);
+      setPaymentStats(statsData);
     } catch (error) {
-      console.error('Error fetching payment stats:', error);
+      console.error('❌ Error fetching payment stats:', error);
       setPaymentStats({});
     }
   }, []);
@@ -1327,14 +1421,48 @@ const PaymentPlanManagementPage = () => {
     }
   }, [selectedProject, setSearchParams]);
 
-  // Filtered templates
+  // ENHANCED: Filtered templates with better logging
   const filteredTemplates = useMemo(() => {
-    return templates.filter(template => {
+    console.log('🔍 Filtering templates:', {
+      totalTemplates: templates.length,
+      searchQuery,
+      filterType,
+      templates: templates.map(t => ({ name: t.name, planType: t.planType, isActive: t.isActive }))
+    });
+    
+    const filtered = templates.filter(template => {
+      // Ensure template has required properties
+      if (!template || typeof template !== 'object') {
+        console.warn('⚠️ Invalid template object:', template);
+        return false;
+      }
+      
       const matchesSearch = template.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            (template.description || '').toLowerCase().includes(searchQuery.toLowerCase());
       const matchesType = filterType === 'all' || template.planType === filterType;
-      return matchesSearch && matchesType;
+      
+      const shouldInclude = matchesSearch && matchesType;
+      
+      if (!shouldInclude) {
+        console.log('🚫 Template filtered out:', {
+          name: template.name,
+          matchesSearch,
+          matchesType,
+          searchQuery,
+          filterType
+        });
+      }
+      
+      return shouldInclude;
     });
+    
+    console.log('✅ Filtered templates result:', {
+      original: templates.length,
+      filtered: filtered.length,
+      filteredNames: filtered.map(t => t.name)
+    });
+    
+    return filtered;
   }, [templates, searchQuery, filterType]);
 
   // Calculate analytics
@@ -1386,6 +1514,93 @@ const PaymentPlanManagementPage = () => {
     setSearchQuery('');
     setFilterType('all');
     setFilterActive('all');
+  };
+
+  // ENHANCED: Templates grid rendering with better error handling
+  const renderTemplatesGrid = () => {
+    console.log('🎨 Rendering templates grid:', {
+      filteredCount: filteredTemplates.length,
+      totalCount: templates.length,
+      loading: templatesLoading
+    });
+    
+    if (filteredTemplates.length === 0) {
+      return (
+        <Card>
+          <CardContent sx={{ textAlign: 'center', py: 6 }}>
+            <Avatar sx={{ width: 80, height: 80, mx: 'auto', mb: 2, bgcolor: 'grey.100' }}>
+              <AccountBalance sx={{ fontSize: 40, color: 'grey.500' }} />
+            </Avatar>
+            <Typography variant="h5" gutterBottom>
+              No templates found
+            </Typography>
+            
+            <Typography variant="body1" color="textSecondary" paragraph>
+              {templates.length === 0 
+                ? "Create your first payment template to get started"
+                : `No templates match your current filters (${filteredTemplates.length}/${templates.length} shown)`
+              }
+            </Typography>
+            
+            {/* Debug information for development */}
+            {process.env.NODE_ENV === 'development' && (
+              <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1, textAlign: 'left' }}>
+                <Typography variant="body2" fontWeight="bold">Debug Info:</Typography>
+                <Typography variant="caption" display="block">Total templates: {templates.length}</Typography>
+                <Typography variant="caption" display="block">Filtered templates: {filteredTemplates.length}</Typography>
+                <Typography variant="caption" display="block">Search query: "{searchQuery}"</Typography>
+                <Typography variant="caption" display="block">Filter type: {filterType}</Typography>
+                <Typography variant="caption" display="block">Filter active: {filterActive}</Typography>
+                <Typography variant="caption" display="block">Selected project: {selectedProject}</Typography>
+                {templates.length > 0 && (
+                  <Typography variant="caption" display="block">
+                    Sample template: {JSON.stringify({
+                      name: templates[0]?.name,
+                      planType: templates[0]?.planType,
+                      isActive: templates[0]?.isActive
+                    }, null, 2)}
+                  </Typography>
+                )}
+              </Box>
+            )}
+            
+            {templates.length === 0 && (
+              <Button
+                variant="contained"
+                startIcon={<Add />}
+                onClick={handleCreateTemplate}
+                size="large"
+              >
+                Create First Template
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      );
+    }
+
+    return (
+      <Grid container spacing={3}>
+        {filteredTemplates.map((template) => {
+          // Validate template before rendering
+          if (!template || !template._id) {
+            console.warn('⚠️ Skipping invalid template:', template);
+            return null;
+          }
+          
+          return (
+            <Grid item xs={12} md={6} lg={4} key={template._id}>
+              <TemplateCard
+                template={template}
+                onEdit={handleEditTemplate}
+                onDelete={handleDeleteTemplate}
+                onPreview={handlePreviewTemplate}
+              />
+            </Grid>
+          );
+        })}
+      </Grid>
+    );
   };
 
   if (loading) {
@@ -1449,7 +1664,16 @@ const PaymentPlanManagementPage = () => {
                 >
                   {projects.map((project) => (
                     <MenuItem key={project._id} value={project._id}>
-                      {project.name}
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <BusinessCenter fontSize="small" />
+                        <span>{project.name}</span>
+                        <Chip 
+                          label={project.type} 
+                          size="small" 
+                          variant="outlined" 
+                          sx={{ ml: 1 }}
+                        />
+                      </Box>
                     </MenuItem>
                   ))}
                 </Select>
@@ -1632,47 +1856,7 @@ const PaymentPlanManagementPage = () => {
           )}
 
           {/* Templates Grid */}
-          {filteredTemplates.length === 0 ? (
-            <Card>
-              <CardContent sx={{ textAlign: 'center', py: 6 }}>
-                <Avatar sx={{ width: 80, height: 80, mx: 'auto', mb: 2, bgcolor: 'grey.100' }}>
-                  <AccountBalance sx={{ fontSize: 40, color: 'grey.500' }} />
-                </Avatar>
-                <Typography variant="h5" gutterBottom>
-                  No templates found
-                </Typography>
-                <Typography variant="body1" color="textSecondary" paragraph>
-                  {templates.length === 0 
-                    ? "Create your first payment template to get started"
-                    : "No templates match your current filters"
-                  }
-                </Typography>
-                {templates.length === 0 && (
-                  <Button
-                    variant="contained"
-                    startIcon={<Add />}
-                    onClick={handleCreateTemplate}
-                    size="large"
-                  >
-                    Create First Template
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          ) : (
-            <Grid container spacing={3}>
-              {filteredTemplates.map((template) => (
-                <Grid item xs={12} md={6} lg={4} key={template._id}>
-                  <TemplateCard
-                    template={template}
-                    onEdit={handleEditTemplate}
-                    onDelete={handleDeleteTemplate}
-                    onPreview={handlePreviewTemplate}
-                  />
-                </Grid>
-              ))}
-            </Grid>
-          )}
+          {renderTemplatesGrid()}
         </>
       )}
 

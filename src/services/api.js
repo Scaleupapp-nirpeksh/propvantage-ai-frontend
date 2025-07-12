@@ -411,24 +411,45 @@ export const paymentAPI = {
 // =============================================================================
 // 17. COMMISSION SERVICES (/api/commissions) - ENHANCED
 // =============================================================================
+// Updated commissionAPI with missing structure methods
+// Add this to your services/api.js file
+
 export const commissionAPI = {
-  // Basic commission operations (from backend)
+  // Basic commission operations
   getCommissions: (params = {}) => api.get('/commissions', { params }),
   getCommission: (id) => api.get(`/commissions/${id}`),
   calculateCommission: (calculationData) => api.post('/commissions/calculate', calculationData),
   
-  // **NEW**: Commission payment operations (confirmed in backend)
+  // Commission approval operations
+  approveCommission: (id) => api.put(`/commissions/${id}/approve`),
+  rejectCommission: (id, data) => api.put(`/commissions/${id}/reject`, data),
+  putCommissionOnHold: (id) => api.put(`/commissions/${id}/hold`),
+  releaseCommissionHold: (id) => api.put(`/commissions/${id}/release-hold`),
+  recalculateCommission: (id) => api.post(`/commissions/${id}/recalculate`),
+  
+  // Commission payment operations
   recordCommissionPayment: (id, paymentData) => api.post(`/commissions/${id}/payment`, paymentData),
   processBulkCommissionPayments: (paymentData) => api.post('/commissions/bulk-payment', paymentData),
   
-  // **NEW**: Commission reports and analytics (confirmed in backend)
+  // Commission structure management (MISSING METHODS ADDED)
+  getCommissionStructures: (params = {}) => api.get('/commissions/structures', { params }),
+  getCommissionStructure: (id) => api.get(`/commissions/structures/${id}`),
+  createCommissionStructure: (structureData) => api.post('/commissions/structures', structureData),
+  updateCommissionStructure: (id, structureData) => api.put(`/commissions/structures/${id}`, structureData),
+  deleteCommissionStructure: (id) => api.delete(`/commissions/structures/${id}`),
+  deactivateCommissionStructure: (id, data = {}) => api.delete(`/commissions/structures/${id}`, { data }),
+  
+  // Commission creation for sales
+  createCommissionForSale: (saleData) => api.post('/commissions/create-for-sale', saleData),
+  
+  // Commission reports and analytics
   getCommissionReport: (params = {}) => api.get('/commissions/reports/detailed', { params }),
   getCommissionAnalytics: (params = {}) => api.get('/commissions/analytics', { params }),
   getOverdueCommissions: (params = {}) => api.get('/commissions/reports/overdue', { params }),
   getPartnerPerformance: (partnerId, params = {}) => api.get(`/commissions/partners/${partnerId}/performance`, { params }),
   
-  // **REMOVED**: This route doesn't exist in backend
-  // getUserCommissions: (userId, params = {}) => api.get(`/commissions/user/${userId}`, { params }),
+  // Bulk operations
+  bulkApproveCommissions: (commissionIds) => api.post('/commissions/bulk-approve', { commissionIds }),
 };
 
 // =============================================================================

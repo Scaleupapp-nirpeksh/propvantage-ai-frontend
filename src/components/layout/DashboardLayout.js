@@ -1,6 +1,6 @@
 // File: src/components/layout/DashboardLayout.js
-// Description: Main dashboard layout component for PropVantage AI - Complete app shell with navigation
-// Version: 1.3 - Added Payment Plan Management to Sales navigation
+// Description: Main dashboard layout component for PropVantage AI - ADDED Payment Dashboard Navigation
+// Version: 1.6 - Added Payment Dashboard to Sales section and enhanced financial navigation
 // Location: src/components/layout/DashboardLayout.js
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -55,10 +55,20 @@ import {
   Construction,
   Description,
   Psychology,
-  AccountBalance,  // NEW: For payment plans
-  Receipt,         // NEW: For payment templates
-  Payment,         // NEW: For active payment plans
-  Assessment,      // NEW: For payment analytics
+  AccountBalance,  
+  Receipt,         
+  Payment,         
+  Assessment,      
+  Timeline,        // For Sales Pipeline
+  BarChart,        // For Sales Reports
+  ShowChart,       // Alternative for Reports
+  Handshake,       // For Commission Management
+  AccountBalanceWallet, // For Commission Payments & Payment Dashboard
+  TrendingUpIcon,  // For Commission Analytics
+  MonetizationOn,  // For Payment Dashboard
+  Today,           // For Due Payments
+  Warning,         // For Overdue Payments
+  Speed,           // For Collection Performance
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 
@@ -69,6 +79,7 @@ const DRAWER_WIDTH = 280;
 
 /**
  * Generates navigation items based on the user's role and permissions.
+ * UPDATED: Added Payment Dashboard navigation items in Sales section
  * @param {string} userRole - The role of the current user.
  * @param {object} canAccess - The access control object from useAuth.
  * @returns {Array} - A filtered array of navigation items.
@@ -133,7 +144,7 @@ const getNavigationItems = (userRole, canAccess) => {
     },
     {
       id: 'sales',
-      title: 'Sales',
+      title: 'Sales & Payments',
       icon: AttachMoney,
       path: '/sales',
       requiredAccess: () => canAccess.salesPipeline(),
@@ -150,17 +161,84 @@ const getNavigationItems = (userRole, canAccess) => {
           icon: Assignment,
           path: '/sales/create',
         },
-        // NEW: Payment Plan Management Section
+        {
+          id: 'sales-pipeline',
+          title: 'Sales Pipeline',
+          icon: Timeline,
+          path: '/sales/pipeline',
+          requiredAccess: () => canAccess.salesPipeline(),
+        },
+        {
+          id: 'sales-reports',
+          title: 'Sales Reports',
+          icon: BarChart,
+          path: '/sales/reports',
+          requiredAccess: () => canAccess.salesReports(),
+        },
+        {
+          id: 'payment-reports',
+          title: 'Payment Reports',
+          icon: Payment,
+          path: '/payments/reports',
+          requiredAccess: () => canAccess.salesReports(),
+        },
         {
           id: 'payment-plans',
           title: 'Payment Plans',
           icon: AccountBalance,
           path: '/sales/payment-plans',
           requiredAccess: () => canAccess.salesPipeline(),
-          
+        },
+        
+        
+        // Commission Management Section
+        {
+          id: 'commission-management',
+          title: 'Commission Management',
+          icon: Handshake,
+          path: '/sales/commissions',
+          requiredAccess: () => canAccess.salesPipeline() || canAccess.viewFinancials(),
+          children: [
+            {
+              id: 'commission-dashboard',
+              title: 'Commission Dashboard',
+              icon: Dashboard,
+              path: '/sales/commissions',
+              requiredAccess: () => canAccess.salesPipeline(),
+            },
+            {
+              id: 'commission-list',
+              title: 'All Commissions',
+              icon: Assignment,
+              path: '/sales/commissions/list',
+              requiredAccess: () => canAccess.salesPipeline(),
+            },
+            {
+              id: 'commission-structures',
+              title: 'Commission Structures',
+              icon: Settings,
+              path: '/sales/commissions/structures',
+              requiredAccess: () => canAccess.projectManagement(), // Management access for structures
+            },
+            {
+              id: 'commission-payments',
+              title: 'Commission Payments',
+              icon: AccountBalanceWallet,
+              path: '/sales/commissions/payments',
+              requiredAccess: () => canAccess.viewFinancials(), // Finance access for payments
+            },
+            {
+              id: 'commission-reports',
+              title: 'Commission Reports',
+              icon: Assessment,
+              path: '/sales/commissions/reports',
+              requiredAccess: () => canAccess.salesReports(),
+            },
+          ],
         },
       ],
     },
+
     {
       id: 'analytics',
       title: 'Analytics',
@@ -276,7 +354,7 @@ const getNavigationItems = (userRole, canAccess) => {
     
     if (item.children) {
       item.children = item.children.filter(child => {
-        // Recursively filter nested children (for payment plans sub-menu)
+        // Recursively filter nested children (for commission sub-menu)
         if (child.children) {
           child.children = child.children.filter(grandchild => {
             return !grandchild.requiredAccess || grandchild.requiredAccess();
@@ -292,7 +370,7 @@ const getNavigationItems = (userRole, canAccess) => {
 
 /**
  * Renders a single navigation item, handling nesting and active states.
- * UPDATED: Enhanced to handle 3-level nested menus (for payment plans)
+ * FIXED: Removed duplicate rendering of grandchildren to prevent menu duplication
  */
 const NavigationItem = ({ item, isActive, onNavigate, isOpen, onToggle, level = 0, openSubMenus = {}, onSubMenuToggle }) => {
   const theme = useTheme();
@@ -351,35 +429,17 @@ const NavigationItem = ({ item, isActive, onNavigate, isOpen, onToggle, level = 
               const childIsOpen = openSubMenus && openSubMenus[child.id];
               
               return (
-                <React.Fragment key={child.id}>
-                  <NavigationItem
-                    item={child}
-                    isActive={window.location.pathname === child.path}
-                    onNavigate={onNavigate}
-                    isOpen={childIsOpen}
-                    onToggle={childHasChildren ? () => onSubMenuToggle && onSubMenuToggle(child.id) : undefined}
-                    level={level + 1}
-                    openSubMenus={openSubMenus}
-                    onSubMenuToggle={onSubMenuToggle}
-                  />
-                  
-                  {/* Handle third-level menu (payment plan sub-items) */}
-                  {childHasChildren && childIsOpen && (
-                    <Collapse in={childIsOpen} timeout="auto" unmountOnExit>
-                      <List component="div" disablePadding>
-                        {child.children.map((grandchild) => (
-                          <NavigationItem
-                            key={grandchild.id}
-                            item={grandchild}
-                            isActive={window.location.pathname === grandchild.path}
-                            onNavigate={onNavigate}
-                            level={level + 2}
-                          />
-                        ))}
-                      </List>
-                    </Collapse>
-                  )}
-                </React.Fragment>
+                <NavigationItem
+                  key={child.id}
+                  item={child}
+                  isActive={window.location.pathname === child.path}
+                  onNavigate={onNavigate}
+                  isOpen={childIsOpen}
+                  onToggle={childHasChildren ? () => onSubMenuToggle && onSubMenuToggle(child.id) : undefined}
+                  level={level + 1}
+                  openSubMenus={openSubMenus}
+                  onSubMenuToggle={onSubMenuToggle}
+                />
               );
             })}
           </List>
@@ -391,7 +451,7 @@ const NavigationItem = ({ item, isActive, onNavigate, isOpen, onToggle, level = 
 
 /**
  * Renders the breadcrumb navigation based on the current URL path.
- * UPDATED: Enhanced to handle payment plan routes
+ * UPDATED: Enhanced to handle payment management routes
  */
 const DashboardBreadcrumbs = () => {
   const location = useLocation();
@@ -419,10 +479,23 @@ const DashboardBreadcrumbs = () => {
         'settings': 'Settings', 
         'create': 'Create New',
         'pipeline': 'Pipeline', 
+        'reports': 'Reports',
         'ai-insights': 'AI Insights',
-        'payment-plans': 'Payment Plans',  // NEW
-        'templates': 'Templates',          // NEW
-        'active': 'Active Plans',          // NEW
+        'payment-plans': 'Payment Plans',
+        'templates': 'Templates',
+        'active': 'Active Plans',
+        // Commission Management breadcrumb labels
+        'commissions': 'Commission Management',
+        'list': 'All Commissions',
+        'structures': 'Commission Structures',
+        'payments': 'Payments',
+        'dashboard': 'Dashboard',
+        // NEW: Payment Management breadcrumb labels
+        'due-today': 'Due Today',
+        'overdue': 'Overdue Payments',
+        'collections': 'Collection Performance',
+        'record': 'Record Payment',
+        'plans': 'Payment Plans',
       };
       
       label = labelMap[segment] || label;
@@ -548,18 +621,17 @@ const DashboardLayout = ({ children }) => {
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openMenus, setOpenMenus] = useState({});
-  const [openSubMenus, setOpenSubMenus] = useState({}); // NEW: For handling 3-level menus
+  const [openSubMenus, setOpenSubMenus] = useState({}); // For handling 3-level menus
 
-  // FIX: Memoize navigationItems to prevent re-creation on every render.
-  // This stops the infinite loop caused by the useEffect dependency.
+  // Memoize navigationItems to prevent re-creation on every render
   const navigationItems = useMemo(() => getNavigationItems(user?.role, canAccess), [user?.role, canAccess]);
 
   // Effect to open the parent menu of the active child on page load
-  // UPDATED: Enhanced to handle 3-level nested menus
+  // UPDATED: Enhanced to handle 3-level nested menus including commission and payment management
   useEffect(() => {
     const currentPath = location.pathname;
     
-    // Check for 3-level nested items (payment plans)
+    // Check for 3-level nested items (payment plans, commission management, and payment management)
     navigationItems.forEach(item => {
       if (item.children) {
         item.children.forEach(child => {
@@ -590,7 +662,7 @@ const DashboardLayout = ({ children }) => {
     setOpenMenus(prev => ({ ...prev, [itemId]: !prev[itemId] }));
   };
 
-  // NEW: Handle sub-menu toggle for 3-level menus
+  // Handle sub-menu toggle for 3-level menus
   const handleSubMenuToggle = (itemId) => {
     setOpenSubMenus(prev => ({ ...prev, [itemId]: !prev[itemId] }));
   };
@@ -622,8 +694,8 @@ const DashboardLayout = ({ children }) => {
               onNavigate={handleNavigation}
               isOpen={!!openMenus[item.id]}
               onToggle={() => handleMenuToggle(item.id)}
-              openSubMenus={openSubMenus}               // NEW: Pass sub-menu state
-              onSubMenuToggle={handleSubMenuToggle}     // NEW: Pass sub-menu toggle handler
+              openSubMenus={openSubMenus}
+              onSubMenuToggle={handleSubMenuToggle}
             />
           ))}
         </List>
@@ -631,7 +703,7 @@ const DashboardLayout = ({ children }) => {
 
       <Box sx={{ p: 2, mt: 'auto', borderTop: '1px solid', borderColor: 'divider' }}>
         <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', display: 'block' }}>
-          PropVantage AI v1.3.0
+          PropVantage AI v1.6.0
         </Typography>
       </Box>
     </Box>
