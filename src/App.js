@@ -91,7 +91,7 @@ const LeadAnalytics = React.lazy(() => import('./pages/analytics/LeadAnalytics')
 // NEW: Phase 1 Analytics Pages - ENHANCED ANALYTICS CAPABILITIES
 const BudgetVsActualDashboard = React.lazy(() => import('./pages/analytics/BudgetVsActualDashboard'));
 const RealTimeFinancialDashboard = React.lazy(() => import('./pages/analytics/RealTimeFinancialDashboard'));
-
+const BudgetVarianceDashboard = React.lazy(() => import('./pages/analytics/BudgetVarianceDashboard'));
 
 
 // NEW: Phase 2 Preparation - AI & Intelligence Pages (to be implemented in Phase 2)
@@ -815,7 +815,16 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
 
-      
+      {/* 🆕 NEW: Budget Variance Dashboard - Real-time variance tracking */}
+<Route path="/analytics/budget-variance" element={
+  <ProtectedRoute requiredPermission={(canAccess) => canAccess.viewFinancials()}>
+    <DashboardLayout>
+      <Suspense fallback={<LoadingFallback section="budget" message="Loading budget variance dashboard..." />}>
+        <BudgetVarianceDashboard />
+      </Suspense>
+    </DashboardLayout>
+  </ProtectedRoute>
+} />
 
       
 

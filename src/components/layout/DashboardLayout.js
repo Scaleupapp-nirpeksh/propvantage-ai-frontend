@@ -86,6 +86,7 @@ import {
   Psychology as PsychologyIcon, // For Conversation Analysis
   PsychologyAlt,   // For Predictive Analytics
   Lightbulb,       // For Smart Recommendations
+  QueryStats,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 
@@ -291,7 +292,14 @@ const getNavigationItems = (userRole, canAccess) => {
           icon: People,
           path: '/analytics/leads',
         },
-
+        {
+          id: 'budget-variance',
+          title: 'Budget Variance',
+          icon: QueryStats,
+          path: '/analytics/budget-variance',
+          requiredAccess: () => canAccess.viewFinancials(),
+          
+        },
        
 
         // NEW: Financial Analytics Sub-section
@@ -316,75 +324,13 @@ const getNavigationItems = (userRole, canAccess) => {
               path: '/analytics/financial',
               requiredAccess: () => canAccess.viewFinancials(),
             },
-            {
-              id: 'variance-analysis',
-              title: 'Variance Analysis',
-              icon: TimelineIcon,
-              path: '/analytics/budget/variance',
-              requiredAccess: () => canAccess.viewFinancials(),
-            },
-            {
-              id: 'project-budget',
-              title: 'Project Budget Analysis',
-              icon: AccountTree,
-              path: '/analytics/budget/projects',
-              requiredAccess: () => canAccess.viewFinancials(),
-            },
+            
+            
           ],
         },
       ],
     },
 
-    // =============================================================================
-    // PHASE 2 PREPARATION - AI INSIGHTS SECTION (ENHANCED STRUCTURE)
-    // =============================================================================
-    {
-      id: 'ai-insights',
-      title: 'AI Intelligence',
-      icon: Psychology,
-      path: '/ai-insights',
-      requiredAccess: () => canAccess.leadManagement(),
-      children: [
-        // Existing AI routes - UNCHANGED (will be enhanced in Phase 2)
-        {
-          id: 'ai-conversation',
-          title: 'Conversation Analysis',
-          icon: PsychologyIcon,
-          path: '/ai-insights/conversation',
-        },
-        {
-          id: 'ai-predictions',
-          title: 'Predictive Analytics',
-          icon: AutoGraph,
-          path: '/ai-insights/predictions',
-        },
-        
-        // NEW: Phase 2 Preparation - Additional AI routes (commented out for now)
-        /*
-        {
-          id: 'ai-dashboard',
-          title: 'AI Dashboard',
-          icon: SmartToy,
-          path: '/ai-insights/dashboard',
-          requiredAccess: () => canAccess.leadManagement(),
-        },
-        {
-          id: 'ai-recommendations',
-          title: 'Smart Recommendations',
-          icon: Lightbulb,
-          path: '/ai-insights/recommendations',
-          requiredAccess: () => canAccess.leadManagement(),
-        },
-        {
-          id: 'ai-lead-scoring',
-          title: 'AI Lead Scoring',
-          icon: Equalizer,
-          path: '/ai-insights/lead-scoring',
-          requiredAccess: () => canAccess.leadManagement(),
-        },
-        */
-      ],
-    },
 
     
     // =============================================================================
@@ -582,6 +528,7 @@ const DashboardBreadcrumbs = () => {
         'variance': 'Variance Analysis',
         'revenue': 'Revenue Analytics',
         'leads': 'Lead Analytics',
+        'budget-variance': 'Budget Variance Dashboard',
         
         // NEW: AI Intelligence breadcrumb labels (Phase 2 preparation)
         'conversation': 'Conversation Analysis',

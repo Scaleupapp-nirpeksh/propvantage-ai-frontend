@@ -1,9 +1,9 @@
 // File: src/pages/projects/ProjectDetailPage.js
-// Description: FIXED project detail page with proper ID handling to prevent [object Object] errors
-// Version: 2.1 - Enhanced with proper ID extraction for all navigation
+// Description: ENHANCED project detail page with integrated Budget Variance Dashboard
+// Version: 3.0 - Integrated with real-time budget variance tracking
 // Location: src/pages/projects/ProjectDetailPage.js
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -32,6 +32,10 @@ import {
   Tabs,
   ToggleButton,
   ToggleButtonGroup,
+  Breadcrumbs,
+  Link,
+  Fade,
+  Slide,
 } from '@mui/material';
 import {
   ArrowBack,
@@ -61,10 +65,27 @@ import {
   Villa,
   ViewModule,
   ViewList,
+  QueryStats,
+  CompareArrows,
+  Assessment,
+  NavigateNext,
+  Speed,
+  AutoGraph,
+  PriceChange,
+  NotificationsActive,
+  AccountBalance
 } from '@mui/icons-material';
 
 import { useAuth } from '../../context/AuthContext';
 import { projectAPI, towerAPI, unitAPI } from '../../services/api';
+import { budgetVarianceAPI, budgetHelpers } from '../../services/budgetAPI';
+
+// Import Budget Variance Dashboard Components
+import BudgetVarianceFilters from '../analytics/BudgetVarianceFilters';
+import BudgetVarianceSummaryCards from '../analytics/BudgetVarianceSummaryCards';
+import VarianceOverviewTab from '../analytics/VarianceOverviewTab';
+import AlertsActionsTab from '../analytics/AlertsActionsTab';
+import PricingSuggestionsTab from '../analytics/PricingSuggestionsTab';
 
 // Utility function to safely extract ID from object or string with debugging
 const extractId = (value, context = 'unknown') => {
@@ -133,8 +154,15 @@ const getProjectType = (project, towers, villaUnits) => {
   return 'apartment'; // default
 };
 
-// Project Header Component
-const ProjectHeader = ({ project, onEdit, onRefresh, isLoading, projectType }) => {
+// Enhanced Project Header Component with Budget Variance Badge
+const ProjectHeader = ({ 
+  project, 
+  onEdit, 
+  onRefresh, 
+  isLoading, 
+  projectType,
+  budgetVarianceData 
+}) => {
   const { canAccess } = useAuth();
   const [anchorEl, setAnchorEl] = useState(null);
 
@@ -156,6 +184,37 @@ const ProjectHeader = ({ project, onEdit, onRefresh, isLoading, projectType }) =
 
   const ProjectIcon = getProjectTypeIcon();
 
+  // Calculate budget variance status
+  const getVarianceStatus = () => {
+    if (!budgetVarianceData || !budgetVarianceData.calculations) {
+      return { status: 'unknown', color: 'default', label: 'No Data' };
+    }
+    
+    const variance = Math.abs(budgetVarianceData.calculations.variancePercentage || 0);
+    
+    if (variance >= 20) {
+      return { 
+        status: 'critical', 
+        color: 'error', 
+        label: `${budgetVarianceData.calculations.variancePercentage.toFixed(1)}% Critical` 
+      };
+    } else if (variance >= 10) {
+      return { 
+        status: 'warning', 
+        color: 'warning', 
+        label: `${budgetVarianceData.calculations.variancePercentage.toFixed(1)}% Warning` 
+      };
+    } else {
+      return { 
+        status: 'success', 
+        color: 'success', 
+        label: `${budgetVarianceData.calculations.variancePercentage.toFixed(1)}% On Track` 
+      };
+    }
+  };
+
+  const varianceStatus = getVarianceStatus();
+
   return (
     <Paper sx={{ p: 3, mb: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -168,7 +227,7 @@ const ProjectHeader = ({ project, onEdit, onRefresh, isLoading, projectType }) =
               <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5 }}>
                 {project.name}
               </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                 <Chip 
                   label={project.type || 'Mixed Development'} 
                   color="primary" 
@@ -185,6 +244,15 @@ const ProjectHeader = ({ project, onEdit, onRefresh, isLoading, projectType }) =
                   color="info" 
                   size="small" 
                   variant="outlined"
+                />
+                {/* Budget Variance Status Badge */}
+                <Chip 
+                  icon={varianceStatus.status === 'critical' ? <Warning /> : 
+                        varianceStatus.status === 'warning' ? <Schedule /> : <CheckCircle />}
+                  label={varianceStatus.label}
+                  color={varianceStatus.color}
+                  size="small"
+                  sx={{ fontWeight: 600 }}
                 />
                 <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
                   Created {new Date(project.createdAt).toLocaleDateString()}
@@ -239,9 +307,9 @@ const ProjectHeader = ({ project, onEdit, onRefresh, isLoading, projectType }) =
           >
             <MenuItem onClick={handleMenuClose}>
               <ListItemIcon>
-                <Analytics fontSize="small" />
+                <QueryStats fontSize="small" />
               </ListItemIcon>
-              <ListItemText>View Analytics</ListItemText>
+              <ListItemText>Budget Variance Dashboard</ListItemText>
             </MenuItem>
             <MenuItem onClick={handleMenuClose}>
               <ListItemIcon>
@@ -262,8 +330,15 @@ const ProjectHeader = ({ project, onEdit, onRefresh, isLoading, projectType }) =
   );
 };
 
-// Enhanced Project Metrics Component
-const ProjectMetrics = ({ project, towers, allUnits, villaUnits, isLoading }) => {
+// Enhanced Project Metrics Component with Budget Integration
+const ProjectMetrics = ({ 
+  project, 
+  towers, 
+  allUnits, 
+  villaUnits, 
+  isLoading,
+  budgetVarianceData 
+}) => {
   if (isLoading) {
     return (
       <Grid container spacing={3} sx={{ mb: 4 }}>
@@ -293,13 +368,27 @@ const ProjectMetrics = ({ project, towers, allUnits, villaUnits, isLoading }) =>
   const salesPercentage = totalUnits > 0 ? Math.round((soldUnits / totalUnits) * 100) : 0;
   const revenuePercentage = project.targetRevenue > 0 ? Math.round((totalRevenue / project.targetRevenue) * 100) : 0;
 
+  // Use budget variance data if available, otherwise use calculated values
+  const actualRevenue = budgetVarianceData?.sales?.totalRevenue || totalRevenue;
+  const budgetTarget = budgetVarianceData?.project?.budgetTarget || project.targetRevenue;
+  const variancePercentage = budgetVarianceData?.calculations?.variancePercentage || 0;
+  const remainingUnits = budgetVarianceData?.calculations?.remainingUnits || availableUnits;
+
   const metrics = [
     {
-      title: 'Total Revenue',
-      value: formatCurrency(totalRevenue),
-      subtitle: `${revenuePercentage}% of target`,
+      title: 'Budget Target',
+      value: formatCurrency(budgetTarget),
+      subtitle: `${Math.round((actualRevenue / budgetTarget) * 100)}% achieved`,
+      progress: Math.round((actualRevenue / budgetTarget) * 100),
+      color: 'info',
+      icon: AccountBalance,
+    },
+    {
+      title: 'Actual Revenue',
+      value: formatCurrency(actualRevenue),
+      subtitle: `${variancePercentage >= 0 ? '+' : ''}${variancePercentage.toFixed(1)}% variance`,
       progress: revenuePercentage,
-      color: 'success',
+      color: variancePercentage >= 0 ? 'success' : 'error',
       icon: AttachMoney,
     },
     {
@@ -311,15 +400,8 @@ const ProjectMetrics = ({ project, towers, allUnits, villaUnits, isLoading }) =>
       icon: CheckCircle,
     },
     {
-      title: 'Inventory',
-      value: totalUnits,
-      subtitle: `${towers.length} towers, ${villaUnits.length} villas`,
-      color: 'info',
-      icon: Domain,
-    },
-    {
-      title: 'Available Units',
-      value: availableUnits,
+      title: 'Remaining Units',
+      value: remainingUnits,
       subtitle: `${blockedUnits} blocked`,
       color: 'warning',
       icon: Home,
@@ -464,7 +546,7 @@ const VillaUnitCard = ({ unit, projectId }) => {
   );
 };
 
-// FIXED Tower Card Component
+// Tower Card Component
 const TowerCard = ({ tower, projectId }) => {
   const navigate = useNavigate();
   const [towerUnits, setTowerUnits] = useState([]);
@@ -487,16 +569,6 @@ const TowerCard = ({ tower, projectId }) => {
   };
 
   const handleClick = () => {
-    // Debug the inputs
-    console.log('🔗 TowerCard click - Raw inputs:', { 
-      projectId, 
-      projectIdType: typeof projectId,
-      towerId: tower._id,
-      towerIdType: typeof tower._id,
-      towerObject: tower
-    });
-    
-    // CRITICAL: Use projectId from props, NOT from tower object
     const validProjectId = extractId(projectId, 'TowerCard projectId');
     const validTowerId = extractId(tower._id || tower.id, 'TowerCard towerId');
     
@@ -506,7 +578,6 @@ const TowerCard = ({ tower, projectId }) => {
     });
     
     if (validProjectId && validTowerId) {
-      // Use template literal to ensure proper string concatenation
       const url = `/projects/${String(validProjectId)}/towers/${String(validTowerId)}`;
       console.log('🔗 Navigating to URL:', url);
       navigate(url);
@@ -566,7 +637,6 @@ const TowerCard = ({ tower, projectId }) => {
           </Box>
         ) : (
           <>
-            {/* Units Summary */}
             <Grid container spacing={2} sx={{ mb: 2 }}>
               <Grid item xs={4}>
                 <Typography variant="h6" sx={{ fontWeight: 700 }}>{totalUnits}</Typography>
@@ -582,7 +652,6 @@ const TowerCard = ({ tower, projectId }) => {
               </Grid>
             </Grid>
 
-            {/* Sales Progress */}
             <Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                 <Typography variant="caption" color="text.secondary">Sales Progress</Typography>
@@ -646,7 +715,7 @@ const VillaUnitsSection = ({ villaUnits, isLoading, onAddVilla, projectType, pro
         <Grid container spacing={3}>
           {villaUnits.map((villa) => (
             <Grid item xs={12} md={6} lg={4} key={villa._id}>
-              <VillaUnitCard villa={villa} projectId={projectId} />
+              <VillaUnitCard unit={villa} projectId={projectId} />
             </Grid>
           ))}
         </Grid>
@@ -674,15 +743,9 @@ const VillaUnitsSection = ({ villaUnits, isLoading, onAddVilla, projectType, pro
   );
 };
 
-// FIXED Towers Section Component
+// Towers Section Component
 const TowersSection = ({ towers, isLoading, onAddTower, projectId }) => {
   const { canAccess } = useAuth();
-
-  // DEBUG: Log what projectId we receive
-  console.log('🔍 TowersSection - received projectId:', { 
-    projectId, 
-    type: typeof projectId 
-  });
 
   if (isLoading) {
     return (
@@ -718,18 +781,11 @@ const TowersSection = ({ towers, isLoading, onAddTower, projectId }) => {
 
       {towers.length > 0 ? (
         <Grid container spacing={3}>
-          {towers.map((tower) => {
-            console.log('🔍 TowersSection - rendering TowerCard with:', { 
-              towerId: tower._id, 
-              projectId, 
-              projectIdType: typeof projectId 
-            });
-            return (
-              <Grid item xs={12} md={6} lg={4} key={tower._id}>
-                <TowerCard tower={tower} projectId={projectId} />
-              </Grid>
-            );
-          })}
+          {towers.map((tower) => (
+            <Grid item xs={12} md={6} lg={4} key={tower._id}>
+              <TowerCard tower={tower} projectId={projectId} />
+            </Grid>
+          ))}
         </Grid>
       ) : (
         <Box sx={{ textAlign: 'center', py: 8 }}>
@@ -755,7 +811,385 @@ const TowersSection = ({ towers, isLoading, onAddTower, projectId }) => {
   );
 };
 
-// Main Project Detail Page Component
+// ============================================================================
+// INTEGRATED BUDGET VARIANCE DASHBOARD COMPONENT
+// ============================================================================
+
+const IntegratedBudgetVarianceDashboard = ({ 
+  projectId, 
+  projectName,
+  onNavigateBack 
+}) => {
+  const theme = useTheme();
+  const { user } = useAuth();
+  
+  // Budget variance dashboard state
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState(0);
+  const [lastUpdated, setLastUpdated] = useState(new Date());
+  
+  // Dashboard data state
+  const [dashboardData, setDashboardData] = useState({
+    portfolioSummary: {
+      totalProjects: 0,
+      projects: [],
+    },
+    projectVariance: null,
+    alerts: [],
+    recommendedActions: [],
+    pricingSuggestions: [],
+    loadingStates: {
+      portfolio: false,
+      projectDetails: true,
+      alerts: false,
+      actions: false,
+      pricing: false,
+    },
+  });
+
+  // Dashboard tabs configuration
+  const DASHBOARD_TABS = [
+    { 
+      label: 'Budget Overview', 
+      value: 0, 
+      icon: <AutoGraph />,
+      description: 'Real-time budget variance analysis'
+    },
+    { 
+      label: 'Alerts & Actions', 
+      value: 1, 
+      icon: <NotificationsActive />,
+      description: 'Critical alerts and recommendations'
+    },
+    { 
+      label: 'Pricing Suggestions', 
+      value: 2, 
+      icon: <PriceChange />,
+      description: 'AI-powered pricing optimization'
+    },
+  ];
+  
+  // =============================================================================
+  // DATA FETCHING FUNCTIONS
+  // =============================================================================
+  
+  const fetchProjectVariance = useCallback(async () => {
+    if (!projectId) return;
+    
+    try {
+      setDashboardData(prev => ({
+        ...prev,
+        loadingStates: { ...prev.loadingStates, projectDetails: true }
+      }));
+      
+      console.log(`🔄 Fetching budget variance for project: ${projectId}`);
+      
+      const response = await budgetVarianceAPI.getProjectBudgetVariance(projectId);
+      const varianceData = response.data?.data || {};
+      
+      console.log('✅ Project variance data loaded:', varianceData);
+      
+      setDashboardData(prev => ({
+        ...prev,
+        projectVariance: varianceData,
+        pricingSuggestions: varianceData.pricingSuggestions || [],
+        loadingStates: { ...prev.loadingStates, projectDetails: false }
+      }));
+      
+    } catch (error) {
+      console.error(`❌ Error fetching project variance:`, error);
+      setError('Failed to load budget variance data');
+      setDashboardData(prev => ({
+        ...prev,
+        projectVariance: null,
+        pricingSuggestions: [],
+        loadingStates: { ...prev.loadingStates, projectDetails: false }
+      }));
+    }
+  }, [projectId]);
+  
+  const refreshDashboard = useCallback(async (showRefreshIndicator = true) => {
+    try {
+      if (showRefreshIndicator) {
+        setRefreshing(true);
+      }
+      
+      console.log('🔄 Refreshing budget variance dashboard...');
+      
+      await fetchProjectVariance();
+      
+      setLastUpdated(new Date());
+      console.log('✅ Dashboard refresh completed');
+      
+    } catch (error) {
+      console.error('❌ Error refreshing dashboard:', error);
+      setError('Failed to refresh dashboard data');
+    } finally {
+      if (showRefreshIndicator) {
+        setRefreshing(false);
+      }
+      setLoading(false);
+    }
+  }, [fetchProjectVariance]);
+  
+  // =============================================================================
+  // EVENT HANDLERS
+  // =============================================================================
+  
+  const handleTabChange = useCallback((event, newValue) => {
+    setActiveTab(newValue);
+  }, []);
+  
+  const handleManualRefresh = useCallback(() => {
+    refreshDashboard(true);
+  }, [refreshDashboard]);
+  
+  // =============================================================================
+  // EFFECTS
+  // =============================================================================
+  
+  useEffect(() => {
+    console.log('🚀 Budget Variance Dashboard initializing for project:', projectId);
+    refreshDashboard(false);
+  }, [projectId, refreshDashboard]);
+  
+  // =============================================================================
+  // COMPUTED VALUES
+  // =============================================================================
+  
+  const dashboardStats = useMemo(() => {
+    if (!dashboardData.projectVariance) {
+      return {
+        totalBudget: 0,
+        totalRevenue: 0,
+        totalVariance: 0,
+        projectsCount: 1,
+      };
+    }
+    
+    const { project, calculations } = dashboardData.projectVariance;
+    return {
+      totalBudget: project?.budgetTarget || 0,
+      totalRevenue: calculations?.actualRevenue || 0,
+      totalVariance: calculations?.variancePercentage || 0,
+      projectsCount: 1,
+    };
+  }, [dashboardData.projectVariance]);
+  
+  // =============================================================================
+  // RENDER FUNCTIONS
+  // =============================================================================
+  
+  const renderDashboardHeader = () => (
+    <Box sx={{ mb: 3 }}>
+      <Breadcrumbs 
+        aria-label="breadcrumb" 
+        sx={{ mb: 2 }}
+        separator={<NavigateNext fontSize="small" />}
+      >
+        <Link
+          color="inherit"
+          href="/projects"
+          onClick={(e) => {
+            e.preventDefault();
+            onNavigateBack();
+          }}
+          sx={{ 
+            display: 'flex', 
+            alignItems: 'center',
+            textDecoration: 'none',
+            '&:hover': { textDecoration: 'underline' }
+          }}
+        >
+          <Home fontSize="small" sx={{ mr: 0.5 }} />
+          <Typography>Project Details</Typography>
+        </Link>
+        <Typography color="text.primary">Budget Variance</Typography>
+      </Breadcrumbs>
+      
+      <Box sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'space-between',
+        mb: 2,
+      }}>
+        <Box>
+          <Typography variant="h5" component="h2" gutterBottom>
+            Budget Variance Analysis
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Real-time budget tracking for {projectName}
+          </Typography>
+        </Box>
+        
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+          <Tooltip title="Refresh Dashboard">
+            <IconButton 
+              onClick={handleManualRefresh}
+              disabled={refreshing}
+              color="primary"
+            >
+              <Refresh sx={{ 
+                animation: refreshing ? 'spin 1s linear infinite' : 'none',
+                '@keyframes spin': {
+                  '0%': { transform: 'rotate(0deg)' },
+                  '100%': { transform: 'rotate(360deg)' },
+                }
+              }} />
+            </IconButton>
+          </Tooltip>
+        </Box>
+      </Box>
+      
+      <Typography variant="caption" color="text.secondary">
+        Last updated: {lastUpdated.toLocaleString()}
+      </Typography>
+    </Box>
+  );
+
+  const renderDashboardTabs = () => (
+    <Paper sx={{ mb: 3 }}>
+      <Tabs 
+        value={activeTab} 
+        onChange={handleTabChange} 
+        variant="fullWidth"
+      >
+        {DASHBOARD_TABS.map((tab) => (
+          <Tab
+            key={tab.value}
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                {tab.icon}
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                  <Typography variant="body2" fontWeight={600}>
+                    {tab.label}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {tab.description}
+                  </Typography>
+                </Box>
+              </Box>
+            }
+            sx={{ 
+              textAlign: 'left',
+              alignItems: 'flex-start',
+              minHeight: 72,
+            }}
+          />
+        ))}
+      </Tabs>
+    </Paper>
+  );
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 0: // Budget Overview
+        return (
+          <VarianceOverviewTab
+            portfolioSummary={{
+              projects: dashboardData.projectVariance ? [dashboardData.projectVariance] : []
+            }}
+            projectVariance={dashboardData.projectVariance}
+            loadingStates={dashboardData.loadingStates}
+            onProjectSelect={() => {}} // Single project view
+            onRefreshData={handleManualRefresh}
+          />
+        );
+        
+      case 1: // Alerts & Actions
+        return (
+          <AlertsActionsTab
+            portfolioSummary={{}}
+            projectVariance={dashboardData.projectVariance}
+            alerts={dashboardData.alerts}
+            recommendedActions={dashboardData.recommendedActions}
+            loadingStates={dashboardData.loadingStates}
+            onAlertAcknowledge={(alertId, userId) => console.log('Acknowledge alert:', alertId)}
+            onActionStatusChange={(actionId, status, userId) => console.log('Update action:', actionId, status)}
+          />
+        );
+        
+      case 2: // Pricing Suggestions
+        return (
+          <PricingSuggestionsTab
+            projectVariance={{
+              ...dashboardData.projectVariance,
+              pricingSuggestions: dashboardData.pricingSuggestions,
+            }}
+            loadingStates={{
+              ...dashboardData.loadingStates,
+              pricingSuggestions: dashboardData.loadingStates.pricing,
+            }}
+            onPriceUpdate={(unitNumber, newPrice) => console.log('Update price:', unitNumber, newPrice)}
+            onBulkPriceUpdate={(updates) => console.log('Bulk update:', updates)}
+          />
+        );
+        
+      default:
+        return null;
+    }
+  };
+  
+  // =============================================================================
+  // MAIN RENDER
+  // =============================================================================
+  
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+        <CircularProgress size={60} />
+      </Box>
+    );
+  }
+  
+  if (error) {
+    return (
+      <Alert 
+        severity="error" 
+        sx={{ mb: 3 }}
+        action={
+          <Button color="inherit" size="small" onClick={handleManualRefresh}>
+            Retry
+          </Button>
+        }
+      >
+        {error}
+      </Alert>
+    );
+  }
+  
+  return (
+    <Fade in timeout={500}>
+      <Box>
+        {renderDashboardHeader()}
+        
+        <BudgetVarianceSummaryCards
+          dashboardStats={dashboardStats}
+          portfolioSummary={{}}
+          projectVariance={dashboardData.projectVariance}
+          alerts={dashboardData.alerts}
+          loadingStates={dashboardData.loadingStates}
+          onNavigateToProject={() => {}}
+          onViewAlerts={() => setActiveTab(1)}
+          onRefreshData={handleManualRefresh}
+        />
+        
+        {renderDashboardTabs()}
+        
+        <Box sx={{ mt: 3 }}>
+          {renderTabContent()}
+        </Box>
+      </Box>
+    </Fade>
+  );
+};
+
+// ============================================================================
+// MAIN PROJECT DETAIL PAGE COMPONENT
+// ============================================================================
+
 const ProjectDetailPage = () => {
   const params = useParams();
   const navigate = useNavigate();
@@ -766,6 +1200,7 @@ const ProjectDetailPage = () => {
   const [towers, setTowers] = useState([]);
   const [allUnits, setAllUnits] = useState([]);
   const [villaUnits, setVillaUnits] = useState([]);
+  const [budgetVarianceData, setBudgetVarianceData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState(0);
@@ -810,6 +1245,17 @@ const ProjectDetailPage = () => {
       const villaUnitsData = allUnitsData.filter(unit => !unit.tower);
       const towerUnitsData = allUnitsData.filter(unit => unit.tower);
 
+      // Fetch budget variance data for the project
+      try {
+        const budgetResponse = await budgetVarianceAPI.getProjectBudgetVariance(projectId);
+        const budgetData = budgetResponse.data?.data || null;
+        setBudgetVarianceData(budgetData);
+        console.log('✅ Budget variance data loaded:', budgetData);
+      } catch (budgetError) {
+        console.warn('⚠️ Budget variance data not available:', budgetError);
+        setBudgetVarianceData(null);
+      }
+
       console.log('✅ Project data loaded:', {
         project: projectData.name,
         towers: towersData.length,
@@ -844,6 +1290,10 @@ const ProjectDetailPage = () => {
 
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
+  };
+
+  const handleNavigateBack = () => {
+    setActiveTab(0); // Go back to overview tab
   };
 
   // Validate projectId - after hooks but before render
@@ -889,6 +1339,36 @@ const ProjectDetailPage = () => {
 
   const projectType = getProjectType(project, towers, villaUnits);
 
+  // Dynamic tab configuration based on project type and permissions
+  const getProjectTabs = () => {
+    const tabs = [];
+    
+    if (projectType === 'villa') {
+      tabs.push({ label: `Villas (${villaUnits.length})`, value: 0 });
+    } else if (projectType === 'apartment') {
+      tabs.push({ label: `Towers (${towers.length})`, value: 0 });
+    } else if (projectType === 'hybrid') {
+      tabs.push({ label: `Towers (${towers.length})`, value: 0 });
+      tabs.push({ label: `Villas (${villaUnits.length})`, value: 1 });
+    }
+    
+    tabs.push({ label: 'Timeline', value: tabs.length });
+    
+    // Add Budget Analytics tab if user has financial permissions
+    if (canAccess.viewFinancials()) {
+      tabs.push({ 
+        label: 'Budget Analytics', 
+        value: tabs.length,
+        icon: <QueryStats />,
+        badge: budgetVarianceData?.alerts?.hasVariance ? 'alert' : null
+      });
+    }
+    
+    return tabs;
+  };
+
+  const projectTabs = getProjectTabs();
+
   return (
     <Box>
       {/* Back Button */}
@@ -909,6 +1389,7 @@ const ProjectDetailPage = () => {
         onRefresh={fetchProjectData}
         isLoading={loading}
         projectType={projectType}
+        budgetVarianceData={budgetVarianceData}
       />
 
       {/* Project Metrics */}
@@ -918,6 +1399,7 @@ const ProjectDetailPage = () => {
         allUnits={allUnits}
         villaUnits={villaUnits}
         isLoading={false}
+        budgetVarianceData={budgetVarianceData}
       />
 
       {/* Dynamic Tabs based on project type */}
@@ -927,24 +1409,27 @@ const ProjectDetailPage = () => {
           onChange={handleTabChange}
           sx={{ borderBottom: 1, borderColor: 'divider' }}
         >
-          {projectType === 'villa' && (
-            <Tab label={`Villas (${villaUnits.length})`} />
-          )}
-          {projectType === 'apartment' && (
-            <Tab label={`Towers (${towers.length})`} />
-          )}
-          {projectType === 'hybrid' && (
-            <>
-              <Tab label={`Towers (${towers.length})`} />
-              <Tab label={`Villas (${villaUnits.length})`} />
-            </>
-          )}
-          <Tab label="Timeline" />
-          <Tab label="Analytics" />
+          {projectTabs.map((tab) => (
+            <Tab 
+              key={tab.value}
+              label={
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  {tab.icon && tab.icon}
+                  <Typography>{tab.label}</Typography>
+                  {tab.badge === 'alert' && (
+                    <Badge badgeContent="!" color="error" />
+                  )}
+                </Box>
+              }
+              value={tab.value}
+            />
+          ))}
         </Tabs>
       </Paper>
 
       {/* Tab Content */}
+      
+      {/* Villa Projects */}
       {projectType === 'villa' && activeTab === 0 && (
         <VillaUnitsSection
           villaUnits={villaUnits}
@@ -955,6 +1440,7 @@ const ProjectDetailPage = () => {
         />
       )}
 
+      {/* Apartment Projects */}
       {projectType === 'apartment' && activeTab === 0 && (
         <TowersSection
           towers={towers}
@@ -964,6 +1450,7 @@ const ProjectDetailPage = () => {
         />
       )}
 
+      {/* Hybrid Projects */}
       {projectType === 'hybrid' && (
         <>
           {activeTab === 0 && (
@@ -991,27 +1478,46 @@ const ProjectDetailPage = () => {
         (projectType === 'apartment' && activeTab === 1) || 
         (projectType === 'hybrid' && activeTab === 2)) && (
         <Paper sx={{ p: 3, textAlign: 'center' }}>
-          <Typography variant="h6" color="text.secondary">
+          <Timeline sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+          <Typography variant="h6" color="text.secondary" gutterBottom>
             Project Timeline Coming Soon
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Detailed project timeline will be available here
+            Detailed project timeline and milestones will be available here
           </Typography>
         </Paper>
       )}
 
-      {/* Analytics Tab */}
-      {((projectType === 'villa' && activeTab === 2) || 
-        (projectType === 'apartment' && activeTab === 2) || 
-        (projectType === 'hybrid' && activeTab === 3)) && (
-        <Paper sx={{ p: 3, textAlign: 'center' }}>
-          <Typography variant="h6" color="text.secondary">
-            Analytics Coming Soon
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Detailed project analytics will be available here
-          </Typography>
-        </Paper>
+      {/* Budget Analytics Tab */}
+      {canAccess.viewFinancials() && (
+        <>
+          {/* Villa Projects - Budget Analytics */}
+          {projectType === 'villa' && activeTab === 2 && (
+            <IntegratedBudgetVarianceDashboard
+              projectId={projectId}
+              projectName={project.name}
+              onNavigateBack={handleNavigateBack}
+            />
+          )}
+          
+          {/* Apartment Projects - Budget Analytics */}
+          {projectType === 'apartment' && activeTab === 2 && (
+            <IntegratedBudgetVarianceDashboard
+              projectId={projectId}
+              projectName={project.name}
+              onNavigateBack={handleNavigateBack}
+            />
+          )}
+          
+          {/* Hybrid Projects - Budget Analytics */}
+          {projectType === 'hybrid' && activeTab === 3 && (
+            <IntegratedBudgetVarianceDashboard
+              projectId={projectId}
+              projectName={project.name}
+              onNavigateBack={handleNavigateBack}
+            />
+          )}
+        </>
       )}
     </Box>
   );
