@@ -1,6 +1,6 @@
 // File: src/pages/settings/UserManagementPage.js
-// Description: ENHANCED User Management interface - Working tabs, analytics, and archived users
-// Version: 3.0.0 - Added working tab navigation, analytics, and archived users handling
+// Description: COMPLETE User Management interface with working invitation dialog
+// Version: 3.1.0 - Added working invitation dialog functionality
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
@@ -285,7 +285,246 @@ const getUserStatus = (user) => {
 };
 
 // =============================================================================
-// NEW ANALYTICS COMPONENTS
+// INVITE USER DIALOG COMPONENT
+// =============================================================================
+
+/**
+ * Invite User Dialog Component
+ */
+const InviteUserDialog = ({ 
+  open, 
+  onClose, 
+  onInvite, 
+  currentUserRole,
+  inviting = false 
+}) => {
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    role: '',
+  });
+  const [errors, setErrors] = useState({});
+  
+  const availableRoles = useMemo(() => {
+    // Define role hierarchy - users can only invite roles below their level
+    const roleOptions = [
+      { value: 'Sales Head', label: 'Sales Head', level: 3 },
+      { value: 'Marketing Head', label: 'Marketing Head', level: 3 },
+      { value: 'Finance Head', label: 'Finance Head', level: 3 },
+      { value: 'Sales Manager', label: 'Sales Manager', level: 4 },
+      { value: 'Finance Manager', label: 'Finance Manager', level: 4 },
+      { value: 'Channel Partner Manager', label: 'Channel Partner Manager', level: 4 },
+      { value: 'Sales Executive', label: 'Sales Executive', level: 5 },
+      { value: 'Channel Partner Admin', label: 'Channel Partner Admin', level: 5 },
+      { value: 'Channel Partner Agent', label: 'Channel Partner Agent', level: 6 },
+    ];
+
+    const currentUserLevel = {
+      'Business Head': 1,
+      'Project Director': 2,
+      'Sales Head': 3,
+      'Marketing Head': 3,
+      'Finance Head': 3,
+      'Sales Manager': 4,
+      'Finance Manager': 4,
+      'Channel Partner Manager': 4,
+    }[currentUserRole] || 10;
+
+    return roleOptions.filter(role => role.level > currentUserLevel);
+  }, [currentUserRole]);
+
+  const handleInputChange = (field) => (event) => {
+    const value = event.target.value;
+    setFormData(prev => ({ ...prev, [field]: value }));
+    
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }));
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+
+    if (!formData.firstName.trim()) {
+      newErrors.firstName = 'First name is required';
+    } else if (formData.firstName.trim().length < 2) {
+      newErrors.firstName = 'First name must be at least 2 characters';
+    }
+
+    if (!formData.lastName.trim()) {
+      newErrors.lastName = 'Last name is required';
+    } else if (formData.lastName.trim().length < 2) {
+      newErrors.lastName = 'Last name must be at least 2 characters';
+    }
+
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else {
+      const emailRegex = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
+      if (!emailRegex.test(formData.email)) {
+        newErrors.email = 'Please enter a valid email address';
+      }
+    }
+
+    if (!formData.role) {
+      newErrors.role = 'Role is required';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = () => {
+    if (validateForm()) {
+      onInvite(formData);
+    }
+  };
+
+  const handleClose = () => {
+    setFormData({ firstName: '', lastName: '', email: '', role: '' });
+    setErrors({});
+    onClose();
+  };
+
+  return (
+    <Dialog 
+      open={open} 
+      onClose={handleClose}
+      maxWidth="sm"
+      fullWidth
+      PaperProps={{
+        sx: { borderRadius: 2 }
+      }}
+    >
+      <DialogTitle>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Avatar sx={{ bgcolor: 'primary.main' }}>
+            <PersonAdd />
+          </Avatar>
+          <Box>
+            <Typography variant="h6">
+              Invite New User
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Send an invitation to join your organization
+            </Typography>
+          </Box>
+        </Box>
+      </DialogTitle>
+
+      <DialogContent sx={{ mt: 1 }}>
+        <Grid container spacing={3}>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              label="First Name"
+              value={formData.firstName}
+              onChange={handleInputChange('firstName')}
+              error={!!errors.firstName}
+              helperText={errors.firstName}
+              disabled={inviting}
+              placeholder="Enter first name"
+            />
+          </Grid>
+          
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              label="Last Name"
+              value={formData.lastName}
+              onChange={handleInputChange('lastName')}
+              error={!!errors.lastName}
+              helperText={errors.lastName}
+              disabled={inviting}
+              placeholder="Enter last name"
+            />
+          </Grid>
+          
+          <Grid item xs={12}>
+            <TextField
+              fullWidth
+              label="Email Address"
+              type="email"
+              value={formData.email}
+              onChange={handleInputChange('email')}
+              error={!!errors.email}
+              helperText={errors.email}
+              disabled={inviting}
+              placeholder="Enter email address"
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Email />
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </Grid>
+          
+          <Grid item xs={12}>
+            <FormControl fullWidth error={!!errors.role}>
+              <InputLabel>Role</InputLabel>
+              <Select
+                value={formData.role}
+                onChange={handleInputChange('role')}
+                label="Role"
+                disabled={inviting}
+              >
+                {availableRoles.map((role) => (
+                  <MenuItem key={role.value} value={role.value}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <BusinessCenter sx={{ fontSize: 20 }} />
+                      <Box>
+                        <Typography variant="body2">
+                          {role.label}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
+              {errors.role && (
+                <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>
+                  {errors.role}
+                </Typography>
+              )}
+            </FormControl>
+          </Grid>
+        </Grid>
+
+        {availableRoles.length === 0 && (
+          <Alert severity="warning" sx={{ mt: 2 }}>
+            <AlertTitle>No Available Roles</AlertTitle>
+            You don't have permission to invite users. Please contact your administrator.
+          </Alert>
+        )}
+      </DialogContent>
+
+      <DialogActions sx={{ p: 3, pt: 1 }}>
+        <Button 
+          onClick={handleClose}
+          disabled={inviting}
+          color="inherit"
+        >
+          Cancel
+        </Button>
+        <Button
+          onClick={handleSubmit}
+          variant="contained"
+          disabled={inviting || availableRoles.length === 0}
+          startIcon={inviting ? <CircularProgress size={16} /> : <Send />}
+        >
+          {inviting ? 'Sending Invitation...' : 'Send Invitation'}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
+// =============================================================================
+// ANALYTICS COMPONENTS
 // =============================================================================
 
 /**
@@ -897,7 +1136,7 @@ const ArchivedUsersTab = ({
 };
 
 // =============================================================================
-// MAIN USER MANAGEMENT PAGE COMPONENT (Updated with working tabs)
+// MAIN USER MANAGEMENT PAGE COMPONENT
 // =============================================================================
 
 /**
@@ -1005,7 +1244,7 @@ const UserManagementPage = () => {
   }, [users, activeTab, searchTerm, roleFilter, statusFilter]);
 
   // =============================================================================
-  // API FUNCTIONS (keeping existing functions)
+  // API FUNCTIONS
   // =============================================================================
   
   const fetchUsers = useCallback(async () => {
@@ -1049,6 +1288,38 @@ const UserManagementPage = () => {
     }
   }, [enqueueSnackbar]);
 
+  // NEW: Invitation handler function
+  const handleInviteUser = useCallback(async (invitationData) => {
+    try {
+      setInviting(true);
+      
+      const response = await invitationAPI.generateInvitationLink(invitationData);
+      
+      if (response.data && response.data.success) {
+        enqueueSnackbar(
+          `Invitation sent successfully to ${invitationData.email}`, 
+          { variant: 'success' }
+        );
+        
+        setInviteDialogOpen(false);
+        
+        // Refresh users list to show the new pending invitation
+        await fetchUsers();
+      } else {
+        throw new Error('Invalid response format from server');
+      }
+    } catch (error) {
+      console.error('❌ Error sending invitation:', error);
+      const apiError = handleAPIError(error);
+      enqueueSnackbar(
+        apiError.message || 'Failed to send invitation', 
+        { variant: 'error' }
+      );
+    } finally {
+      setInviting(false);
+    }
+  }, [enqueueSnackbar, fetchUsers]);
+
   // Restore user function
   const handleRestoreUser = useCallback(async (userId) => {
     try {
@@ -1071,7 +1342,6 @@ const UserManagementPage = () => {
     }
   }, [enqueueSnackbar]);
 
-  // Other existing functions remain the same...
   const handleToggleUserStatus = useCallback(async (userId, isActive) => {
     try {
       await userAPI.updateUser(userId, { isActive });
@@ -1616,6 +1886,15 @@ const UserManagementPage = () => {
 
       {/* Tab Content */}
       {renderTabContent()}
+
+      {/* Invite User Dialog */}
+      <InviteUserDialog
+        open={inviteDialogOpen}
+        onClose={() => setInviteDialogOpen(false)}
+        onInvite={handleInviteUser}
+        currentUserRole={currentUser?.role}
+        inviting={inviting}
+      />
     </Box>
   );
 };
