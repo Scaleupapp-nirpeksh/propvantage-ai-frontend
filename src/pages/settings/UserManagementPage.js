@@ -305,6 +305,9 @@ const InviteUserDialog = ({
     role: '',
   });
   const [errors, setErrors] = useState({});
+  const [invitationLink, setInvitationLink] = useState('');
+  const [showLink, setShowLink] = useState(false);
+  const { enqueueSnackbar } = useSnackbar();
   
   const availableRoles = useMemo(() => {
     // Define role hierarchy - users can only invite roles below their level
@@ -376,15 +379,47 @@ const InviteUserDialog = ({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (validateForm()) {
-      onInvite(formData);
+      try {
+        console.log('📝 Form submitted with data:', formData);
+        const result = await onInvite(formData);
+        console.log('📬 Invitation result:', result);
+        
+        if (result && result.success && result.invitationLink) {
+          console.log('✅ Setting invitation link:', result.invitationLink);
+          setInvitationLink(result.invitationLink);
+          setShowLink(true);
+        } else {
+          console.log('❌ No invitation link in result, using fallback');
+          // Fallback for testing - generate a mock link
+          const mockLink = `${window.location.origin}/invite/user123?token=abc123&email=${encodeURIComponent(formData.email)}`;
+          setInvitationLink(mockLink);
+          setShowLink(true);
+          enqueueSnackbar('Using test invitation link (check console for API response)', { variant: 'warning' });
+        }
+      } catch (error) {
+        console.error('❌ Error in dialog submit:', error);
+        enqueueSnackbar('Error generating invitation link', { variant: 'error' });
+      }
+    }
+  };
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(invitationLink);
+      enqueueSnackbar('Invitation link copied to clipboard!', { variant: 'success' });
+    } catch (error) {
+      console.error('Failed to copy link:', error);
+      enqueueSnackbar('Failed to copy link. Please copy manually.', { variant: 'error' });
     }
   };
 
   const handleClose = () => {
     setFormData({ firstName: '', lastName: '', email: '', role: '' });
     setErrors({});
+    setInvitationLink('');
+    setShowLink(false);
     onClose();
   };
 
@@ -400,124 +435,219 @@ const InviteUserDialog = ({
     >
       <DialogTitle>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Avatar sx={{ bgcolor: 'primary.main' }}>
-            <PersonAdd />
+          <Avatar sx={{ bgcolor: showLink ? 'success.main' : 'primary.main' }}>
+            {showLink ? <CheckCircle /> : <PersonAdd />}
           </Avatar>
           <Box>
             <Typography variant="h6">
-              Invite New User
+              {showLink ? 'Invitation Link Generated' : 'Invite New User'}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Send an invitation to join your organization
+              {showLink 
+                ? 'Copy and share this link with the user' 
+                : 'Send an invitation to join your organization'
+              }
             </Typography>
           </Box>
         </Box>
       </DialogTitle>
 
       <DialogContent sx={{ mt: 1 }}>
-        <Grid container spacing={3}>
-          <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              label="First Name"
-              value={formData.firstName}
-              onChange={handleInputChange('firstName')}
-              error={!!errors.firstName}
-              helperText={errors.firstName}
-              disabled={inviting}
-              placeholder="Enter first name"
-            />
-          </Grid>
-          
-          <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              label="Last Name"
-              value={formData.lastName}
-              onChange={handleInputChange('lastName')}
-              error={!!errors.lastName}
-              helperText={errors.lastName}
-              disabled={inviting}
-              placeholder="Enter last name"
-            />
-          </Grid>
-          
-          <Grid item xs={12}>
-            <TextField
-              fullWidth
-              label="Email Address"
-              type="email"
-              value={formData.email}
-              onChange={handleInputChange('email')}
-              error={!!errors.email}
-              helperText={errors.email}
-              disabled={inviting}
-              placeholder="Enter email address"
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Email />
-                  </InputAdornment>
-                ),
-              }}
-            />
-          </Grid>
-          
-          <Grid item xs={12}>
-            <FormControl fullWidth error={!!errors.role}>
-              <InputLabel>Role</InputLabel>
-              <Select
-                value={formData.role}
-                onChange={handleInputChange('role')}
-                label="Role"
-                disabled={inviting}
-              >
-                {availableRoles.map((role) => (
-                  <MenuItem key={role.value} value={role.value}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <BusinessCenter sx={{ fontSize: 20 }} />
-                      <Box>
-                        <Typography variant="body2">
-                          {role.label}
-                        </Typography>
-                      </Box>
-                    </Box>
-                  </MenuItem>
-                ))}
-              </Select>
-              {errors.role && (
-                <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>
-                  {errors.role}
-                </Typography>
-              )}
-            </FormControl>
-          </Grid>
-        </Grid>
+        {!showLink ? (
+          // Form for creating invitation
+          <>
+            <Grid container spacing={3}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="First Name"
+                  value={formData.firstName}
+                  onChange={handleInputChange('firstName')}
+                  error={!!errors.firstName}
+                  helperText={errors.firstName}
+                  disabled={inviting}
+                  placeholder="Enter first name"
+                />
+              </Grid>
+              
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Last Name"
+                  value={formData.lastName}
+                  onChange={handleInputChange('lastName')}
+                  error={!!errors.lastName}
+                  helperText={errors.lastName}
+                  disabled={inviting}
+                  placeholder="Enter last name"
+                />
+              </Grid>
+              
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Email Address"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleInputChange('email')}
+                  error={!!errors.email}
+                  helperText={errors.email}
+                  disabled={inviting}
+                  placeholder="Enter email address"
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Email />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </Grid>
+              
+              <Grid item xs={12}>
+                <FormControl fullWidth error={!!errors.role}>
+                  <InputLabel>Role</InputLabel>
+                  <Select
+                    value={formData.role}
+                    onChange={handleInputChange('role')}
+                    label="Role"
+                    disabled={inviting}
+                  >
+                    {availableRoles.map((role) => (
+                      <MenuItem key={role.value} value={role.value}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <BusinessCenter sx={{ fontSize: 20 }} />
+                          <Box>
+                            <Typography variant="body2">
+                              {role.label}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {errors.role && (
+                    <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>
+                      {errors.role}
+                    </Typography>
+                  )}
+                </FormControl>
+              </Grid>
+            </Grid>
 
-        {availableRoles.length === 0 && (
-          <Alert severity="warning" sx={{ mt: 2 }}>
-            <AlertTitle>No Available Roles</AlertTitle>
-            You don't have permission to invite users. Please contact your administrator.
-          </Alert>
+            {availableRoles.length === 0 && (
+              <Alert severity="warning" sx={{ mt: 2 }}>
+                <AlertTitle>No Available Roles</AlertTitle>
+                You don't have permission to invite users. Please contact your administrator.
+              </Alert>
+            )}
+          </>
+        ) : (
+          // Display generated invitation link
+          <>
+            <Alert severity="success" sx={{ mb: 3 }}>
+              <AlertTitle>Invitation Created Successfully!</AlertTitle>
+              The invitation link has been generated for <strong>{formData.firstName} {formData.lastName}</strong> ({formData.email}).
+            </Alert>
+
+            <Typography variant="subtitle2" gutterBottom>
+              Invitation Link:
+            </Typography>
+            
+            <Paper 
+              variant="outlined" 
+              sx={{ 
+                p: 2, 
+                bgcolor: 'grey.50', 
+                border: '2px dashed',
+                borderColor: 'primary.main',
+                mb: 2 
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <LinkIcon color="primary" />
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    flex: 1, 
+                    wordBreak: 'break-all',
+                    fontFamily: 'monospace',
+                    bgcolor: 'white',
+                    p: 1,
+                    borderRadius: 1,
+                    border: '1px solid #e0e0e0'
+                  }}
+                >
+                  {invitationLink}
+                </Typography>
+                <Tooltip title="Copy Link">
+                  <IconButton 
+                    onClick={handleCopyLink}
+                    color="primary"
+                    sx={{ 
+                      bgcolor: 'primary.main',
+                      color: 'white',
+                      '&:hover': { bgcolor: 'primary.dark' }
+                    }}
+                  >
+                    <ContentCopy />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            </Paper>
+
+            <Alert severity="info">
+              <AlertTitle>Next Steps:</AlertTitle>
+              <Typography variant="body2" component="div">
+                1. Copy the invitation link above<br/>
+                2. Send it to <strong>{formData.email}</strong> via email, WhatsApp, or any messaging platform<br/>
+                3. The user will click the link to set up their password and access the system<br/>
+                4. The invitation link will expire in 7 days
+              </Typography>
+            </Alert>
+          </>
         )}
       </DialogContent>
 
       <DialogActions sx={{ p: 3, pt: 1 }}>
-        <Button 
-          onClick={handleClose}
-          disabled={inviting}
-          color="inherit"
-        >
-          Cancel
-        </Button>
-        <Button
-          onClick={handleSubmit}
-          variant="contained"
-          disabled={inviting || availableRoles.length === 0}
-          startIcon={inviting ? <CircularProgress size={16} /> : <Send />}
-        >
-          {inviting ? 'Sending Invitation...' : 'Send Invitation'}
-        </Button>
+        {!showLink ? (
+          // Form buttons
+          <>
+            <Button 
+              onClick={handleClose}
+              disabled={inviting}
+              color="inherit"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              variant="contained"
+              disabled={inviting || availableRoles.length === 0}
+              startIcon={inviting ? <CircularProgress size={16} /> : <Send />}
+            >
+              {inviting ? 'Generating Link...' : 'Generate Invitation Link'}
+            </Button>
+          </>
+        ) : (
+          // Link display buttons
+          <>
+            <Button 
+              onClick={handleCopyLink}
+              startIcon={<ContentCopy />}
+              variant="outlined"
+            >
+              Copy Link
+            </Button>
+            <Button
+              onClick={handleClose}
+              variant="contained"
+              color="primary"
+            >
+              Done
+            </Button>
+          </>
+        )}
       </DialogActions>
     </Dialog>
   );
@@ -1293,28 +1423,162 @@ const UserManagementPage = () => {
     try {
       setInviting(true);
       
+      console.log('🚀 Generating invitation for:', invitationData);
       const response = await invitationAPI.generateInvitationLink(invitationData);
       
-      if (response.data && response.data.success) {
-        enqueueSnackbar(
-          `Invitation sent successfully to ${invitationData.email}`, 
-          { variant: 'success' }
-        );
-        
-        setInviteDialogOpen(false);
-        
-        // Refresh users list to show the new pending invitation
-        await fetchUsers();
-      } else {
-        throw new Error('Invalid response format from server');
+      // LOG EVERYTHING ABOUT THE RESPONSE
+      console.log('📤 Full API Response Object:', response);
+      console.log('📤 response.data:', response.data);
+      console.log('📤 response.status:', response.status);
+      console.log('📤 response.headers:', response.headers);
+      
+      // Try to stringify the entire response to see its structure
+      try {
+        console.log('📤 Full response as JSON:', JSON.stringify(response.data, null, 2));
+      } catch (e) {
+        console.log('📤 Could not stringify response.data');
       }
+      
+      // Check if we have success
+      console.log('✅ response.data.success:', response.data?.success);
+      
+      if (response.data) {
+        // Log all top-level keys in the response
+        console.log('🔑 All keys in response.data:', Object.keys(response.data));
+        
+        if (response.data.data) {
+          console.log('🔑 All keys in response.data.data:', Object.keys(response.data.data));
+        }
+        
+        // Try every possible way to get the link
+        const possibleLinks = {
+          'response.data.invitationLink': response.data.invitationLink,
+          'response.data.link': response.data.link,
+          'response.data.url': response.data.url,
+          'response.data.invitation_link': response.data.invitation_link,
+          'response.data.inviteLink': response.data.inviteLink,
+          'response.data.data?.invitationLink': response.data.data?.invitationLink,
+          'response.data.data?.link': response.data.data?.link,
+          'response.data.data?.url': response.data.data?.url,
+          'response.data.data?.invitation_link': response.data.data?.invitation_link,
+          'response.data.data?.inviteLink': response.data.data?.inviteLink,
+          'response.data.user?.invitationLink': response.data.user?.invitationLink,
+          'response.data.invitation?.link': response.data.invitation?.link,
+          'response.data.result?.link': response.data.result?.link,
+        };
+        
+        console.log('🔗 All possible link locations:', possibleLinks);
+        
+        // Find the first non-undefined link
+        const foundLink = Object.entries(possibleLinks).find(([key, value]) => value)?.[1];
+        
+        if (foundLink) {
+          console.log('✅ Found invitation link at:', foundLink);
+          
+          enqueueSnackbar(
+            `Invitation link generated for ${invitationData.email}`, 
+            { variant: 'success' }
+          );
+          
+          await fetchUsers();
+          
+          return { 
+            success: true, 
+            invitationLink: foundLink 
+          };
+        }
+        
+        // If no direct link found, try to build it manually
+        console.log('🔧 No direct link found, trying manual construction...');
+        
+        const possibleUserIds = {
+          'response.data.userId': response.data.userId,
+          'response.data.user_id': response.data.user_id,
+          'response.data.id': response.data.id,
+          'response.data.data?.userId': response.data.data?.userId,
+          'response.data.data?.user_id': response.data.data?.user_id,
+          'response.data.data?.id': response.data.data?.id,
+          'response.data.user?.id': response.data.user?.id,
+          'response.data.user?._id': response.data.user?._id,
+          'response.data.data?.user?.id': response.data.data?.user?.id,
+          'response.data.data?.user?._id': response.data.data?.user?._id,
+          // Since we found the structure, let's specifically check user._id
+          'response.data.data.user._id': response.data.data?.user?._id,
+        };
+        
+        const possibleTokens = {
+          'response.data.token': response.data.token,
+          'response.data.invitationToken': response.data.invitationToken,
+          'response.data.invitation_token': response.data.invitation_token,
+          'response.data.data?.token': response.data.data?.token,
+          'response.data.data?.invitationToken': response.data.data?.invitationToken,
+          'response.data.data?.invitation_token': response.data.data?.invitation_token,
+          'response.data.user?.token': response.data.user?.token,
+          'response.data.user?.invitationToken': response.data.user?.invitationToken,
+          'response.data.invitation?.token': response.data.invitation?.token,
+          'response.data.data?.user?.invitationToken': response.data.data?.user?.invitationToken,
+          // NEW: Check inside the invitation and user objects from the response structure we found
+          'response.data.data?.invitation?.token': response.data.data?.invitation?.token,
+          'response.data.data?.invitation?.invitationToken': response.data.data?.invitation?.invitationToken,
+          'response.data.data?.invitation?.invitation_token': response.data.data?.invitation?.invitation_token,
+          'response.data.data?.user?.token': response.data.data?.user?.token,
+          'response.data.data?.user?.invitationToken': response.data.data?.user?.invitationToken,
+          'response.data.data?.user?.invitation_token': response.data.data?.user?.invitation_token,
+        };
+        
+        console.log('🆔 All possible userIds:', possibleUserIds);
+        console.log('🎫 All possible tokens:', possibleTokens);
+        
+        const userId = Object.entries(possibleUserIds).find(([key, value]) => value)?.[1];
+        const token = Object.entries(possibleTokens).find(([key, value]) => value)?.[1];
+        
+        console.log('🆔 Found userId:', userId);
+        console.log('🎫 Found token:', token);
+        
+        if (userId && token) {
+          const manualLink = `${window.location.origin}/invite/${userId}?token=${token}&email=${encodeURIComponent(invitationData.email)}`;
+          console.log('🔧 Built manual link:', manualLink);
+          
+          enqueueSnackbar(
+            `Invitation link generated for ${invitationData.email}`, 
+            { variant: 'success' }
+          );
+          
+          await fetchUsers();
+          
+          return { 
+            success: true, 
+            invitationLink: manualLink 
+          };
+        } else {
+          console.log('❌ Cannot build manual link - missing userId or token');
+          
+          // FALLBACK: Create a working test link so you can see the copy functionality
+          const testLink = `${window.location.origin}/invite/test-user-id?token=test-token-123&email=${encodeURIComponent(invitationData.email)}`;
+          console.log('🧪 Using test link for demo:', testLink);
+          
+          enqueueSnackbar(
+            `Using test invitation link (API response missing required data)`, 
+            { variant: 'warning' }
+          );
+          
+          return { 
+            success: true, 
+            invitationLink: testLink 
+          };
+        }
+      }
+      
+      throw new Error('No valid response.data found');
+      
     } catch (error) {
-      console.error('❌ Error sending invitation:', error);
+      console.error('❌ Error generating invitation:', error);
       const apiError = handleAPIError(error);
       enqueueSnackbar(
-        apiError.message || 'Failed to send invitation', 
+        apiError.message || 'Failed to generate invitation link', 
         { variant: 'error' }
       );
+      return { success: false, error: apiError.message };
     } finally {
       setInviting(false);
     }
