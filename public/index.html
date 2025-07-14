@@ -2,45 +2,84 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#1976d2" />
-    <meta
-      name="description"
-      content="PropVantage AI - AI-Powered Real Estate CRM for modern property management and sales automation"
-    />
-    <meta name="keywords" content="real estate, CRM, property management, sales pipeline, AI insights, PropVantage" />
-    <meta name="author" content="PropVantage AI Team" />
     
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content="PropVantage AI - Real Estate CRM" />
-    <meta property="og:description" content="AI-Powered Real Estate CRM for modern property management" />
-    <meta property="og:image" content="%PUBLIC_URL%/og-image.png" />
-
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image" />
-    <meta property="twitter:title" content="PropVantage AI - Real Estate CRM" />
-    <meta property="twitter:description" content="AI-Powered Real Estate CRM for modern property management" />
-    <meta property="twitter:image" content="%PUBLIC_URL%/twitter-image.png" />
-
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <!-- Enhanced Favicon Setup -->
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" sizes="32x32" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/apple-touch-icon.png" />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
     
-    <!-- Preconnect to Google Fonts for better performance -->
+    <!-- Viewport and Theme -->
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#1a1a1a" />
+    <meta name="color-scheme" content="light dark" />
+    
+    <!-- Enhanced Meta Description for Luxury Positioning -->
+    <meta
+      name="description"
+      content="PropVantage AI - Elite Real Estate CRM platform designed for luxury developers. AI-powered revenue intelligence, premium client management, and sophisticated project orchestration for ultra-high-net-worth clientele."
+    />
+    <meta name="keywords" content="luxury real estate CRM, elite property management, AI revenue intelligence, premium real estate software, UHNW client management, luxury development CRM, PropVantage AI" />
+    <meta name="author" content="PropVantage AI - Elite CRM Solutions" />
+    <meta name="robots" content="index, follow" />
+    <meta name="language" content="English" />
+    
+    <!-- Enhanced Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="PropVantage AI" />
+    <meta property="og:title" content="PropVantage AI - Elite Real Estate CRM for Luxury Developers" />
+    <meta property="og:description" content="The most sophisticated CRM platform designed exclusively for elite real estate developers managing premium properties and ultra-high-net-worth clientele." />
+    <meta property="og:image" content="%PUBLIC_URL%/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="PropVantage AI - Elite Real Estate CRM Dashboard" />
+    <meta property="og:url" content="https://propvantage.ai" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Enhanced Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@PropVantageAI" />
+    <meta name="twitter:creator" content="@PropVantageAI" />
+    <meta name="twitter:title" content="PropVantage AI - Elite Real Estate CRM" />
+    <meta name="twitter:description" content="Luxury real estate CRM with AI-powered revenue intelligence for elite developers and premium properties." />
+    <meta name="twitter:image" content="%PUBLIC_URL%/twitter-image.png" />
+    <meta name="twitter:image:alt" content="PropVantage AI Elite CRM Platform" />
+
+    <!-- Additional Meta Tags for SEO -->
+    <meta name="application-name" content="PropVantage AI" />
+    <meta name="msapplication-TileColor" content="#1a1a1a" />
+    <meta name="msapplication-config" content="%PUBLIC_URL%/browserconfig.xml" />
+    
+    <!-- Preconnect to External Resources -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
     
-    <!-- Inter font family -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+    <!-- Enhanced Font Loading with Display Swap -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
     
     <!-- Material Icons -->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
     
-    <title>PropVantage AI - Real Estate CRM</title>
+    <!-- Preload Critical Resources -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" as="style" />
     
-    <!-- Prevent flash of unstyled content -->
+    <title>PropVantage AI - Elite Real Estate CRM for Luxury Developers</title>
+    
+    <!-- Enhanced Styling for Premium Loading Experience -->
     <style>
+      :root {
+        --primary-gold: #FFD700;
+        --dark-charcoal: #1a1a1a;
+        --luxury-gradient: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #DAA520 100%);
+        --shadow-luxury: 0 8px 32px rgba(255, 215, 0, 0.15);
+      }
+      
+      * {
+        box-sizing: border-box;
+      }
+      
       body {
         margin: 0;
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -48,62 +87,278 @@
           sans-serif;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
-        background-color: #fafafa;
+        background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+        font-feature-settings: 'kern' 1, 'liga' 1;
+        text-rendering: optimizeLegibility;
       }
       
       #root {
         min-height: 100vh;
       }
       
-      /* Loading screen */
+      /* Luxury Loading Screen */
       .initial-loading {
         display: flex;
         justify-content: center;
         align-items: center;
         height: 100vh;
         flex-direction: column;
-        gap: 16px;
-        background-color: #fafafa;
+        gap: 24px;
+        background: 
+          radial-gradient(circle at 20% 80%, rgba(255, 215, 0, 0.03) 0%, transparent 50%),
+          radial-gradient(circle at 80% 20%, rgba(26, 26, 26, 0.03) 0%, transparent 50%),
+          linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+        position: relative;
+        overflow: hidden;
       }
       
-      .loading-spinner {
-        width: 40px;
-        height: 40px;
-        border: 4px solid #e3f2fd;
-        border-top: 4px solid #1976d2;
+      .initial-loading::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-image: 
+          linear-gradient(45deg, transparent 49%, rgba(255, 215, 0, 0.01) 50%, transparent 51%),
+          linear-gradient(-45deg, transparent 49%, rgba(26, 26, 26, 0.01) 50%, transparent 51%);
+        background-size: 80px 80px;
+        animation: backgroundShift 20s linear infinite;
+      }
+      
+      @keyframes backgroundShift {
+        0% { transform: translateX(0) translateY(0); }
+        100% { transform: translateX(80px) translateY(80px); }
+      }
+      
+      /* Luxury Logo for Loading */
+      .loading-logo {
+        width: 64px;
+        height: 64px;
+        background: var(--luxury-gradient);
         border-radius: 50%;
-        animation: spin 1s linear infinite;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: var(--shadow-luxury);
+        position: relative;
+        z-index: 2;
+        animation: logoFloat 3s ease-in-out infinite;
       }
       
-      @keyframes spin {
+      .loading-logo::before {
+        content: 'P';
+        font-size: 32px;
+        color: white;
+        font-weight: 800;
+        font-family: 'Inter', sans-serif;
+        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      }
+      
+      @keyframes logoFloat {
+        0%, 100% { transform: translateY(0px) scale(1); }
+        50% { transform: translateY(-8px) scale(1.05); }
+      }
+      
+      /* Enhanced Loading Spinner */
+      .loading-spinner {
+        width: 48px;
+        height: 48px;
+        border: 3px solid transparent;
+        border-top: 3px solid var(--primary-gold);
+        border-right: 3px solid rgba(255, 215, 0, 0.3);
+        border-radius: 50%;
+        animation: luxurySpin 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        position: relative;
+        z-index: 2;
+      }
+      
+      .loading-spinner::before {
+        content: '';
+        position: absolute;
+        top: -3px;
+        left: -3px;
+        right: -3px;
+        bottom: -3px;
+        border: 1px solid rgba(255, 215, 0, 0.1);
+        border-radius: 50%;
+      }
+      
+      @keyframes luxurySpin {
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
+      }
+      
+      /* Loading Text */
+      .loading-text {
+        color: var(--dark-charcoal);
+        font-size: 16px;
+        font-weight: 600;
+        font-family: 'Inter', sans-serif;
+        letter-spacing: 0.5px;
+        position: relative;
+        z-index: 2;
+      }
+      
+      .loading-subtitle {
+        color: #666;
+        font-size: 14px;
+        font-weight: 400;
+        margin-top: 8px;
+        opacity: 0.8;
+        position: relative;
+        z-index: 2;
+      }
+      
+      /* Loading Progress Animation */
+      .loading-progress {
+        width: 200px;
+        height: 2px;
+        background: rgba(255, 215, 0, 0.1);
+        border-radius: 1px;
+        overflow: hidden;
+        position: relative;
+        z-index: 2;
+      }
+      
+      .loading-progress::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: var(--luxury-gradient);
+        animation: progressSlide 2s ease-in-out infinite;
+      }
+      
+      @keyframes progressSlide {
+        0% { left: -100%; }
+        50% { left: 0%; }
+        100% { left: 100%; }
+      }
+      
+      /* Accessibility and Performance */
+      @media (prefers-reduced-motion: reduce) {
+        .loading-logo,
+        .loading-spinner,
+        .loading-progress::before,
+        .initial-loading::before {
+          animation: none;
+        }
+      }
+      
+      /* High contrast mode support */
+      @media (prefers-contrast: high) {
+        .loading-text {
+          color: #000;
+        }
+        .loading-subtitle {
+          color: #333;
+        }
+      }
+      
+      /* Dark mode detection */
+      @media (prefers-color-scheme: dark) {
+        body {
+          background: linear-gradient(135deg, #1a1a1a 0%, #2c2c2c 100%);
+        }
+        .initial-loading {
+          background: 
+            radial-gradient(circle at 20% 80%, rgba(255, 215, 0, 0.05) 0%, transparent 50%),
+            radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.02) 0%, transparent 50%),
+            linear-gradient(135deg, #1a1a1a 0%, #2c2c2c 100%);
+        }
+        .loading-text {
+          color: #fff;
+        }
+        .loading-subtitle {
+          color: #ccc;
+        }
       }
     </style>
   </head>
   <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <noscript>
+      <div style="
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        flex-direction: column;
+        font-family: 'Inter', sans-serif;
+        text-align: center;
+        padding: 20px;
+        background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+      ">
+        <h1 style="color: #1a1a1a; margin-bottom: 16px;">PropVantage AI</h1>
+        <p style="color: #666; margin-bottom: 24px;">Elite Real Estate CRM</p>
+        <p style="color: #666;">You need to enable JavaScript to run this luxury real estate application.</p>
+        <p style="color: #999; font-size: 14px; margin-top: 16px;">
+          Please enable JavaScript in your browser settings and refresh the page.
+        </p>
+      </div>
+    </noscript>
+    
     <div id="root">
-      <!-- Initial loading screen -->
+      <!-- Luxury Loading Screen -->
       <div class="initial-loading">
+        <div class="loading-logo"></div>
         <div class="loading-spinner"></div>
-        <div style="color: #666; font-size: 14px;">Loading PropVantage AI...</div>
+        <div style="text-align: center;">
+          <div class="loading-text">PropVantage AI</div>
+          <div class="loading-subtitle">Loading Elite CRM Experience...</div>
+        </div>
+        <div class="loading-progress"></div>
       </div>
     </div>
     
-    <!-- Service Worker Registration -->
+    <!-- Enhanced Service Worker Registration -->
     <script>
+      // Enhanced service worker registration with error handling
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
           navigator.serviceWorker.register('%PUBLIC_URL%/sw.js')
             .then(function(registration) {
-              console.log('SW registered: ', registration);
+              console.log('PropVantage AI SW registered successfully:', registration.scope);
+              
+              // Handle updates
+              registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+                newWorker.addEventListener('statechange', () => {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    // New content available, notify user
+                    console.log('New content available, please refresh.');
+                  }
+                });
+              });
             })
             .catch(function(registrationError) {
-              console.log('SW registration failed: ', registrationError);
+              console.log('PropVantage AI SW registration failed:', registrationError);
             });
         });
       }
+      
+      // Performance monitoring
+      if ('performance' in window) {
+        window.addEventListener('load', function() {
+          setTimeout(function() {
+            const perfData = performance.getEntriesByType('navigation')[0];
+            if (perfData) {
+              console.log('PropVantage AI Load Time:', Math.round(perfData.loadEventEnd - perfData.fetchStart) + 'ms');
+            }
+          }, 0);
+        });
+      }
+      
+      // Error boundary for uncaught errors
+      window.addEventListener('error', function(event) {
+        console.error('PropVantage AI Error:', event.error);
+      });
+      
+      window.addEventListener('unhandledrejection', function(event) {
+        console.error('PropVantage AI Unhandled Promise Rejection:', event.reason);
+      });
     </script>
   </body>
 </html>

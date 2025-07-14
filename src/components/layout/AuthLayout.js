@@ -188,44 +188,7 @@ const PlatformStats = () => {
       >
         Trusted by Leading Builders
       </Typography>
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-around',
-          flexWrap: 'wrap',
-          gap: 2,
-        }}
-      >
-        {stats.map((stat, index) => (
-          <Box
-            key={index}
-            sx={{
-              textAlign: 'center',
-              minWidth: '80px',
-            }}
-          >
-            <Typography
-              variant="h6"
-              sx={{
-                fontWeight: 700,
-                color: theme.palette[stat.color].main,
-                lineHeight: 1,
-              }}
-            >
-              {stat.value}
-            </Typography>
-            <Typography
-              variant="caption"
-              sx={{
-                color: theme.palette.text.secondary,
-                fontWeight: 500,
-              }}
-            >
-              {stat.label}
-            </Typography>
-          </Box>
-        ))}
-      </Box>
+  
     </Box>
   );
 };
@@ -320,19 +283,7 @@ const AuthLayout = ({ children, title, subtitle }) => {
                       gap: 1,
                     }}
                   >
-                    {['AI/ML', 'React', 'Node.js', 'MongoDB', 'Material-UI'].map((tech) => (
-                      <Chip
-                        key={tech}
-                        label={tech}
-                        size="small"
-                        variant="outlined"
-                        sx={{
-                          borderColor: theme.palette.primary.main,
-                          color: theme.palette.primary.main,
-                          fontSize: '0.75rem',
-                        }}
-                      />
-                    ))}
+                    
                   </Box>
                 </Box>
               </Box>
@@ -442,7 +393,7 @@ const AuthLayout = ({ children, title, subtitle }) => {
             color: theme.palette.text.secondary,
           }}
         >
-          © 2024 PropVantage AI. Transforming Real Estate with Intelligence.
+          © 2025 PropVantage AI.
         </Typography>
       </Box>
     </Box>

@@ -1,0 +1,61 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle with gradient -->
+  <circle cx="16" cy="16" r="16" fill="url(#gradient1)"/>
+  
+  <!-- Building structure -->
+  <path d="M8 20h4v8H8v-8z" fill="url(#gradient2)"/>
+  <path d="M12 16h4v12h-4V16z" fill="url(#gradient3)"/>
+  <path d="M16 12h4v16h-4V12z" fill="url(#gradient4)"/>
+  <path d="M20 8h4v20h-4V8z" fill="url(#gradient5)"/>
+  
+  <!-- Diamond/AI symbol on top -->
+  <path d="M16 4l3 3-3 3-3-3 3-3z" fill="url(#goldGradient)" stroke="rgba(255,255,255,0.3)" stroke-width="0.5"/>
+  
+  <!-- Windows/details -->
+  <rect x="9" y="22" width="1.5" height="1.5" fill="rgba(255,215,0,0.8)" rx="0.2"/>
+  <rect x="9" y="24.5" width="1.5" height="1.5" fill="rgba(255,215,0,0.8)" rx="0.2"/>
+  <rect x="13" y="18" width="1.5" height="1.5" fill="rgba(255,215,0,0.8)" rx="0.2"/>
+  <rect x="13" y="20.5" width="1.5" height="1.5" fill="rgba(255,215,0,0.8)" rx="0.2"/>
+  <rect x="13" y="23" width="1.5" height="1.5" fill="rgba(255,215,0,0.8)" rx="0.2"/>
+  <rect x="17" y="14" width="1.5" height="1.5" fill="rgba(255,215,0,0.8)" rx="0.2"/>
+  <rect x="17" y="16.5" width="1.5" height="1.5" fill="rgba(255,215,0,0.8)" rx="0.2"/>
+  <rect x="17" y="19" width="1.5" height="1.5" fill="rgba(255,215,0,0.8)" rx="0.2"/>
+  <rect x="21" y="10" width="1.5" height="1.5" fill="rgba(255,215,0,0.8)" rx="0.2"/>
+  <rect x="21" y="12.5" width="1.5" height="1.5" fill="rgba(255,215,0,0.8)" rx="0.2"/>
+  <rect x="21" y="15" width="1.5" height="1.5" fill="rgba(255,215,0,0.8)" rx="0.2"/>
+  
+  <!-- Gradients -->
+  <defs>
+    <linearGradient id="gradient1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a1a;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#2c2c2c;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1a1a1a;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="gradient2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4a5568;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2d3748;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="gradient3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#5a6575;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3d4754;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="gradient4" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6a7582;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#4d5761;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="gradient5" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7a8592;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#5d676e;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFD700;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#FFA500;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#DAA520;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+</svg>
