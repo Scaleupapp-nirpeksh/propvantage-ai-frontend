@@ -1,6 +1,6 @@
 // File: src/pages/leads/CreateLeadPage.js
 // Description: Production-grade lead creation page with model-aligned data capture
-// Version: 1.1 - COMPLETE FIXED VERSION with proper Lead Model alignment
+// Version: 1.2 - FIXED Interaction enum values to match backend model
 // Location: src/pages/leads/CreateLeadPage.js
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -168,6 +168,17 @@ const BUDGET_SOURCES = [
   { value: 'pre_approved', label: 'Pre-approved by Bank' },
   { value: 'loan_approved', label: 'Loan Already Approved' },
   { value: 'verified', label: 'Verified by Documents' }
+];
+
+// FIXED: Follow-up types matching Interaction model enum (Capitalized)
+const FOLLOW_UP_TYPES = [
+  { value: 'Call', label: 'Phone Call' },
+  { value: 'Email', label: 'Email' },
+  { value: 'WhatsApp', label: 'WhatsApp' },
+  { value: 'Site Visit', label: 'Site Visit' },
+  { value: 'Meeting', label: 'In-person Meeting' },
+  { value: 'SMS', label: 'SMS' },
+  { value: 'Note', label: 'Note/Memo' }
 ];
 
 // Form steps configuration
@@ -358,10 +369,10 @@ const CreateLeadPage = () => {
     project: '', // Required by backend
     notes: '',
     
-    // Follow-up with correct enum values
+    // FIXED: Follow-up with correct Interaction model enum values (Capitalized)
     scheduleFollowUp: false,
     followUpDate: null,
-    followUpType: 'call', // lowercase enum value
+    followUpType: 'Call', // FIXED: Changed from 'call' to 'Call' to match Interaction model
     followUpNotes: '',
   });
 
@@ -518,10 +529,10 @@ const CreateLeadPage = () => {
         // Additional notes
         notes: formData.notes.trim() || undefined,
         
-        // Follow-up with correct enum values
+        // FIXED: Follow-up with correct Interaction model enum values (Capitalized)
         followUpSchedule: formData.scheduleFollowUp ? {
           nextFollowUpDate: formData.followUpDate,
-          followUpType: formData.followUpType,
+          followUpType: formData.followUpType, // Now uses capitalized values like 'Call', 'Meeting'
           notes: formData.followUpNotes.trim() || undefined,
           isOverdue: false,
           overdueBy: 0,
@@ -1292,6 +1303,7 @@ const CreateLeadPage = () => {
           </Grid>
 
           <Grid item xs={12} sm={6}>
+            {/* FIXED: Follow-up Type with correct Interaction model enum values */}
             <FormControl fullWidth>
               <InputLabel>Follow-up Type</InputLabel>
               <Select
@@ -1300,11 +1312,11 @@ const CreateLeadPage = () => {
                 label="Follow-up Type"
                 disabled={isLoading}
               >
-                <MenuItem value="call">Phone Call</MenuItem>
-                <MenuItem value="email">Email</MenuItem>
-                <MenuItem value="whatsapp">WhatsApp</MenuItem>
-                <MenuItem value="site_visit">Site Visit</MenuItem>
-                <MenuItem value="meeting">In-person Meeting</MenuItem>
+                {FOLLOW_UP_TYPES.map(type => (
+                  <MenuItem key={type.value} value={type.value}>
+                    {type.label}
+                  </MenuItem>
+                ))}
               </Select>
             </FormControl>
           </Grid>
@@ -1367,6 +1379,17 @@ const CreateLeadPage = () => {
                 {salesTeam.find(member => member._id === formData.assignedTo)?.firstName || 'Unassigned'} {salesTeam.find(member => member._id === formData.assignedTo)?.lastName || ''}
               </Typography>
             </Grid>
+            {formData.scheduleFollowUp && (
+              <Grid item xs={12} sm={6}>
+                <Typography variant="body2" color="text.secondary">Follow-up:</Typography>
+                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                  {FOLLOW_UP_TYPES.find(type => type.value === formData.followUpType)?.label || formData.followUpType}
+                </Typography>
+                <Typography variant="body2">
+                  {formData.followUpDate ? new Date(formData.followUpDate).toLocaleString() : 'No date set'}
+                </Typography>
+              </Grid>
+            )}
           </Grid>
         </Paper>
       </Grid>
