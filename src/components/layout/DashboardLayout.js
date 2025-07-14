@@ -1,6 +1,6 @@
 // File: src/components/layout/DashboardLayout.js
-// Description: Main dashboard layout component for PropVantage AI - ENHANCED for Phase 1 Analytics
-// Version: 1.8 - Enhanced Analytics Navigation for Phase 1 Implementation (ADDITIVE ONLY)
+// Description: Simplified dashboard layout - Single User Management section without nested children
+// Version: 1.10 - Simplified user management navigation structure
 // Location: src/components/layout/DashboardLayout.js
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -71,7 +71,7 @@ import {
   Speed,           // For Collection Performance
   NoteAdd,         // For Generate Invoice
   ReceiptLong,     // Alternative invoice icon
-  // NEW: Phase 1 Analytics Icons
+  // Analytics Icons
   PieChart,        // For KPI Dashboard
   DonutLarge,      // For Budget Analytics
   TrendingFlat,    // For Real-time Financial
@@ -81,12 +81,18 @@ import {
   AccountTree,     // For Project Budget Analysis
   AutoGraph,       // For Advanced Analytics
   Equalizer,       // For Performance Metrics
-  // Phase 2 Preparation - AI Icons (for future use)
+  // AI Icons (for future use)
   SmartToy,        // For AI Insights
   Psychology as PsychologyIcon, // For Conversation Analysis
   PsychologyAlt,   // For Predictive Analytics
   Lightbulb,       // For Smart Recommendations
   QueryStats,
+  // User Management Icons
+  PersonAdd,       // For Invite User
+  Email,           // For Pending Invitations  
+  Link as LinkIcon, // For Invitation Links
+  SupervisorAccount, // For Role Management
+  Security,        // For Security Settings
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 
@@ -97,7 +103,7 @@ const DRAWER_WIDTH = 280;
 
 /**
  * Generates navigation items based on the user's role and permissions.
- * ENHANCED: Added comprehensive Phase 1 Analytics navigation with new routes
+ * SIMPLIFIED: Removed nested user management structure
  * @param {string} userRole - The role of the current user.
  * @param {object} canAccess - The access control object from useAuth.
  * @returns {Array} - A filtered array of navigation items.
@@ -208,7 +214,7 @@ const getNavigationItems = (userRole, canAccess) => {
           requiredAccess: () => canAccess.salesPipeline(),
         },
         
-        // Commission Management Section - UNCHANGED
+        // Commission Management Section
         {
           id: 'commission-management',
           title: 'Commission Management',
@@ -257,7 +263,7 @@ const getNavigationItems = (userRole, canAccess) => {
     },
 
     // =============================================================================
-    // ENHANCED ANALYTICS SECTION - PHASE 1 IMPLEMENTATION
+    // ANALYTICS SECTION
     // =============================================================================
     {
       id: 'analytics',
@@ -266,7 +272,6 @@ const getNavigationItems = (userRole, canAccess) => {
       path: '/analytics',
       requiredAccess: () => canAccess.salesReports(),
       children: [
-        // EXISTING Analytics Routes - UNCHANGED
         {
           id: 'analytics-dashboard',
           title: 'Analytics Overview',
@@ -294,15 +299,13 @@ const getNavigationItems = (userRole, canAccess) => {
         },
         {
           id: 'budget-variance',
-          title: 'Budget Variance',
+          title: 'Budget Planning',
           icon: QueryStats,
           path: '/analytics/budget-variance',
           requiredAccess: () => canAccess.viewFinancials(),
-          
         },
-       
 
-        // NEW: Financial Analytics Sub-section
+        // Financial Analytics Sub-section
         {
           id: 'financial-analytics',
           title: 'Financial Analytics',
@@ -324,45 +327,36 @@ const getNavigationItems = (userRole, canAccess) => {
               path: '/analytics/financial',
               requiredAccess: () => canAccess.viewFinancials(),
             },
-            
-            
           ],
         },
       ],
     },
 
-
-    
     // =============================================================================
-    // REMAINING SECTIONS - UNCHANGED
+    // SIMPLIFIED SETTINGS & ADMINISTRATION SECTION
     // =============================================================================
-    
-    
     {
       id: 'settings',
-      title: 'Settings',
+      title: 'Admin Panel',
       icon: Settings,
       path: '/settings',
-      requiredAccess: () => canAccess.projectManagement(),
+      requiredAccess: () => canAccess.userManagement() || canAccess.projectManagement(),
       children: [
+        // SIMPLIFIED: Single User Management item (no nested children)
         {
-          id: 'settings-general',
-          title: 'General',
-          icon: Settings,
-          path: '/settings',
-        },
-        {
-          id: 'settings-users',
+          id: 'user-management',
           title: 'User Management',
           icon: People,
           path: '/settings/users',
           requiredAccess: () => canAccess.userManagement(),
         },
+        
+
       ],
     },
   ];
 
-  // Filter items based on access control - UNCHANGED
+  // Filter items based on access control
   return allItems.filter(item => {
     if (item.requiredAccess && !item.requiredAccess()) {
       return false;
@@ -370,7 +364,7 @@ const getNavigationItems = (userRole, canAccess) => {
     
     if (item.children) {
       item.children = item.children.filter(child => {
-        // Recursively filter nested children (for commission, analytics, and AI sub-menus)
+        // Recursively filter nested children (for commission and analytics sub-menus)
         if (child.children) {
           child.children = child.children.filter(grandchild => {
             return !grandchild.requiredAccess || grandchild.requiredAccess();
@@ -386,7 +380,6 @@ const getNavigationItems = (userRole, canAccess) => {
 
 /**
  * Renders a single navigation item, handling nesting and active states.
- * UNCHANGED - Already handles 3-level nesting properly
  */
 const NavigationItem = ({ item, isActive, onNavigate, isOpen, onToggle, level = 0, openSubMenus = {}, onSubMenuToggle }) => {
   const theme = useTheme();
@@ -467,7 +460,7 @@ const NavigationItem = ({ item, isActive, onNavigate, isOpen, onToggle, level = 
 
 /**
  * Renders the breadcrumb navigation based on the current URL path.
- * ENHANCED: Added comprehensive breadcrumb support for Phase 1 analytics routes
+ * SIMPLIFIED: Updated breadcrumb labels for simplified user management
  */
 const DashboardBreadcrumbs = () => {
   const location = useLocation();
@@ -488,7 +481,7 @@ const DashboardBreadcrumbs = () => {
       let label = segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, ' ');
       
       const labelMap = {
-        // Existing labels - UNCHANGED
+        // Existing labels
         'projects': 'Projects', 
         'leads': 'Leads', 
         'sales': 'Sales',
@@ -502,35 +495,39 @@ const DashboardBreadcrumbs = () => {
         'templates': 'Templates',
         'active': 'Active Plans',
         
-        // Commission Management breadcrumb labels - UNCHANGED
+        // Commission Management breadcrumb labels
         'commissions': 'Commission Management',
         'list': 'All Commissions',
         'structures': 'Commission Structures',
         'payments': 'Payments',
         'dashboard': 'Dashboard',
         
-        // Payment Management breadcrumb labels - UNCHANGED
+        // Payment Management breadcrumb labels
         'due-today': 'Due Today',
         'overdue': 'Overdue Payments',
         'collections': 'Collection Performance',
         'record': 'Record Payment',
         'plans': 'Payment Plans',
         
-        // Invoice Management breadcrumb labels - UNCHANGED
+        // Invoice Management breadcrumb labels
         'invoices': 'Invoice Management',
         'generate': 'Generate Invoice',
         'invoice-reports': 'Invoice Reports',
 
-        // NEW: Phase 1 Analytics breadcrumb labels
+        // Analytics breadcrumb labels
         'budget': 'Budget Analysis',
         'financial': 'Financial Dashboard',
         'kpis': 'KPI Dashboard',
         'variance': 'Variance Analysis',
         'revenue': 'Revenue Analytics',
-        'leads': 'Lead Analytics',
         'budget-variance': 'Budget Variance Dashboard',
         
-        // NEW: AI Intelligence breadcrumb labels (Phase 2 preparation)
+        // SIMPLIFIED: User Management breadcrumb labels (no sub-sections)
+        'users': 'User Management',
+        'organization': 'Organization Settings', 
+        'security': 'Security & Access',
+        
+        // AI Intelligence breadcrumb labels (Phase 2 preparation)
         'conversation': 'Conversation Analysis',
         'predictions': 'Predictive Analytics',
         'recommendations': 'Smart Recommendations',
@@ -585,18 +582,19 @@ const DashboardBreadcrumbs = () => {
 };
 
 /**
- * Renders the user menu in the app bar.
- * UNCHANGED - No modifications needed for Phase 1
+ * Enhanced user menu with simplified user management shortcuts
+ * SIMPLIFIED: Removed specific user management sub-actions from menu
  */
-const UserMenu = () => {
+const EnhancedUserMenu = () => {
   const navigate = useNavigate();
-  const { user, organization, logout, getUserDisplayName, getOrganizationDisplayName } = useAuth();
+  const { user, organization, logout, getUserDisplayName, getOrganizationDisplayName, canAccess } = useAuth();
   const [anchorEl, setAnchorEl] = useState(null);
 
   const handleMenuOpen = (event) => setAnchorEl(event.currentTarget);
   const handleMenuClose = () => setAnchorEl(null);
   const handleProfileClick = () => { navigate('/profile'); handleMenuClose(); };
   const handleSettingsClick = () => { navigate('/settings'); handleMenuClose(); };
+  const handleUserManagementClick = () => { navigate('/settings/users'); handleMenuClose(); };
   const handleLogout = async () => { await logout(); handleMenuClose(); };
 
   return (
@@ -616,14 +614,17 @@ const UserMenu = () => {
         PaperProps={{
           elevation: 8,
           sx: {
-            overflow: 'visible', filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.32))',
-            mt: 1.5, minWidth: 240,
+            overflow: 'visible', 
+            filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.32))',
+            mt: 1.5, 
+            minWidth: 260,
             '& .MuiAvatar-root': { width: 32, height: 32, ml: -0.5, mr: 1 },
           },
         }}
         transformOrigin={{ horizontal: 'right', vertical: 'top' }}
         anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
       >
+        {/* User Info Header */}
         <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}>
           <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
             {getUserDisplayName()}
@@ -632,14 +633,29 @@ const UserMenu = () => {
             {user?.role} @ {getOrganizationDisplayName()}
           </Typography>
         </Box>
+
+        {/* Standard Menu Items */}
         <MenuItem onClick={handleProfileClick} sx={{ py: 1.5 }}>
           <ListItemIcon><AccountCircle fontSize="small" /></ListItemIcon>
           Profile
         </MenuItem>
+        
         <MenuItem onClick={handleSettingsClick} sx={{ py: 1.5 }}>
           <ListItemIcon><Settings fontSize="small" /></ListItemIcon>
           Settings
         </MenuItem>
+
+        {/* SIMPLIFIED: Single User Management shortcut (for authorized users only) */}
+        {canAccess.userManagement() && (
+          <>
+            <Divider />
+            <MenuItem onClick={handleUserManagementClick} sx={{ py: 1.5 }}>
+              <ListItemIcon><People fontSize="small" /></ListItemIcon>
+              User Management
+            </MenuItem>
+          </>
+        )}
+
         <Divider />
         <MenuItem onClick={handleLogout} sx={{ py: 1.5, color: 'error.main' }}>
           <ListItemIcon><Logout fontSize="small" sx={{ color: 'error.main' }} /></ListItemIcon>
@@ -651,7 +667,7 @@ const UserMenu = () => {
 };
 
 // =============================================================================
-// MAIN DASHBOARD LAYOUT COMPONENT - ENHANCED FOR PHASE 1
+// MAIN DASHBOARD LAYOUT COMPONENT - SIMPLIFIED
 // =============================================================================
 
 const DashboardLayout = ({ children }) => {
@@ -668,12 +684,11 @@ const DashboardLayout = ({ children }) => {
   // Memoize navigationItems to prevent re-creation on every render
   const navigationItems = useMemo(() => getNavigationItems(user?.role, canAccess), [user?.role, canAccess]);
 
-  // ENHANCED: Effect to open the parent menu of the active child on page load
-  // Updated to handle 3-level nested menus including analytics, commission, payment, and AI management
+  // Effect to open the parent menu of the active child on page load
   useEffect(() => {
     const currentPath = location.pathname;
     
-    // Check for 3-level nested items (analytics, commission management, payment management, AI intelligence)
+    // Check for 3-level nested items (analytics and commission management)
     navigationItems.forEach(item => {
       if (item.children) {
         item.children.forEach(child => {
@@ -745,7 +760,7 @@ const DashboardLayout = ({ children }) => {
 
       <Box sx={{ p: 2, mt: 'auto', borderTop: '1px solid', borderColor: 'divider' }}>
         <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', display: 'block' }}>
-          PropVantage AI v1.8.0
+          PropVantage AI v1.10.0
         </Typography>
       </Box>
     </Box>
@@ -782,7 +797,7 @@ const DashboardLayout = ({ children }) => {
                 <Badge badgeContent={3} color="error"><Notifications /></Badge>
               </IconButton>
             </Tooltip>
-            <UserMenu />
+            <EnhancedUserMenu />
           </Box>
         </Toolbar>
       </AppBar>

@@ -1,6 +1,6 @@
 // File: src/pages/dashboard/BusinessHeadDashboard.js
-// Description: FIXED Business Head Dashboard - Working with actual backend data
-// Version: 2.1 - Fixed all data loading and display issues
+// Description: FIXED Business Head Dashboard - Removed team section to fix reduce error
+// Version: 2.2 - Fixed teamData.reduce error by removing team functionality
 // Location: src/pages/dashboard/BusinessHeadDashboard.js
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -15,14 +15,12 @@ import {
   IconButton,
   Avatar,
   Chip,
-  LinearProgress,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
   Divider,
   Alert,
   CircularProgress,
@@ -31,7 +29,6 @@ import {
   Zoom,
   Skeleton,
   Tooltip,
-  Stack,
 } from '@mui/material';
 import {
   TrendingUp,
@@ -67,7 +64,7 @@ import {
 } from 'recharts';
 
 import { useAuth } from '../../context/AuthContext';
-import { projectAPI, userAPI } from '../../services/api';
+import { projectAPI } from '../../services/api';
 
 // Utility functions
 const formatCurrency = (amount) => {
@@ -340,81 +337,73 @@ const ProjectPerformanceTable = ({ projects, isLoading }) => {
   );
 };
 
-// Team Overview Component
-const TeamOverview = ({ teamData, isLoading }) => {
+// Revenue Analytics Card Component
+const RevenueAnalyticsCard = ({ projects, isLoading }) => {
   if (isLoading) {
     return (
       <Card sx={{ height: 400 }}>
         <CardContent>
-          <Typography variant="h6" gutterBottom>Team Overview</Typography>
-          <Box sx={{ p: 2 }}>
-            {[...Array(5)].map((_, index) => (
-              <Skeleton key={index} height={50} sx={{ mb: 1 }} />
-            ))}
+          <Typography variant="h6" gutterBottom>Revenue Analytics</Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 300 }}>
+            <CircularProgress />
           </Box>
         </CardContent>
       </Card>
     );
   }
 
-  // Process team data for role distribution
-  const roleCounts = teamData.reduce((acc, member) => {
-    const role = member.role || 'Unknown';
-    acc[role] = (acc[role] || 0) + 1;
+  // Process revenue data by project type
+  const revenueByType = projects.reduce((acc, project) => {
+    const type = project.type || 'Unknown';
+    if (!acc[type]) {
+      acc[type] = { type, revenue: 0, projects: 0 };
+    }
+    acc[type].revenue += project.targetRevenue || 0;
+    acc[type].projects += 1;
     return acc;
   }, {});
 
-  const chartData = Object.entries(roleCounts).map(([role, count]) => ({
-    role,
-    count,
-  }));
+  const chartData = Object.values(revenueByType);
 
   return (
     <Card sx={{ height: 400 }}>
       <CardContent>
-        <Typography variant="h6" gutterBottom>Team Overview</Typography>
+        <Typography variant="h6" gutterBottom>Revenue by Project Type</Typography>
         <ResponsiveContainer width="100%" height={250}>
           <BarChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis 
-              dataKey="role" 
+              dataKey="type" 
               angle={-45}
               textAnchor="end"
               height={80}
               interval={0}
             />
-            <YAxis />
-            <RechartsTooltip />
-            <Bar dataKey="count" fill="#8884d8" />
+            <YAxis tickFormatter={(value) => formatCurrency(value)} />
+            <RechartsTooltip 
+              formatter={(value) => [formatCurrency(value), 'Revenue']}
+            />
+            <Bar dataKey="revenue" fill="#8884d8" />
           </BarChart>
         </ResponsiveContainer>
         
         <Divider sx={{ my: 2 }} />
         
         <Box>
-          <Typography variant="subtitle2" sx={{ mb: 1 }}>Active Team Members</Typography>
-          <Stack spacing={1}>
-            {teamData.slice(0, 5).map((member) => (
-              <Box key={member._id} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.100' }}>
-                  {member.firstName?.charAt(0)}{member.lastName?.charAt(0)}
-                </Avatar>
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    {member.firstName} {member.lastName}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {member.role}
-                  </Typography>
-                </Box>
-                <Chip 
-                  label={member.isActive ? 'Active' : 'Inactive'}
-                  color={member.isActive ? 'success' : 'default'}
-                  size="small"
-                />
+          <Typography variant="subtitle2" sx={{ mb: 1 }}>Revenue Breakdown</Typography>
+          {chartData.map((item, index) => (
+            <Box key={item.type} sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+              <Typography variant="body2">{item.type}</Typography>
+              <Box sx={{ textAlign: 'right' }}>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                  {formatCurrency(item.revenue)}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {item.projects} project{item.projects !== 1 ? 's' : ''}
+                </Typography>
               </Box>
-            ))}
-          </Stack>
+            </Box>
+          ))}
         </Box>
       </CardContent>
     </Card>
@@ -436,13 +425,11 @@ const BusinessHeadDashboard = () => {
       avgProjectValue: 0,
     },
     projects: [],
-    teamData: [],
   });
 
   const [loading, setLoading] = useState({
     kpis: true,
     projects: true,
-    team: true,
   });
 
   const [error, setError] = useState(null);
@@ -456,30 +443,14 @@ const BusinessHeadDashboard = () => {
       
       console.log('🔄 Fetching dashboard data...');
       
-      // Fetch data in parallel with proper error handling
-      const [projectsResult, teamResult] = await Promise.allSettled([
-        projectAPI.getProjects(),
-        userAPI.getUsers(),
-      ]);
-
+      // Fetch projects data
+      const projectsResult = await projectAPI.getProjects();
+      
       let projects = [];
-      let teamData = [];
 
       // Process projects data
-      if (projectsResult.status === 'fulfilled') {
-        console.log('✅ Projects API Response:', projectsResult.value.data);
-        projects = projectsResult.value.data.data || projectsResult.value.data || [];
-      } else {
-        console.error('❌ Projects API failed:', projectsResult.reason);
-      }
-
-      // Process team data
-      if (teamResult.status === 'fulfilled') {
-        console.log('✅ Team API Response:', teamResult.value.data);
-        teamData = teamResult.value.data.data || teamResult.value.data || [];
-      } else {
-        console.error('❌ Team API failed:', teamResult.reason);
-      }
+      console.log('✅ Projects API Response:', projectsResult.data);
+      projects = projectsResult.data.data || projectsResult.data || [];
 
       // Calculate KPIs from actual data
       const totalRevenue = projects.reduce((sum, project) => sum + (project.targetRevenue || 0), 0);
@@ -499,13 +470,11 @@ const BusinessHeadDashboard = () => {
       setDashboardData({
         kpis,
         projects,
-        teamData,
       });
 
       setLoading({
         kpis: false,
         projects: false,
-        team: false,
       });
 
     } catch (error) {
@@ -514,7 +483,6 @@ const BusinessHeadDashboard = () => {
       setLoading({
         kpis: false,
         projects: false,
-        team: false,
       });
     } finally {
       if (showRefreshing) setRefreshing(false);
@@ -596,7 +564,6 @@ const BusinessHeadDashboard = () => {
             title="Total Revenue Target"
             value={formatCurrency(dashboardData.kpis.totalRevenue)}
             subtitle="Across all projects"
-           
             icon={AttachMoney}
             color="success"
             isLoading={loading.kpis}
@@ -608,7 +575,6 @@ const BusinessHeadDashboard = () => {
             title="Active Projects"
             value={dashboardData.kpis.totalProjects}
             subtitle="In development pipeline"
-            
             icon={Business}
             color="primary"
             isLoading={loading.kpis}
@@ -620,7 +586,6 @@ const BusinessHeadDashboard = () => {
             title="Total Units"
             value={formatNumber(dashboardData.kpis.totalUnits)}
             subtitle="Across all projects"
-            
             icon={Construction}
             color="info"
             isLoading={loading.kpis}
@@ -632,7 +597,6 @@ const BusinessHeadDashboard = () => {
             title="Avg Project Value"
             value={formatCurrency(dashboardData.kpis.avgProjectValue)}
             subtitle="Revenue per project"
-            
             icon={Timeline}
             color="warning"
             isLoading={loading.kpis}
@@ -657,12 +621,12 @@ const BusinessHeadDashboard = () => {
         </Grid>
       </Grid>
 
-      {/* Team Overview */}
+      {/* Revenue Analytics Row */}
       <Grid container spacing={3}>
         <Grid item xs={12}>
-          <TeamOverview 
-            teamData={dashboardData.teamData} 
-            isLoading={loading.team}
+          <RevenueAnalyticsCard 
+            projects={dashboardData.projects} 
+            isLoading={loading.projects}
           />
         </Grid>
       </Grid>

@@ -1,6 +1,6 @@
 // File: src/services/api.js
-// Description: Complete API service configuration for PropVantage AI - Enhanced for Phase 1 Analytics
-// Version: 2.1 - ENHANCED for Phase 1 Analytics (ADDITIVE ONLY - No existing functionality removed)
+// Description: Complete API service configuration for PropVantage AI - Enhanced for Phase 1 Analytics + Invitation System
+// Version: 2.2 - ENHANCED for Invitation System (ADDITIVE ONLY - No existing functionality removed)
 // Location: src/services/api.js
 
 import axios from 'axios';
@@ -73,21 +73,266 @@ export const authAPI = {
 };
 
 // =============================================================================
-// 2. USER MANAGEMENT SERVICES (/api/users) - UNCHANGED
+// 2. USER MANAGEMENT SERVICES (/api/users) - ENHANCED WITH NEW ENDPOINTS
 // =============================================================================
 export const userAPI = {
-  // Get all users in organization
+  // EXISTING: Get all users in organization (UNCHANGED)
   getUsers: (params = {}) => api.get('/users', { params }),
   
-  // Update user by ID
+  // EXISTING: Update user by ID (UNCHANGED)
   updateUser: (id, userData) => api.put(`/users/${id}`, userData),
   
-  // Invite new user
+  // DEPRECATED: Invite user functionality moved to invitationAPI
+  // KEEPING FOR BACKWARDS COMPATIBILITY - will return error from backend
   inviteUser: (inviteData) => api.post('/users/invite', inviteData),
+  
+  // NEW: Enhanced user management endpoints
+  /**
+   * Get single user by ID with full details
+   * @param {string} id - User ID
+   * @returns {Promise} User details
+   */
+  getUserById: (id) => api.get(`/users/${id}`),
+  
+  /**
+   * Get current user's profile
+   * @returns {Promise} Current user profile
+   */
+  getCurrentUserProfile: () => api.get('/users/me'),
+  
+  /**
+   * Update current user's profile
+   * @param {Object} profileData - Profile data to update
+   * @returns {Promise} Updated profile
+   */
+  updateCurrentUserProfile: (profileData) => api.put('/users/me', profileData),
+  
+  /**
+   * Delete/deactivate a user (soft delete)
+   * @param {string} id - User ID to delete
+   * @returns {Promise} Deletion confirmation
+   */
+  deleteUser: (id) => api.delete(`/users/${id}`),
+  
+  /**
+   * Health check for user management system
+   * @returns {Promise} System health status
+   */
+  getUserSystemHealth: () => api.get('/users/health'),
 };
 
 // =============================================================================
-// 3. PROJECT MANAGEMENT SERVICES (/api/projects) - UNCHANGED
+// 3. INVITATION MANAGEMENT SERVICES (/api/invitations) - NEW SECTION
+// =============================================================================
+export const invitationAPI = {
+  // =============================================================================
+  // PUBLIC INVITATION ENDPOINTS (No authentication required)
+  // =============================================================================
+  
+  /**
+   * Verify invitation token and get invitation details
+   * @param {string} userId - User ID from invitation link
+   * @param {Object} params - Query parameters { token, email }
+   * @returns {Promise} Invitation verification result
+   */
+  verifyInvitation: (userId, params) => api.get(`/invitations/verify/${userId}`, { params }),
+  
+  /**
+   * Accept invitation and set password (final step)
+   * @param {string} userId - User ID from invitation link
+   * @param {Object} acceptanceData - { token, email, password, confirmPassword }
+   * @returns {Promise} User data and authentication token
+   */
+  acceptInvitation: (userId, acceptanceData) => api.post(`/invitations/accept/${userId}`, acceptanceData),
+  
+  /**
+   * Get invitation status (for checking validity, expiry, etc.)
+   * @param {string} userId - User ID from invitation link
+   * @param {Object} params - Optional query parameters { token }
+   * @returns {Promise} Invitation status information
+   */
+  getInvitationStatus: (userId, params = {}) => api.get(`/invitations/status/${userId}`, { params }),
+  
+  // =============================================================================
+  // PROTECTED INVITATION MANAGEMENT ENDPOINTS (Authentication required)
+  // =============================================================================
+  
+  /**
+   * Generate invitation link from UI (main invitation creation endpoint)
+   * @param {Object} invitationData - { firstName, lastName, email, role }
+   * @returns {Promise} Generated invitation link and token
+   */
+  generateInvitationLink: (invitationData) => api.post('/invitations/generate', invitationData),
+  
+  /**
+   * Resend invitation with new token
+   * @param {string} userId - User ID to resend invitation to
+   * @returns {Promise} New invitation link and token
+   */
+  resendInvitation: (userId) => api.post(`/invitations/resend/${userId}`),
+  
+  /**
+   * Revoke/cancel pending invitation
+   * @param {string} userId - User ID to revoke invitation for
+   * @returns {Promise} Revocation confirmation
+   */
+  revokeInvitation: (userId) => api.delete(`/invitations/revoke/${userId}`),
+  
+  /**
+   * Get detailed invitation information for management
+   * @param {string} userId - User ID to get invitation details for
+   * @returns {Promise} Comprehensive invitation details
+   */
+  getInvitationDetails: (userId) => api.get(`/invitations/details/${userId}`),
+  
+  /**
+   * Refresh invitation token (extend expiry)
+   * @param {string} userId - User ID to refresh invitation for
+   * @returns {Promise} New invitation link and extended expiry
+   */
+  refreshInvitationToken: (userId) => api.put(`/invitations/refresh/${userId}`),
+  
+  // =============================================================================
+  // ADMIN-ONLY INVITATION ENDPOINTS (Business Head + Project Director only)
+  // =============================================================================
+  
+  /**
+   * Get invitation analytics and statistics
+   * @param {Object} params - Query parameters { startDate, endDate, organizationId }
+   * @returns {Promise} Invitation analytics data
+   */
+  getInvitationAnalytics: (params = {}) => api.get('/invitations/analytics', { params }),
+  
+  /**
+   * Generate multiple invitations at once
+   * @param {Object} bulkData - { invitations: [{ firstName, lastName, email, role }] }
+   * @returns {Promise} Bulk invitation results
+   */
+  bulkGenerateInvitations: (bulkData) => api.post('/invitations/bulk-generate', bulkData),
+  
+  /**
+   * Revoke multiple pending invitations
+   * @param {Object} bulkData - { userIds: [userId1, userId2, ...] }
+   * @returns {Promise} Bulk revocation results
+   */
+  bulkRevokeInvitations: (bulkData) => api.delete('/invitations/bulk-revoke', { data: bulkData }),
+  
+  /**
+   * Health check for invitation system
+   * @returns {Promise} System health status
+   */
+  getInvitationSystemHealth: () => api.get('/invitations/health'),
+  
+  // =============================================================================
+  // INVITATION UTILITY FUNCTIONS
+  // =============================================================================
+  
+  /**
+   * Parse invitation link to extract user ID and token
+   * @param {string} invitationLink - Full invitation URL
+   * @returns {Object} Parsed invitation data { userId, token, email }
+   */
+  parseInvitationLink: (invitationLink) => {
+    try {
+      const url = new URL(invitationLink);
+      const pathParts = url.pathname.split('/');
+      const userId = pathParts[pathParts.length - 1];
+      const token = url.searchParams.get('token');
+      const email = url.searchParams.get('email');
+      
+      return { userId, token, email };
+    } catch (error) {
+      console.error('Error parsing invitation link:', error);
+      return { userId: null, token: null, email: null };
+    }
+  },
+  
+  /**
+   * Validate invitation link format
+   * @param {string} invitationLink - Invitation URL to validate
+   * @returns {boolean} True if link format is valid
+   */
+  validateInvitationLink: (invitationLink) => {
+    if (!invitationLink || typeof invitationLink !== 'string') return false;
+    
+    try {
+      const url = new URL(invitationLink);
+      const { userId, token, email } = invitationAPI.parseInvitationLink(invitationLink);
+      
+      return !!(userId && token && email && url.pathname.includes('/invite/'));
+    } catch {
+      return false;
+    }
+  },
+  
+  /**
+   * Get invitation status color for UI display
+   * @param {string} status - Invitation status
+   * @returns {string} Color code for status display
+   */
+  getStatusColor: (status) => {
+    const statusColors = {
+      pending: 'warning',
+      accepted: 'success',
+      expired: 'error',
+      revoked: 'default',
+    };
+    return statusColors[status] || 'default';
+  },
+  
+  /**
+   * Get invitation status display text
+   * @param {string} status - Invitation status
+   * @returns {string} Human-readable status text
+   */
+  getStatusText: (status) => {
+    const statusTexts = {
+      pending: 'Pending',
+      accepted: 'Accepted',
+      expired: 'Expired',
+      revoked: 'Revoked',
+    };
+    return statusTexts[status] || 'Unknown';
+  },
+  
+  /**
+   * Calculate days remaining for invitation
+   * @param {string} expiresAt - ISO date string of expiry
+   * @returns {number} Days remaining (negative if expired)
+   */
+  calculateDaysRemaining: (expiresAt) => {
+    if (!expiresAt) return 0;
+    
+    const expiry = new Date(expiresAt);
+    const now = new Date();
+    const diffTime = expiry - now;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    return diffDays;
+  },
+  
+  /**
+   * Format invitation expiry for display
+   * @param {string} expiresAt - ISO date string of expiry
+   * @returns {string} Formatted expiry text
+   */
+  formatExpiry: (expiresAt) => {
+    const daysRemaining = invitationAPI.calculateDaysRemaining(expiresAt);
+    
+    if (daysRemaining < 0) {
+      return `Expired ${Math.abs(daysRemaining)} day${Math.abs(daysRemaining) !== 1 ? 's' : ''} ago`;
+    } else if (daysRemaining === 0) {
+      return 'Expires today';
+    } else if (daysRemaining === 1) {
+      return 'Expires tomorrow';
+    } else {
+      return `Expires in ${daysRemaining} days`;
+    }
+  },
+};
+
+// =============================================================================
+// 4. PROJECT MANAGEMENT SERVICES (/api/projects) - UNCHANGED
 // =============================================================================
 export const projectAPI = {
   // Basic CRUD operations (confirmed in backend)
@@ -99,7 +344,7 @@ export const projectAPI = {
 };
 
 // =============================================================================
-// 4. PROJECT PAYMENT CONFIGURATION SERVICES (/api/projects) - UNCHANGED
+// 5. PROJECT PAYMENT CONFIGURATION SERVICES (/api/projects) - UNCHANGED
 // =============================================================================
 export const projectPaymentAPI = {
   // Payment configuration for projects
@@ -114,7 +359,7 @@ export const projectPaymentAPI = {
 };
 
 // =============================================================================
-// 5. TOWER MANAGEMENT SERVICES (/api/towers) - UNCHANGED
+// 6. TOWER MANAGEMENT SERVICES (/api/towers) - UNCHANGED
 // =============================================================================
 export const towerAPI = {
   // Get all towers
@@ -140,7 +385,7 @@ export const towerAPI = {
 };
 
 // =============================================================================
-// 6. UNIT MANAGEMENT SERVICES (/api/units) - UNCHANGED
+// 7. UNIT MANAGEMENT SERVICES (/api/units) - UNCHANGED
 // =============================================================================
 export const unitAPI = {
   // Get all units
@@ -163,7 +408,7 @@ export const unitAPI = {
 };
 
 // =============================================================================
-// 7. LEAD MANAGEMENT SERVICES (/api/leads) - UNCHANGED
+// 8. LEAD MANAGEMENT SERVICES (/api/leads) - UNCHANGED
 // =============================================================================
 export const leadAPI = {
   // Basic CRUD operations
@@ -192,7 +437,7 @@ export const leadAPI = {
 };
 
 // =============================================================================
-// 8. SALES MANAGEMENT SERVICES (/api/sales) - UNCHANGED
+// 9. SALES MANAGEMENT SERVICES (/api/sales) - UNCHANGED
 // =============================================================================
 export const salesAPI = {
   // Get all sales
@@ -221,7 +466,7 @@ export const salesAPI = {
 };
 
 // =============================================================================
-// 9. PRICING SERVICES (/api/pricing) - UNCHANGED
+// 10. PRICING SERVICES (/api/pricing) - UNCHANGED
 // =============================================================================
 export const pricingAPI = {
   // Generate cost sheet for unit (confirmed in backend)
@@ -232,7 +477,7 @@ export const pricingAPI = {
 };
 
 // =============================================================================
-// 10. AI INSIGHTS SERVICES (/api/ai) - UNCHANGED
+// 11. AI INSIGHTS SERVICES (/api/ai) - UNCHANGED
 // =============================================================================
 export const aiAPI = {
   // Get AI insights for lead (confirmed in backend)
@@ -240,7 +485,7 @@ export const aiAPI = {
 };
 
 // =============================================================================
-// 11. FILE MANAGEMENT SERVICES (/api/files) - UNCHANGED
+// 12. FILE MANAGEMENT SERVICES (/api/files) - UNCHANGED
 // =============================================================================
 export const fileAPI = {
   // Upload file (confirmed in backend)
@@ -257,7 +502,7 @@ export const fileAPI = {
 };
 
 // =============================================================================
-// 12. ANALYTICS SERVICES - ENHANCED FOR PHASE 1 (EXISTING + NEW)
+// 13. ANALYTICS SERVICES - ENHANCED FOR PHASE 1 (EXISTING + NEW)
 // =============================================================================
 export const analyticsAPI = {
   // =============================================================================
@@ -347,7 +592,7 @@ export const analyticsAPI = {
 };
 
 // =============================================================================
-// 13. BUDGET VS ACTUAL ANALYTICS - ENHANCED (EXISTING + NEW)
+// 14. BUDGET VS ACTUAL ANALYTICS - ENHANCED (EXISTING + NEW)
 // =============================================================================
 export const budgetVsActualAPI = {
   // =============================================================================
@@ -390,7 +635,7 @@ export const budgetVsActualAPI = {
 };
 
 // =============================================================================
-// 14. PREDICTIVE ANALYTICS SERVICES - UNCHANGED
+// 15. PREDICTIVE ANALYTICS SERVICES - UNCHANGED
 // =============================================================================
 export const predictiveAPI = {
   // Sales forecasting (confirmed in backend)
@@ -407,7 +652,7 @@ export const predictiveAPI = {
 };
 
 // =============================================================================
-// 15. PAYMENT SERVICES - UNCHANGED
+// 16. PAYMENT SERVICES - UNCHANGED
 // =============================================================================
 export const paymentAPI = {
   // Payment Plans
@@ -433,7 +678,7 @@ export const paymentAPI = {
 };
 
 // =============================================================================
-// 16. COMMISSION SERVICES - UNCHANGED
+// 17. COMMISSION SERVICES - UNCHANGED
 // =============================================================================
 export const commissionAPI = {
   // Basic commission operations
@@ -474,7 +719,7 @@ export const commissionAPI = {
 };
 
 // =============================================================================
-// 17-21. ALL OTHER SERVICES REMAIN UNCHANGED
+// 18-22. ALL OTHER SERVICES REMAIN UNCHANGED
 // =============================================================================
 
 // Document services - UNCHANGED
@@ -722,8 +967,165 @@ export const realTimeAPI = {
   getSystemStatus: () => api.get('/analytics/system-status'),
 };
 
+// =============================================================================
+// NEW INVITATION UTILITY FUNCTIONS
+// =============================================================================
 
-
+/**
+ * Invitation utility functions for common operations
+ * NEW: Added comprehensive utility functions for invitation management
+ */
+export const invitationUtils = {
+  /**
+   * Validate invitation form data
+   * @param {Object} data - Invitation form data
+   * @returns {Object} Validation result with errors array
+   */
+  validateInvitationData: (data) => {
+    const errors = [];
+    
+    if (!data.firstName || data.firstName.trim().length < 2) {
+      errors.push('First name must be at least 2 characters long');
+    }
+    
+    if (!data.lastName || data.lastName.trim().length < 2) {
+      errors.push('Last name must be at least 2 characters long');
+    }
+    
+    if (!data.email) {
+      errors.push('Email is required');
+    } else {
+      const emailRegex = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
+      if (!emailRegex.test(data.email)) {
+        errors.push('Please provide a valid email address');
+      }
+    }
+    
+    if (!data.role) {
+      errors.push('Role is required');
+    }
+    
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
+  },
+  
+  /**
+   * Validate password strength
+   * @param {string} password - Password to validate
+   * @returns {Object} Validation result with strength score
+   */
+  validatePassword: (password) => {
+    const errors = [];
+    const checks = {
+      length: false,
+      uppercase: false,
+      lowercase: false,
+      numbers: false,
+      specialChar: false
+    };
+    
+    if (!password) {
+      errors.push('Password is required');
+      return { isValid: false, errors, checks, strength: 0 };
+    }
+    
+    if (password.length >= 8) {
+      checks.length = true;
+    } else {
+      errors.push('Password must be at least 8 characters long');
+    }
+    
+    if (/[A-Z]/.test(password)) {
+      checks.uppercase = true;
+    } else {
+      errors.push('Password must contain at least one uppercase letter');
+    }
+    
+    if (/[a-z]/.test(password)) {
+      checks.lowercase = true;
+    } else {
+      errors.push('Password must contain at least one lowercase letter');
+    }
+    
+    if (/\d/.test(password)) {
+      checks.numbers = true;
+    } else {
+      errors.push('Password must contain at least one number');
+    }
+    
+    if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+      checks.specialChar = true;
+    } else {
+      errors.push('Password must contain at least one special character');
+    }
+    
+    const strength = Object.values(checks).filter(Boolean).length / Object.keys(checks).length * 100;
+    
+    return {
+      isValid: errors.length === 0,
+      errors,
+      checks,
+      strength: Math.round(strength)
+    };
+  },
+  
+  /**
+   * Generate role options for invitation form
+   * @returns {Array} Array of role options
+   */
+  getRoleOptions: () => [
+    { value: 'Sales Head', label: 'Sales Head' },
+    { value: 'Marketing Head', label: 'Marketing Head' },
+    { value: 'Finance Head', label: 'Finance Head' },
+    { value: 'Sales Manager', label: 'Sales Manager' },
+    { value: 'Finance Manager', label: 'Finance Manager' },
+    { value: 'Channel Partner Manager', label: 'Channel Partner Manager' },
+    { value: 'Sales Executive', label: 'Sales Executive' },
+    { value: 'Channel Partner Admin', label: 'Channel Partner Admin' },
+    { value: 'Channel Partner Agent', label: 'Channel Partner Agent' },
+  ],
+  
+  /**
+   * Check if current user can invite users with specific role
+   * @param {string} currentUserRole - Current user's role
+   * @param {string} targetRole - Role to check invitation permission for
+   * @returns {boolean} True if invitation is allowed
+   */
+  canInviteRole: (currentUserRole, targetRole) => {
+    const roleHierarchy = {
+      'Business Head': 1,
+      'Project Director': 2,
+      'Sales Head': 3,
+      'Marketing Head': 3,
+      'Finance Head': 3,
+      'Sales Manager': 4,
+      'Finance Manager': 4,
+      'Channel Partner Manager': 4,
+      'Sales Executive': 5,
+      'Channel Partner Admin': 5,
+      'Channel Partner Agent': 6,
+    };
+    
+    const currentLevel = roleHierarchy[currentUserRole] || 10;
+    const targetLevel = roleHierarchy[targetRole] || 10;
+    
+    return currentLevel < targetLevel;
+  },
+  
+  /**
+   * Get available roles that current user can invite
+   * @param {string} currentUserRole - Current user's role
+   * @returns {Array} Array of available role options
+   */
+  getAvailableRoles: (currentUserRole) => {
+    const allRoles = invitationUtils.getRoleOptions();
+    return allRoles.filter(role => 
+      invitationUtils.canInviteRole(currentUserRole, role.value)
+    );
+  },
+};
 
 // =============================================================================
 // EXISTING UTILITY FUNCTIONS - UNCHANGED
@@ -776,17 +1178,16 @@ export const logout = () => {
   window.location.href = '/login';
 };
 
-
-
 // =============================================================================
-// DEFAULT EXPORT - ENHANCED FOR PHASE 1 (EXISTING + NEW)
+// DEFAULT EXPORT - ENHANCED FOR PHASE 1 + INVITATION SYSTEM (EXISTING + NEW)
 // =============================================================================
 
 // Default export with all APIs - ENHANCED
 export default {
-  // Existing APIs (UNCHANGED)
+  // Existing APIs (ENHANCED)
   auth: authAPI,
-  user: userAPI,
+  user: userAPI, // ENHANCED with new endpoints
+  invitation: invitationAPI, // NEW section
   project: projectAPI,
   projectPayment: projectPaymentAPI,
   tower: towerAPI,
@@ -810,9 +1211,10 @@ export default {
   // NEW for Phase 1
   realTime: realTimeAPI,
   
-  // Utilities (ENHANCED)
+  // Utilities (ENHANCED with new invitation utils)
   utils: {
     analytics: analyticsUtils, // NEW
+    invitation: invitationUtils, // NEW
     error: handleAPIError, // EXISTING
   },
 };

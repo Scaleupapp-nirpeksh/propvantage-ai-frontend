@@ -1,6 +1,6 @@
 // File: src/App.js
 // Description: Main App component with routing, theme, and authentication setup for PropVantage AI
-// Version: 1.6 - ENHANCED for Phase 1 Analytics Implementation (ADDITIVE ONLY)
+// Version: 1.6 - ENHANCED for Phase 1 Analytics Implementation + INVITATION ROUTE ADDED
 // Location: src/App.js
 
 import React, { Suspense } from 'react';
@@ -22,6 +22,7 @@ import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
+const InviteAcceptancePage = React.lazy(() => import('./pages/auth/InviteAcceptancePage'));
 
 // Dashboard Pages (Lazy loaded for performance) - UNCHANGED
 const BusinessHeadDashboard = React.lazy(() => import('./pages/dashboard/BusinessHeadDashboard'));
@@ -139,6 +140,7 @@ const LoadingFallback = ({ message = 'Loading...', section = null }) => (
       {section === 'analytics' ? 'Loading analytics dashboard...' : 
        section === 'budget' ? 'Loading financial data...' :
        section === 'realtime' ? 'Connecting to real-time data...' :
+       section === 'invitation' ? 'Loading invitation...' :
        message}
     </Typography>
   </Box>
@@ -225,14 +227,14 @@ const PublicRoute = ({ children }) => {
 };
 
 // =============================================================================
-// MAIN APP ROUTES COMPONENT - ENHANCED FOR PHASE 1
+// MAIN APP ROUTES COMPONENT - ENHANCED FOR INVITATION ROUTES
 // =============================================================================
 
 const AppRoutes = () => {
   return (
     <Routes>
       {/* ========================================= */}
-      {/* PUBLIC ROUTES - UNCHANGED */}
+      {/* PUBLIC ROUTES - ENHANCED WITH INVITATION */}
       {/* ========================================= */}
 
       <Route path="/login" element={
@@ -265,6 +267,24 @@ const AppRoutes = () => {
             <ResetPasswordPage />
           </AuthLayout>
         </PublicRoute>
+      } />
+
+      {/* ========================================= */}
+      {/* INVITATION ROUTES - NEW & CRITICAL */}
+      {/* ========================================= */}
+
+      {/* Invitation Acceptance Route - PUBLIC (no auth required) */}
+      <Route path="/invite/:userId" element={
+        <PublicRoute>
+          <Suspense fallback={<LoadingFallback section="invitation" message="Loading invitation..." />}>
+            <InviteAcceptancePage />
+          </Suspense>
+        </PublicRoute>
+      } />
+
+      {/* Alternative invitation route format for backwards compatibility */}
+      <Route path="/invitation/:userId" element={
+        <Navigate to="/invite/:userId" replace />
       } />
 
       {/* ========================================= */}
