@@ -1,1588 +1,685 @@
-/**
- * File: src/pages/sales/SalesReportsPage.js
- * Description: Enhanced sales reporting dashboard with modern UX and frontend export functionality
- * Version: 2.0 - UX Enhancement & Frontend Export Implementation
- * Location: src/pages/sales/SalesReportsPage.js
- */
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  Box,
-  Grid,
-  Card,
-  CardContent,
-  CardHeader,
-  Typography,
-  Button,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Chip,
-  IconButton,
-  Avatar,
-  Alert,
-  CircularProgress,
-  Stack,
-  useTheme,
-  useMediaQuery,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  LinearProgress,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TablePagination,
-  Tabs,
-  Tab,
-  Divider,
-  Tooltip,
-  Badge,
-  Fade,
-  Slide,
-  Zoom,
-  Breadcrumbs,
-  Link,
-  Menu,
-  ListItemIcon,
-  ListItemText,
-  Switch,
-  FormControlLabel,
-  ToggleButton,
-  ToggleButtonGroup,
-  Skeleton,
-  alpha,
-  SpeedDial,
-  SpeedDialAction,
-  SpeedDialIcon,
+  Box, Grid, Card, CardContent, CardHeader, Typography, Button,
+  IconButton, Avatar, Alert, Chip, Stack, Tabs, Tab, Tooltip,
+  Menu, MenuItem, ListItemIcon, ListItemText, LinearProgress,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+  TablePagination, Skeleton, ToggleButton, ToggleButtonGroup,
+  useTheme, useMediaQuery, alpha,
 } from '@mui/material';
 import {
-  Assessment,
-  TrendingUp,
-  TrendingDown,
-  AttachMoney,
-  ExpandMore,
-  Refresh,
-  FileDownload,
-  Print,
-  Share,
-  CalendarToday,
-  Person,
-  Business,
-  PieChart,
-  BarChart,
-  ShowChart,
-  Timeline as TimelineIcon,
-  MonetizationOn,
-  CheckCircle,
-  Schedule,
-  Warning,
-  TableChart,
-  InsertChart,
-  FilterList,
-  Clear,
-  DateRange,
-  GetApp,
-  Visibility,
-  Dashboard,
-  Home,
-  Analytics,
-  PictureAsPdf,
-  TableView,
-  SaveAlt,
-  CloudDownload,
-  DataSaverOff,
-  FullscreenRounded,
-  SettingsRounded,
-  AutoGraphRounded,
-  LeaderboardRounded,
-  PieChartRounded,
-  BarChartRounded,
-  TimelineRounded,
+  Assessment, Refresh, FileDownload, Print, Person, Business,
+  MonetizationOn, CheckCircle, TrendingUp, ShowChart, BarChart,
+  Timeline as TimelineIcon, Visibility, CloudDownload,
+  PictureAsPdf, TableView, Analytics,
 } from '@mui/icons-material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import {
-  LineChart,
-  Line,
-  AreaChart,
-  Area,
-  BarChart as RechartsBarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as RechartsTooltip,
-  Legend,
-  ResponsiveContainer,
-  PieChart as RechartsPieChart,
-  Pie,
-  Cell,
-  ComposedChart,
+  AreaChart, Area, BarChart as RechartsBarChart, Bar,
+  XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
+  Legend, ResponsiveContainer, PieChart as RechartsPieChart,
+  Pie, Cell, ComposedChart, LineChart, Line,
 } from 'recharts';
 
 import { useAuth } from '../../context/AuthContext';
 import { salesAPI, projectAPI, userAPI } from '../../services/api';
-import { formatCurrency, formatDate, formatPercentage } from '../../utils/formatters';
+import { formatCurrency, formatDate } from '../../utils/formatters';
+import { PageHeader, KPICard, FilterBar, StatusChip } from '../../components/common';
+import { CHART_COLORS } from '../../constants/statusConfig';
 
-// ============================================================================
-// CONSTANTS AND CONFIGURATION
-// ============================================================================
-
-const REPORT_TYPES = [
-  {
-    key: 'overview',
-    label: 'Sales Overview',
-    description: 'High-level sales metrics and trends',
-    icon: AutoGraphRounded,
-    color: 'primary',
-  },
-  {
-    key: 'performance',
-    label: 'Performance Analysis',
-    description: 'Detailed performance by salesperson and project',
-    icon: LeaderboardRounded,
-    color: 'success',
-  },
-  {
-    key: 'revenue',
-    label: 'Revenue Analytics',
-    description: 'Revenue trends and forecasting',
-    icon: MonetizationOn,
-    color: 'info',
-  },
-  {
-    key: 'detailed',
-    label: 'Detailed Reports',
-    description: 'Comprehensive data tables and exports',
-    icon: TableView,
-    color: 'warning',
-  },
-];
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
 
 const TIME_PERIODS = [
-  { value: '7', label: 'Last 7 days', days: 7 },
-  { value: '30', label: 'Last 30 days', days: 30 },
-  { value: '90', label: 'Last 3 months', days: 90 },
-  { value: '180', label: 'Last 6 months', days: 180 },
-  { value: '365', label: 'Last year', days: 365 },
-  { value: 'ytd', label: 'Year to date', days: null },
-  { value: 'custom', label: 'Custom range', days: null },
+  { value: 'all', label: 'All time' },
+  { value: '7',   label: 'Last 7 days' },
+  { value: '30',  label: 'Last 30 days' },
+  { value: '90',  label: 'Last 3 months' },
+  { value: '180', label: 'Last 6 months' },
+  { value: '365', label: 'Last year' },
 ];
 
-const CHART_COLORS = [
-  '#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#00ff7f', 
-  '#ff6b6b', '#4ecdc4', '#45b7d1', '#f9ca24', '#f0932b'
-];
-
-const EXPORT_FORMATS = [
-  { key: 'pdf', label: 'PDF Report', icon: PictureAsPdf, description: 'Complete visual report' },
-  { key: 'excel', label: 'Excel File', icon: TableView, description: 'Spreadsheet with all data' },
-  { key: 'csv', label: 'CSV Data', icon: DataSaverOff, description: 'Raw data export' },
-  { key: 'print', label: 'Print Report', icon: Print, description: 'Print-friendly version' },
-];
-
-// ============================================================================
-// UTILITY FUNCTIONS
-// ============================================================================
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 const generateDateRange = (period) => {
+  if (!period || period === 'all') return { startDate: null, endDate: null };
+  const days = parseInt(period, 10);
+  if (isNaN(days)) return { startDate: null, endDate: null };
   const endDate = new Date();
-  let startDate = new Date();
-
-  switch (period) {
-    case 'ytd':
-      startDate = new Date(endDate.getFullYear(), 0, 1);
-      break;
-    case 'custom':
-      return { startDate: null, endDate: null };
-    default:
-      const days = parseInt(period);
-      startDate.setDate(endDate.getDate() - days);
-  }
-
+  const startDate = new Date();
+  startDate.setDate(endDate.getDate() - days);
   return { startDate, endDate };
 };
 
-const aggregateDataByPeriod = (data, period) => {
-  const groupedData = {};
-  
+const aggregateByPeriod = (data, periodDays) => {
+  const grouped = {};
   data.forEach(item => {
     const date = new Date(item.bookingDate || item.createdAt);
     let key;
-    
-    if (period <= 30) {
-      key = date.toLocaleDateString();
-    } else if (period <= 180) {
-      const weekStart = new Date(date);
-      weekStart.setDate(date.getDate() - date.getDay());
-      key = `Week of ${weekStart.toLocaleDateString()}`;
+    if (periodDays <= 30) {
+      key = date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+    } else if (periodDays <= 180) {
+      const ws = new Date(date);
+      ws.setDate(date.getDate() - date.getDay());
+      key = ws.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
     } else {
-      key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      key = date.toLocaleDateString('en-IN', { month: 'short', year: '2-digit' });
     }
-    
-    if (!groupedData[key]) {
-      groupedData[key] = {
-        period: key,
-        sales: 0,
-        revenue: 0,
-        averageValue: 0,
-      };
-    }
-    
-    groupedData[key].sales += 1;
-    groupedData[key].revenue += item.salePrice || 0;
+    if (!grouped[key]) grouped[key] = { period: key, sales: 0, revenue: 0 };
+    grouped[key].sales += 1;
+    grouped[key].revenue += item.salePrice || 0;
   });
-  
-  Object.values(groupedData).forEach(item => {
-    item.averageValue = item.sales > 0 ? item.revenue / item.sales : 0;
-  });
-  
-  return Object.values(groupedData).sort((a, b) => a.period.localeCompare(b.period));
+  return Object.values(grouped).sort((a, b) => a.period.localeCompare(b.period));
 };
 
-// ============================================================================
-// EXPORT FUNCTIONALITY
-// ============================================================================
-
-const exportToPDF = async (reportData, filters) => {
-  try {
-    // Import html2pdf dynamically
-    const html2pdf = await import('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js');
-    
-    const element = document.getElementById('report-content');
-    const options = {
-      margin: 1,
-      filename: `sales-report-${new Date().toISOString().split('T')[0]}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2 },
-      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-    };
-    
-    html2pdf.default().from(element).set(options).save();
-  } catch (error) {
-    console.error('PDF export failed:', error);
-    alert('PDF export is not available. Please try another format.');
-  }
+const getCustomerName = (sale) => {
+  const l = sale?.lead;
+  if (!l) return 'Unknown';
+  if (l.firstName && l.lastName) return `${l.firstName} ${l.lastName}`;
+  return l.firstName || l.lastName || l.email || l.phone || 'Unknown';
 };
 
-const exportToExcel = (salesData, analytics, filters) => {
-  try {
-    // Create workbook data
-    const wb = {
-      SheetNames: ['Sales Data', 'Summary'],
-      Sheets: {}
-    };
+// ---------------------------------------------------------------------------
+// Export helpers
+// ---------------------------------------------------------------------------
 
-    // Sales data sheet
-    const salesSheetData = salesData.map(sale => ({
-      'Customer Name': sale.lead?.firstName && sale.lead?.lastName 
-        ? `${sale.lead.firstName} ${sale.lead.lastName}` 
-        : sale.lead?.email || 'Unknown',
-      'Project': sale.project?.name || 'Unknown',
-      'Unit': sale.unit?.unitNumber || sale.unit?.fullAddress || 'Unknown',
-      'Sale Price': sale.salePrice || 0,
-      'Status': sale.status || 'Unknown',
-      'Booking Date': sale.bookingDate ? formatDate(sale.bookingDate) : '',
-      'Salesperson': sale.salesPerson?.firstName && sale.salesPerson?.lastName 
-        ? `${sale.salesPerson.firstName} ${sale.salesPerson.lastName}` 
-        : 'Unassigned',
-    }));
-
-    // Summary data
-    const totalSales = salesData.length;
-    const totalRevenue = salesData.reduce((sum, sale) => sum + (sale.salePrice || 0), 0);
-    const summaryData = [
-      ['Metric', 'Value'],
-      ['Total Sales', totalSales],
-      ['Total Revenue', totalRevenue],
-      ['Average Sale Value', totalSales > 0 ? totalRevenue / totalSales : 0],
-      ['Report Period', TIME_PERIODS.find(p => p.value === filters.period)?.label || 'Custom'],
-      ['Generated On', new Date().toLocaleDateString()],
-    ];
-
-    // Convert to worksheet format (simplified)
-    wb.Sheets['Sales Data'] = {
-      '!ref': `A1:G${salesSheetData.length + 1}`,
-      ...salesSheetData.reduce((acc, row, index) => {
-        Object.keys(row).forEach((key, colIndex) => {
-          const cellAddress = String.fromCharCode(65 + colIndex) + (index + 2);
-          acc[cellAddress] = { v: row[key] };
-        });
-        return acc;
-      }, {
-        A1: { v: 'Customer Name' }, B1: { v: 'Project' }, C1: { v: 'Unit' },
-        D1: { v: 'Sale Price' }, E1: { v: 'Status' }, F1: { v: 'Booking Date' }, G1: { v: 'Salesperson' }
-      })
-    };
-
-    wb.Sheets['Summary'] = {
-      '!ref': `A1:B${summaryData.length}`,
-      ...summaryData.reduce((acc, row, index) => {
-        acc[`A${index + 1}`] = { v: row[0] };
-        acc[`B${index + 1}`] = { v: row[1] };
-        return acc;
-      }, {})
-    };
-
-    // Create download (simplified approach)
-    const csvContent = salesSheetData.map(row => 
-      Object.values(row).map(value => `"${value}"`).join(',')
-    ).join('\n');
-    
-    const headers = Object.keys(salesSheetData[0] || {}).map(h => `"${h}"`).join(',');
-    const fullCsv = headers + '\n' + csvContent;
-    
-    const blob = new Blob([fullCsv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `sales-report-${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-  } catch (error) {
-    console.error('Excel export failed:', error);
-    alert('Excel export failed. Downloading as CSV instead.');
-  }
+const exportToCSV = (salesData) => {
+  const headers = ['Customer', 'Project', 'Unit', 'Sale Price', 'Status', 'Booking Date', 'Salesperson'];
+  const rows = salesData.map(s => [
+    getCustomerName(s),
+    s.project?.name || 'Unknown',
+    s.unit?.unitNumber || s.unit?.fullAddress || 'Unknown',
+    s.salePrice || 0,
+    s.status || 'Unknown',
+    s.bookingDate ? formatDate(s.bookingDate) : '',
+    s.salesPerson ? `${s.salesPerson.firstName || ''} ${s.salesPerson.lastName || ''}`.trim() : 'Unassigned',
+  ]);
+  const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `sales-report-${new Date().toISOString().split('T')[0]}.csv`;
+  link.click();
+  URL.revokeObjectURL(link.href);
 };
 
-const exportToCSV = (salesData, filters) => {
-  try {
-    const csvData = salesData.map(sale => ({
-      'Customer Name': sale.lead?.firstName && sale.lead?.lastName 
-        ? `${sale.lead.firstName} ${sale.lead.lastName}` 
-        : sale.lead?.email || 'Unknown',
-      'Project': sale.project?.name || 'Unknown',
-      'Unit': sale.unit?.unitNumber || sale.unit?.fullAddress || 'Unknown',
-      'Sale Price': sale.salePrice || 0,
-      'Status': sale.status || 'Unknown',
-      'Booking Date': sale.bookingDate ? formatDate(sale.bookingDate) : '',
-      'Salesperson': sale.salesPerson?.firstName && sale.salesPerson?.lastName 
-        ? `${sale.salesPerson.firstName} ${sale.salesPerson.lastName}` 
-        : 'Unassigned',
-    }));
+// ---------------------------------------------------------------------------
+// Chart tooltip
+// ---------------------------------------------------------------------------
 
-    const headers = Object.keys(csvData[0] || {}).map(h => `"${h}"`).join(',');
-    const rows = csvData.map(row => 
-      Object.values(row).map(value => `"${value}"`).join(',')
-    ).join('\n');
-    
-    const csvContent = headers + '\n' + rows;
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `sales-data-${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-  } catch (error) {
-    console.error('CSV export failed:', error);
-    alert('CSV export failed. Please try again.');
-  }
-};
-
-const handlePrint = () => {
-  window.print();
-};
-
-// ============================================================================
-// ENHANCED METRIC CARD COMPONENT
-// ============================================================================
-
-const EnhancedMetricCard = ({ title, value, subtitle, icon: Icon, color, trend, loading, onClick }) => {
-  const theme = useTheme();
-  
-  if (loading) {
-    return (
-      <Card 
-        sx={{ 
-          height: '100%',
-          transition: 'all 0.3s ease',
-        }}
-      >
-        <CardContent>
-          <Stack spacing={2}>
-            <Skeleton variant="text" width="60%" />
-            <Skeleton variant="text" width="40%" height={40} />
-            <Skeleton variant="text" width="80%" />
-          </Stack>
-        </CardContent>
-      </Card>
-    );
-  }
-
+const ChartTooltipContent = ({ active, payload, label }) => {
+  if (!active || !payload?.length) return null;
   return (
-    <Zoom in timeout={300}>
-      <Card
-        sx={{
-          height: '100%',
-          cursor: onClick ? 'pointer' : 'default',
-          transition: 'all 0.3s ease',
-          background: `linear-gradient(135deg, ${alpha(theme.palette[color].main, 0.1)}, ${alpha(theme.palette[color].light, 0.05)})`,
-          border: 1,
-          borderColor: alpha(theme.palette[color].main, 0.2),
-          '&:hover': onClick ? {
-            transform: 'translateY(-4px)',
-            boxShadow: 6,
-            borderColor: theme.palette[color].main,
-          } : {},
-        }}
-        onClick={onClick}
-      >
-        <CardContent>
-          <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 2 }}>
-            <Box sx={{ flex: 1 }}>
-              <Typography color="text.secondary" variant="body2" gutterBottom fontWeight="medium">
-                {title}
-              </Typography>
-              <Typography 
-                variant="h3" 
-                component="div" 
-                fontWeight="bold" 
-                color={`${color}.main`}
-                sx={{ mb: 1 }}
-              >
-                {value}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {subtitle}
-              </Typography>
-              {trend && (
-                <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-                  {trend > 0 ? (
-                    <TrendingUp sx={{ fontSize: 16, color: 'success.main', mr: 0.5 }} />
-                  ) : (
-                    <TrendingDown sx={{ fontSize: 16, color: 'error.main', mr: 0.5 }} />
-                  )}
-                  <Typography 
-                    variant="caption" 
-                    color={trend > 0 ? 'success.main' : 'error.main'}
-                    fontWeight="medium"
-                  >
-                    {trend > 0 ? '+' : ''}{trend.toFixed(1)}%
-                  </Typography>
-                </Box>
-              )}
-            </Box>
-            
-            <Avatar 
-              sx={{ 
-                bgcolor: `${color}.main`, 
-                width: 56, 
-                height: 56,
-                ml: 2,
-                boxShadow: 3,
-              }}
-            >
-              <Icon />
-            </Avatar>
-          </Box>
-        </CardContent>
-      </Card>
-    </Zoom>
-  );
-};
-
-// ============================================================================
-// ENHANCED SALES OVERVIEW COMPONENT
-// ============================================================================
-
-const EnhancedSalesOverview = ({ salesData, analytics, loading, period }) => {
-  const theme = useTheme();
-  const [chartType, setChartType] = useState('area');
-
-  const totalSales = salesData.length;
-  const totalRevenue = salesData.reduce((sum, sale) => sum + (sale.salePrice || 0), 0);
-  const averageSaleValue = totalSales > 0 ? totalRevenue / totalSales : 0;
-  
-  const statusBreakdown = salesData.reduce((acc, sale) => {
-    const status = sale.status || 'Unknown';
-    acc[status] = (acc[status] || 0) + 1;
-    return acc;
-  }, {});
-
-  const trendData = useMemo(() => {
-    return aggregateDataByPeriod(salesData, parseInt(period) || 30);
-  }, [salesData, period]);
-
-  const pieData = Object.entries(statusBreakdown).map(([status, count], index) => ({
-    name: status,
-    value: count,
-    fill: CHART_COLORS[index % CHART_COLORS.length],
-  }));
-
-  const metrics = [
-    {
-      title: 'Total Sales',
-      value: totalSales.toLocaleString(),
-      subtitle: TIME_PERIODS.find(p => p.value === period)?.label || 'Custom period',
-      icon: Assessment,
-      color: 'primary',
-      trend: null,
-    },
-    {
-      title: 'Total Revenue',
-      value: formatCurrency(totalRevenue),
-      subtitle: 'Revenue generated',
-      icon: MonetizationOn,
-      color: 'success',
-      trend: null,
-    },
-    {
-      title: 'Average Sale Value',
-      value: formatCurrency(averageSaleValue),
-      subtitle: 'Per transaction',
-      icon: TrendingUp,
-      color: 'info',
-      trend: null,
-    },
-    {
-      title: 'Completion Rate',
-      value: totalSales > 0 ? formatPercentage((statusBreakdown['Completed'] || 0) / totalSales * 100) : '0%',
-      subtitle: 'Sales completed',
-      icon: CheckCircle,
-      color: 'warning',
-      trend: null,
-    },
-  ];
-
-  return (
-    <Box id="sales-overview-content">
-      {/* Enhanced Metrics Grid */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        {metrics.map((metric, index) => (
-          <Grid item xs={12} sm={6} lg={3} key={index}>
-            <EnhancedMetricCard {...metric} loading={loading} />
-          </Grid>
-        ))}
-      </Grid>
-
-      {/* Enhanced Charts Section */}
-      <Grid container spacing={3}>
-        {/* Sales Trend Chart with Controls */}
-        <Grid item xs={12} lg={8}>
-          <Card sx={{ height: 450 }}>
-            <CardHeader 
-              title={
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Box>
-                    <Typography variant="h6" fontWeight="bold">
-                      Sales Trend Analysis
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Sales and revenue over {TIME_PERIODS.find(p => p.value === period)?.label.toLowerCase()}
-                    </Typography>
-                  </Box>
-                  
-                  <ToggleButtonGroup
-                    value={chartType}
-                    exclusive
-                    onChange={(e, newType) => newType && setChartType(newType)}
-                    size="small"
-                  >
-                    <ToggleButton value="area">
-                      <Tooltip title="Area Chart">
-                        <ShowChart />
-                      </Tooltip>
-                    </ToggleButton>
-                    <ToggleButton value="bar">
-                      <Tooltip title="Bar Chart">
-                        <BarChart />
-                      </Tooltip>
-                    </ToggleButton>
-                    <ToggleButton value="line">
-                      <Tooltip title="Line Chart">
-                        <TimelineIcon />
-                      </Tooltip>
-                    </ToggleButton>
-                  </ToggleButtonGroup>
-                </Box>
-              }
-            />
-            <CardContent>
-              {loading ? (
-                <Skeleton variant="rectangular" height={300} />
-              ) : (
-                <Box sx={{ width: '100%', height: 320 }}>
-                  <ResponsiveContainer>
-                    {chartType === 'area' ? (
-                      <ComposedChart data={trendData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke={alpha(theme.palette.divider, 0.5)} />
-                        <XAxis dataKey="period" stroke={theme.palette.text.secondary} />
-                        <YAxis yAxisId="sales" orientation="left" stroke={theme.palette.text.secondary} />
-                        <YAxis yAxisId="revenue" orientation="right" stroke={theme.palette.text.secondary} />
-                        <RechartsTooltip 
-                          formatter={(value, name) => {
-                            if (name === 'revenue' || name === 'averageValue') {
-                              return [formatCurrency(value), name];
-                            }
-                            return [value, name];
-                          }}
-                          contentStyle={{
-                            backgroundColor: theme.palette.background.paper,
-                            border: `1px solid ${theme.palette.divider}`,
-                            borderRadius: 8,
-                          }}
-                        />
-                        <Legend />
-                        <Area
-                          yAxisId="sales"
-                          type="monotone"
-                          dataKey="sales"
-                          stackId="1"
-                          stroke={theme.palette.primary.main}
-                          fill={theme.palette.primary.main}
-                          fillOpacity={0.3}
-                          name="Sales Count"
-                        />
-                        <Bar
-                          yAxisId="revenue"
-                          dataKey="revenue"
-                          fill={theme.palette.success.main}
-                          fillOpacity={0.7}
-                          name="Revenue"
-                        />
-                      </ComposedChart>
-                    ) : chartType === 'bar' ? (
-                      <RechartsBarChart data={trendData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke={alpha(theme.palette.divider, 0.5)} />
-                        <XAxis dataKey="period" stroke={theme.palette.text.secondary} />
-                        <YAxis stroke={theme.palette.text.secondary} />
-                        <RechartsTooltip 
-                          formatter={(value, name) => {
-                            if (name === 'revenue' || name === 'averageValue') {
-                              return [formatCurrency(value), name];
-                            }
-                            return [value, name];
-                          }}
-                          contentStyle={{
-                            backgroundColor: theme.palette.background.paper,
-                            border: `1px solid ${theme.palette.divider}`,
-                            borderRadius: 8,
-                          }}
-                        />
-                        <Legend />
-                        <Bar dataKey="sales" fill={theme.palette.primary.main} name="Sales Count" />
-                        <Bar dataKey="revenue" fill={theme.palette.success.main} name="Revenue" />
-                      </RechartsBarChart>
-                    ) : (
-                      <LineChart data={trendData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke={alpha(theme.palette.divider, 0.5)} />
-                        <XAxis dataKey="period" stroke={theme.palette.text.secondary} />
-                        <YAxis stroke={theme.palette.text.secondary} />
-                        <RechartsTooltip 
-                          formatter={(value, name) => {
-                            if (name === 'revenue' || name === 'averageValue') {
-                              return [formatCurrency(value), name];
-                            }
-                            return [value, name];
-                          }}
-                          contentStyle={{
-                            backgroundColor: theme.palette.background.paper,
-                            border: `1px solid ${theme.palette.divider}`,
-                            borderRadius: 8,
-                          }}
-                        />
-                        <Legend />
-                        <Line 
-                          type="monotone" 
-                          dataKey="sales" 
-                          stroke={theme.palette.primary.main} 
-                          strokeWidth={3}
-                          name="Sales Count"
-                        />
-                        <Line 
-                          type="monotone" 
-                          dataKey="revenue" 
-                          stroke={theme.palette.success.main} 
-                          strokeWidth={3}
-                          name="Revenue"
-                        />
-                      </LineChart>
-                    )}
-                  </ResponsiveContainer>
-                </Box>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Enhanced Status Breakdown */}
-        <Grid item xs={12} lg={4}>
-          <Card sx={{ height: 450 }}>
-            <CardHeader 
-              title="Sales by Status" 
-              subheader="Distribution across pipeline stages"
-            />
-            <CardContent>
-              {loading ? (
-                <Skeleton variant="rectangular" height={300} />
-              ) : (
-                <>
-                  <Box sx={{ width: '100%', height: 250, mb: 2 }}>
-                    <ResponsiveContainer>
-                      <RechartsPieChart>
-                        <Pie
-                          data={pieData}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                          outerRadius={80}
-                          fill="#8884d8"
-                          dataKey="value"
-                        >
-                          {pieData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.fill} />
-                          ))}
-                        </Pie>
-                        <RechartsTooltip />
-                      </RechartsPieChart>
-                    </ResponsiveContainer>
-                  </Box>
-                  
-                  {/* Status Legend */}
-                  <Stack spacing={1}>
-                    {pieData.map((status) => (
-                      <Box key={status.name} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <Box 
-                            sx={{ 
-                              width: 12, 
-                              height: 12, 
-                              bgcolor: status.fill, 
-                              borderRadius: 1, 
-                              mr: 1 
-                            }} 
-                          />
-                          <Typography variant="body2">{status.name}</Typography>
-                        </Box>
-                        <Typography variant="body2" fontWeight="bold">
-                          {status.value}
-                        </Typography>
-                      </Box>
-                    ))}
-                  </Stack>
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-    </Box>
-  );
-};
-
-// ============================================================================
-// ENHANCED PERFORMANCE ANALYSIS COMPONENT
-// ============================================================================
-
-const EnhancedPerformanceAnalysis = ({ salesData, projects, users, loading }) => {
-  const theme = useTheme();
-  const [performanceView, setPerformanceView] = useState('salesperson');
-
-  const salespersonPerformance = useMemo(() => {
-    const performance = {};
-    
-    salesData.forEach(sale => {
-      const salesPersonId = sale.salesPerson?._id || sale.salesPerson || 'unassigned';
-      const salesPersonName = sale.salesPerson?.firstName && sale.salesPerson?.lastName 
-        ? `${sale.salesPerson.firstName} ${sale.salesPerson.lastName}`
-        : 'Unassigned';
-      
-      if (!performance[salesPersonId]) {
-        performance[salesPersonId] = {
-          id: salesPersonId,
-          name: salesPersonName,
-          sales: 0,
-          revenue: 0,
-          averageValue: 0,
-        };
-      }
-      
-      performance[salesPersonId].sales += 1;
-      performance[salesPersonId].revenue += sale.salePrice || 0;
-    });
-    
-    return Object.values(performance)
-      .map(perf => ({
-        ...perf,
-        averageValue: perf.sales > 0 ? perf.revenue / perf.sales : 0,
-      }))
-      .sort((a, b) => b.revenue - a.revenue);
-  }, [salesData]);
-
-  const projectPerformance = useMemo(() => {
-    const performance = {};
-    
-    salesData.forEach(sale => {
-      const projectId = sale.project?._id || sale.project || 'unknown';
-      const projectName = sale.project?.name || 'Unknown Project';
-      
-      if (!performance[projectId]) {
-        performance[projectId] = {
-          id: projectId,
-          name: projectName,
-          sales: 0,
-          revenue: 0,
-          averageValue: 0,
-        };
-      }
-      
-      performance[projectId].sales += 1;
-      performance[projectId].revenue += sale.salePrice || 0;
-    });
-    
-    return Object.values(performance)
-      .map(perf => ({
-        ...perf,
-        averageValue: perf.sales > 0 ? perf.revenue / perf.sales : 0,
-      }))
-      .sort((a, b) => b.revenue - a.revenue);
-  }, [salesData]);
-
-  const currentData = performanceView === 'salesperson' ? salespersonPerformance : projectPerformance;
-
-  if (loading) {
-    return (
-      <Grid container spacing={3}>
-        {[1, 2].map(i => (
-          <Grid item xs={12} md={6} key={i}>
-            <Card sx={{ height: 400 }}>
-              <CardContent>
-                <Skeleton variant="rectangular" height="100%" />
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
-    );
-  }
-
-  return (
-    <Box id="performance-analysis-content">
-      <Grid container spacing={3}>
-        {/* Performance Chart with Toggle */}
-        <Grid item xs={12} lg={8}>
-          <Card sx={{ height: 500 }}>
-            <CardHeader 
-              title={
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Box>
-                    <Typography variant="h6" fontWeight="bold">
-                      Performance Analysis
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Revenue performance comparison
-                    </Typography>
-                  </Box>
-                  
-                  <ToggleButtonGroup
-                    value={performanceView}
-                    exclusive
-                    onChange={(e, newView) => newView && setPerformanceView(newView)}
-                    size="small"
-                  >
-                    <ToggleButton value="salesperson">
-                      <Person sx={{ mr: 1 }} />
-                      Salespeople
-                    </ToggleButton>
-                    <ToggleButton value="project">
-                      <Business sx={{ mr: 1 }} />
-                      Projects
-                    </ToggleButton>
-                  </ToggleButtonGroup>
-                </Box>
-              }
-            />
-            <CardContent>
-              <Box sx={{ width: '100%', height: 380 }}>
-                <ResponsiveContainer>
-                  <RechartsBarChart data={currentData.slice(0, 10)} layout="horizontal">
-                    <CartesianGrid strokeDasharray="3 3" stroke={alpha(theme.palette.divider, 0.5)} />
-                    <XAxis type="number" stroke={theme.palette.text.secondary} />
-                    <YAxis 
-                      type="category" 
-                      dataKey="name" 
-                      stroke={theme.palette.text.secondary}
-                      width={120}
-                    />
-                    <RechartsTooltip 
-                      formatter={(value) => [formatCurrency(value), 'Revenue']}
-                      contentStyle={{
-                        backgroundColor: theme.palette.background.paper,
-                        border: `1px solid ${theme.palette.divider}`,
-                        borderRadius: 8,
-                      }}
-                    />
-                    <Bar 
-                      dataKey="revenue" 
-                      fill={performanceView === 'salesperson' ? theme.palette.primary.main : theme.palette.success.main}
-                      radius={[0, 4, 4, 0]}
-                    />
-                  </RechartsBarChart>
-                </ResponsiveContainer>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Top Performers Table */}
-        <Grid item xs={12} lg={4}>
-          <Card sx={{ height: 500 }}>
-            <CardHeader 
-              title={`Top ${performanceView === 'salesperson' ? 'Performers' : 'Projects'}`}
-              subheader="Performance ranking"
-            />
-            <CardContent sx={{ p: 0, height: 420, overflow: 'auto' }}>
-              {currentData.slice(0, 10).map((perf, index) => (
-                <Box 
-                  key={perf.id}
-                  sx={{ 
-                    p: 2, 
-                    borderBottom: 1, 
-                    borderColor: 'divider',
-                    '&:hover': { bgcolor: 'action.hover' },
-                    transition: 'background-color 0.2s',
-                  }}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <Avatar 
-                      sx={{ 
-                        mr: 2, 
-                        width: 32, 
-                        height: 32, 
-                        fontSize: '0.875rem',
-                        bgcolor: index < 3 ? 'primary.main' : 'grey.400',
-                      }}
-                    >
-                      {index + 1}
-                    </Avatar>
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography variant="subtitle2" fontWeight="bold" noWrap>
-                        {perf.name}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {perf.sales} sale{perf.sales !== 1 ? 's' : ''}
-                      </Typography>
-                    </Box>
-                  </Box>
-                  
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="h6" fontWeight="bold" color="primary.main">
-                      {formatCurrency(perf.revenue)}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Avg: {formatCurrency(perf.averageValue)}
-                    </Typography>
-                  </Box>
-                </Box>
-              ))}
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-    </Box>
-  );
-};
-
-// ============================================================================
-// DETAILED REPORTS TABLE COMPONENT
-// ============================================================================
-
-const DetailedReportsTable = ({ salesData, loading }) => {
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(25);
-
-  if (loading) {
-    return (
-      <Card>
-        <CardContent>
-          <Skeleton variant="rectangular" height={400} />
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const paginatedData = salesData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
-
-  return (
-    <Card>
-      <CardHeader 
-        title="Detailed Sales Data" 
-        subheader={`${salesData.length} total records`}
-      />
-      <CardContent sx={{ p: 0 }}>
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Customer</TableCell>
-                <TableCell>Project</TableCell>
-                <TableCell>Unit</TableCell>
-                <TableCell align="right">Sale Price</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Date</TableCell>
-                <TableCell>Salesperson</TableCell>
-                <TableCell align="center">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {paginatedData.map((sale) => (
-                <TableRow key={sale._id} hover>
-                  <TableCell>
-                    {sale.lead?.firstName && sale.lead?.lastName 
-                      ? `${sale.lead.firstName} ${sale.lead.lastName}` 
-                      : sale.lead?.email || 'Unknown'}
-                  </TableCell>
-                  <TableCell>{sale.project?.name || 'Unknown'}</TableCell>
-                  <TableCell>{sale.unit?.unitNumber || sale.unit?.fullAddress || 'Unknown'}</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-                    {formatCurrency(sale.salePrice || 0)}
-                  </TableCell>
-                  <TableCell>
-                    <Chip 
-                      label={sale.status || 'Unknown'} 
-                      size="small"
-                      color={
-                        sale.status === 'Completed' ? 'success' :
-                        sale.status === 'Cancelled' ? 'error' :
-                        sale.status === 'Agreement Signed' ? 'primary' : 'default'
-                      }
-                    />
-                  </TableCell>
-                  <TableCell>
-                    {sale.bookingDate ? formatDate(sale.bookingDate) : '-'}
-                  </TableCell>
-                  <TableCell>
-                    {sale.salesPerson?.firstName && sale.salesPerson?.lastName 
-                      ? `${sale.salesPerson.firstName} ${sale.salesPerson.lastName}` 
-                      : 'Unassigned'}
-                  </TableCell>
-                  <TableCell align="center">
-                    <Tooltip title="View Details">
-                      <IconButton size="small">
-                        <Visibility />
-                      </IconButton>
-                    </Tooltip>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        
-        <TablePagination
-          component="div"
-          count={salesData.length}
-          page={page}
-          onPageChange={(e, newPage) => setPage(newPage)}
-          rowsPerPage={rowsPerPage}
-          onRowsPerPageChange={(e) => {
-            setRowsPerPage(parseInt(e.target.value, 10));
-            setPage(0);
-          }}
-          rowsPerPageOptions={[10, 25, 50, 100]}
-        />
-      </CardContent>
+    <Card sx={{ p: 1.5, minWidth: 160 }} elevation={3}>
+      <Typography variant="caption" color="text.secondary" gutterBottom display="block">{label}</Typography>
+      {payload.map((p, i) => (
+        <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
+          <Typography variant="caption" sx={{ color: p.color }}>{p.name}</Typography>
+          <Typography variant="caption" sx={{ fontWeight: 600 }}>
+            {p.name === 'Revenue' ? formatCurrency(p.value) : p.value}
+          </Typography>
+        </Box>
+      ))}
     </Card>
   );
 };
 
-// ============================================================================
-// MAIN ENHANCED SALES REPORTS PAGE
-// ============================================================================
+// ---------------------------------------------------------------------------
+// Overview Tab
+// ---------------------------------------------------------------------------
+
+const OverviewTab = ({ salesData, period, loading }) => {
+  const theme = useTheme();
+  const [chartType, setChartType] = useState('area');
+
+  const trendData = useMemo(() =>
+    aggregateByPeriod(salesData, parseInt(period) || 365),
+  [salesData, period]);
+
+  const statusBreakdown = useMemo(() => {
+    const counts = {};
+    salesData.forEach(s => { counts[s.status || 'Unknown'] = (counts[s.status || 'Unknown'] || 0) + 1; });
+    return Object.entries(counts).map(([name, value], i) => ({
+      name, value, fill: CHART_COLORS[i % CHART_COLORS.length],
+    }));
+  }, [salesData]);
+
+  if (loading) {
+    return (
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={8}><Skeleton variant="rounded" height={380} /></Grid>
+        <Grid item xs={12} md={4}><Skeleton variant="rounded" height={380} /></Grid>
+      </Grid>
+    );
+  }
+
+  const renderChart = () => {
+    const common = {
+      data: trendData,
+      children: [
+        <CartesianGrid key="g" strokeDasharray="3 3" stroke={alpha(theme.palette.divider, 0.5)} />,
+        <XAxis key="x" dataKey="period" stroke={theme.palette.text.secondary} tick={{ fontSize: 11 }} />,
+        <YAxis key="y" stroke={theme.palette.text.secondary} tick={{ fontSize: 11 }} />,
+        <RechartsTooltip key="t" content={<ChartTooltipContent />} />,
+        <Legend key="l" />,
+      ],
+    };
+
+    if (chartType === 'area') {
+      return (
+        <ComposedChart data={trendData}>
+          {common.children}
+          <Area type="monotone" dataKey="sales" name="Sales" fill={theme.palette.primary.main} fillOpacity={0.15} stroke={theme.palette.primary.main} strokeWidth={2} />
+          <Bar dataKey="revenue" name="Revenue" fill={alpha(theme.palette.success.main, 0.7)} radius={[3, 3, 0, 0]} />
+        </ComposedChart>
+      );
+    }
+    if (chartType === 'bar') {
+      return (
+        <RechartsBarChart data={trendData}>
+          {common.children}
+          <Bar dataKey="sales" name="Sales" fill={theme.palette.primary.main} radius={[3, 3, 0, 0]} />
+          <Bar dataKey="revenue" name="Revenue" fill={theme.palette.success.main} radius={[3, 3, 0, 0]} />
+        </RechartsBarChart>
+      );
+    }
+    return (
+      <LineChart data={trendData}>
+        {common.children}
+        <Line type="monotone" dataKey="sales" name="Sales" stroke={theme.palette.primary.main} strokeWidth={2} dot={{ r: 3 }} />
+        <Line type="monotone" dataKey="revenue" name="Revenue" stroke={theme.palette.success.main} strokeWidth={2} dot={{ r: 3 }} />
+      </LineChart>
+    );
+  };
+
+  return (
+    <Grid container spacing={3}>
+      {/* Trend chart */}
+      <Grid item xs={12} md={8}>
+        <Card variant="outlined" sx={{ height: '100%' }}>
+          <CardHeader
+            title={<Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Sales Trend</Typography>}
+            action={
+              <ToggleButtonGroup value={chartType} exclusive onChange={(e, v) => v && setChartType(v)} size="small">
+                <ToggleButton value="area"><Tooltip title="Area"><ShowChart sx={{ fontSize: 18 }} /></Tooltip></ToggleButton>
+                <ToggleButton value="bar"><Tooltip title="Bar"><BarChart sx={{ fontSize: 18 }} /></Tooltip></ToggleButton>
+                <ToggleButton value="line"><Tooltip title="Line"><TimelineIcon sx={{ fontSize: 18 }} /></Tooltip></ToggleButton>
+              </ToggleButtonGroup>
+            }
+          />
+          <CardContent sx={{ height: 320 }}>
+            {trendData.length === 0 ? (
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                <Typography color="text.secondary">No trend data for this period</Typography>
+              </Box>
+            ) : (
+              <ResponsiveContainer>{renderChart()}</ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+      </Grid>
+
+      {/* Status pie */}
+      <Grid item xs={12} md={4}>
+        <Card variant="outlined" sx={{ height: '100%' }}>
+          <CardHeader title={<Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Status Breakdown</Typography>} />
+          <CardContent>
+            {statusBreakdown.length === 0 ? (
+              <Box sx={{ textAlign: 'center', py: 4 }}>
+                <Typography color="text.secondary">No data</Typography>
+              </Box>
+            ) : (
+              <>
+                <Box sx={{ height: 220 }}>
+                  <ResponsiveContainer>
+                    <RechartsPieChart>
+                      <Pie data={statusBreakdown} cx="50%" cy="50%" outerRadius={80} dataKey="value"
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
+                        {statusBreakdown.map((e, i) => <Cell key={i} fill={e.fill} />)}
+                      </Pie>
+                      <RechartsTooltip />
+                    </RechartsPieChart>
+                  </ResponsiveContainer>
+                </Box>
+                <Stack spacing={0.75} sx={{ mt: 1 }}>
+                  {statusBreakdown.map(s => (
+                    <Box key={s.name} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box sx={{ width: 10, height: 10, borderRadius: 0.5, bgcolor: s.fill }} />
+                        <Typography variant="caption">{s.name}</Typography>
+                      </Box>
+                      <Typography variant="caption" sx={{ fontWeight: 600 }}>{s.value}</Typography>
+                    </Box>
+                  ))}
+                </Stack>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </Grid>
+    </Grid>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// Performance Tab
+// ---------------------------------------------------------------------------
+
+const PerformanceTab = ({ salesData, loading }) => {
+  const theme = useTheme();
+  const [view, setView] = useState('salesperson');
+
+  const aggregate = useCallback((keyFn, nameFn) => {
+    const map = {};
+    salesData.forEach(sale => {
+      const id = keyFn(sale);
+      const name = nameFn(sale);
+      if (!map[id]) map[id] = { id, name, sales: 0, revenue: 0 };
+      map[id].sales += 1;
+      map[id].revenue += sale.salePrice || 0;
+    });
+    return Object.values(map)
+      .map(p => ({ ...p, avg: p.sales > 0 ? p.revenue / p.sales : 0 }))
+      .sort((a, b) => b.revenue - a.revenue);
+  }, [salesData]);
+
+  const data = useMemo(() =>
+    view === 'salesperson'
+      ? aggregate(
+          s => s.salesPerson?._id || 'unassigned',
+          s => s.salesPerson ? `${s.salesPerson.firstName || ''} ${s.salesPerson.lastName || ''}`.trim() || 'Unassigned' : 'Unassigned',
+        )
+      : aggregate(
+          s => s.project?._id || 'unknown',
+          s => s.project?.name || 'Unknown Project',
+        ),
+  [view, aggregate]);
+
+  if (loading) return <Skeleton variant="rounded" height={400} />;
+
+  return (
+    <Grid container spacing={3}>
+      <Grid item xs={12} md={8}>
+        <Card variant="outlined">
+          <CardHeader
+            title={<Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Performance Comparison</Typography>}
+            action={
+              <ToggleButtonGroup value={view} exclusive onChange={(e, v) => v && setView(v)} size="small">
+                <ToggleButton value="salesperson"><Person sx={{ fontSize: 18, mr: 0.5 }} /> People</ToggleButton>
+                <ToggleButton value="project"><Business sx={{ fontSize: 18, mr: 0.5 }} /> Projects</ToggleButton>
+              </ToggleButtonGroup>
+            }
+          />
+          <CardContent sx={{ height: 380 }}>
+            {data.length === 0 ? (
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                <Typography color="text.secondary">No performance data</Typography>
+              </Box>
+            ) : (
+              <ResponsiveContainer>
+                <RechartsBarChart data={data.slice(0, 10)} layout="horizontal">
+                  <CartesianGrid strokeDasharray="3 3" stroke={alpha(theme.palette.divider, 0.5)} />
+                  <XAxis type="number" stroke={theme.palette.text.secondary} tick={{ fontSize: 11 }} />
+                  <YAxis type="category" dataKey="name" width={120} stroke={theme.palette.text.secondary} tick={{ fontSize: 11 }} />
+                  <RechartsTooltip content={<ChartTooltipContent />} />
+                  <Bar dataKey="revenue" name="Revenue" fill={view === 'salesperson' ? theme.palette.primary.main : theme.palette.success.main} radius={[0, 4, 4, 0]} />
+                </RechartsBarChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+      </Grid>
+
+      <Grid item xs={12} md={4}>
+        <Card variant="outlined" sx={{ height: '100%' }}>
+          <CardHeader title={<Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Rankings</Typography>} />
+          <CardContent sx={{ p: 0, maxHeight: 420, overflow: 'auto' }}>
+            {data.slice(0, 10).map((p, i) => (
+              <Box key={p.id} sx={{ px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider', '&:hover': { bgcolor: 'action.hover' } }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
+                  <Avatar sx={{ width: 28, height: 28, fontSize: '0.75rem', bgcolor: i < 3 ? 'primary.main' : 'grey.400' }}>{i + 1}</Avatar>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>{p.name}</Typography>
+                    <Typography variant="caption" color="text.secondary">{p.sales} sale{p.sales !== 1 ? 's' : ''}</Typography>
+                  </Box>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', pl: 5.5 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: 'primary.main' }}>{formatCurrency(p.revenue)}</Typography>
+                  <Typography variant="caption" color="text.secondary">Avg: {formatCurrency(p.avg)}</Typography>
+                </Box>
+              </Box>
+            ))}
+          </CardContent>
+        </Card>
+      </Grid>
+    </Grid>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// Details Tab
+// ---------------------------------------------------------------------------
+
+const DetailsTab = ({ salesData, loading, onSaleClick }) => {
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(25);
+
+  if (loading) return <Skeleton variant="rounded" height={400} />;
+
+  const paginated = salesData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+
+  return (
+    <Card variant="outlined">
+      <CardHeader
+        title={<Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Detailed Sales Data</Typography>}
+        subheader={`${salesData.length} records`}
+      />
+      <TableContainer>
+        <Table size="small">
+          <TableHead>
+            <TableRow>
+              <TableCell>Customer</TableCell>
+              <TableCell>Project</TableCell>
+              <TableCell>Unit</TableCell>
+              <TableCell align="right">Sale Price</TableCell>
+              <TableCell>Status</TableCell>
+              <TableCell>Date</TableCell>
+              <TableCell>Salesperson</TableCell>
+              <TableCell align="center" width={48}></TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {paginated.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} sx={{ textAlign: 'center', py: 4 }}>
+                  <Typography color="text.secondary">No sales data for this period</Typography>
+                </TableCell>
+              </TableRow>
+            ) : paginated.map((sale) => (
+              <TableRow key={sale._id} hover sx={{ cursor: 'pointer' }} onClick={() => onSaleClick(sale)}>
+                <TableCell>
+                  <Typography variant="body2" sx={{ fontWeight: 500 }}>{getCustomerName(sale)}</Typography>
+                </TableCell>
+                <TableCell>{sale.project?.name || 'Unknown'}</TableCell>
+                <TableCell>{sale.unit?.unitNumber || sale.unit?.fullAddress || '-'}</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, color: 'primary.main' }}>
+                  {formatCurrency(sale.salePrice || 0)}
+                </TableCell>
+                <TableCell><StatusChip status={sale.status} type="sale" size="small" /></TableCell>
+                <TableCell>{sale.bookingDate ? formatDate(sale.bookingDate) : '-'}</TableCell>
+                <TableCell>
+                  {sale.salesPerson
+                    ? `${sale.salesPerson.firstName || ''} ${sale.salesPerson.lastName || ''}`.trim()
+                    : 'Unassigned'}
+                </TableCell>
+                <TableCell align="center">
+                  <IconButton size="small"><Visibility sx={{ fontSize: 16 }} /></IconButton>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+      <TablePagination
+        component="div"
+        count={salesData.length}
+        page={page}
+        onPageChange={(e, p) => setPage(p)}
+        rowsPerPage={rowsPerPage}
+        onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
+        rowsPerPageOptions={[10, 25, 50, 100]}
+      />
+    </Card>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// Main Page
+// ---------------------------------------------------------------------------
 
 const SalesReportsPage = () => {
   const navigate = useNavigate();
-  const { user, canAccess } = useAuth();
+  const { canAccess } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // State management
   const [activeTab, setActiveTab] = useState(0);
   const [salesData, setSalesData] = useState([]);
+  const [apiStats, setApiStats] = useState(null);
   const [projects, setProjects] = useState([]);
   const [users, setUsers] = useState([]);
-  const [analytics, setAnalytics] = useState({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
-  const [exportMenuAnchor, setExportMenuAnchor] = useState(null);
+  const [exportAnchor, setExportAnchor] = useState(null);
 
-  // Filter states
   const [filters, setFilters] = useState({
-    period: searchParams.get('period') || '30',
-    project: searchParams.get('project') || 'all',
-    salesperson: searchParams.get('salesperson') || 'all',
-    dateFrom: searchParams.get('dateFrom') ? new Date(searchParams.get('dateFrom')) : null,
-    dateTo: searchParams.get('dateTo') ? new Date(searchParams.get('dateTo')) : null,
+    search: '',
+    period: searchParams.get('period') || 'all',
+    project: searchParams.get('project') || '',
+    salesperson: searchParams.get('salesperson') || '',
   });
 
-  const canViewReports = canAccess && canAccess.salesPipeline ? canAccess.salesPipeline() : true;
+  const canViewReports = canAccess?.salesPipeline ? canAccess.salesPipeline() : true;
 
-  // Fetch reports data (keeping original logic)
-  const fetchReportsData = useCallback(async (showRefreshing = false) => {
+  // ---------------------------------------------------------------------------
+  // Fetch data
+  // ---------------------------------------------------------------------------
+
+  const fetchData = useCallback(async (showRefreshing = false) => {
     try {
       if (showRefreshing) setRefreshing(true);
       setError(null);
 
-      console.log('🔄 Fetching reports data with filters:', filters);
-
-      let dateRange = generateDateRange(filters.period);
-      if (filters.period === 'custom' && filters.dateFrom && filters.dateTo) {
-        dateRange = { startDate: filters.dateFrom, endDate: filters.dateTo };
-      }
-
+      const dateRange = generateDateRange(filters.period);
       const queryParams = {
         limit: 1000,
-        project: filters.project !== 'all' ? filters.project : undefined,
-        salesperson: filters.salesperson !== 'all' ? filters.salesperson : undefined,
-        dateFrom: dateRange.startDate ? dateRange.startDate.toISOString() : undefined,
-        dateTo: dateRange.endDate ? dateRange.endDate.toISOString() : undefined,
+        project: filters.project || undefined,
+        salesperson: filters.salesperson || undefined,
+        dateFrom: dateRange.startDate?.toISOString() || undefined,
+        dateTo: dateRange.endDate?.toISOString() || undefined,
         sortBy: 'bookingDate',
         sortOrder: 'desc',
       };
+      Object.keys(queryParams).forEach(k => queryParams[k] === undefined && delete queryParams[k]);
 
-      Object.keys(queryParams).forEach(key => 
-        queryParams[key] === undefined && delete queryParams[key]
-      );
-
-      const [salesResult, analyticsResult, projectsResult, usersResult] = await Promise.allSettled([
+      const [salesResult, projectsResult, usersResult] = await Promise.allSettled([
         salesAPI.getSales(queryParams),
-        salesAPI.getSalesAnalytics({ 
-          period: filters.period !== 'custom' ? filters.period : undefined,
-          projectId: filters.project !== 'all' ? filters.project : undefined,
-          salespersonId: filters.salesperson !== 'all' ? filters.salesperson : undefined,
-        }),
         projectAPI.getProjects(),
-        canAccess && canAccess.userManagement() ? userAPI.getUsers() : Promise.resolve({ data: { data: [] } }),
+        canAccess?.userManagement?.() ? userAPI.getUsers() : Promise.resolve({ data: { data: [] } }),
       ]);
 
       if (salesResult.status === 'fulfilled') {
-        const response = salesResult.value.data;
-        const sales = response.data || [];
-        console.log('✅ Sales data loaded:', sales.length, 'sales');
-        setSalesData(sales);
+        const resp = salesResult.value.data;
+        setSalesData(resp.data || []);
+        setApiStats(resp.stats || null);
       } else {
-        console.error('❌ Sales API failed:', salesResult.reason);
         setSalesData([]);
-      }
-
-      if (analyticsResult.status === 'fulfilled') {
-        const response = analyticsResult.value.data;
-        const analyticsData = response.data || [];
-        console.log('✅ Analytics data loaded:', analyticsData);
-        setAnalytics(analyticsData);
-      } else {
-        console.error('❌ Analytics API failed:', analyticsResult.reason);
-        setAnalytics({});
+        setApiStats(null);
       }
 
       if (projectsResult.status === 'fulfilled') {
-        const response = projectsResult.value.data;
-        const projectsData = response.data || response || [];
-        setProjects(Array.isArray(projectsData) ? projectsData : []);
+        const d = projectsResult.value.data?.data || projectsResult.value.data || [];
+        setProjects(Array.isArray(d) ? d : []);
       }
 
       if (usersResult.status === 'fulfilled') {
-        const response = usersResult.value.data;
-        const usersData = response.data || response || [];
-        setUsers(Array.isArray(usersData) ? usersData : []);
+        const d = usersResult.value.data?.data || usersResult.value.data || [];
+        setUsers(Array.isArray(d) ? d : []);
       }
 
       setLoading(false);
-
-    } catch (error) {
-      console.error('❌ Error fetching reports data:', error);
+    } catch (err) {
       setError('Failed to load reports data. Please try again.');
       setLoading(false);
-      setSalesData([]);
-      setAnalytics({});
     } finally {
       if (showRefreshing) setRefreshing(false);
     }
-  }, [filters, canAccess]);
+  }, [filters.period, filters.project, filters.salesperson, canAccess]);
 
-  useEffect(() => {
-    if (canViewReports) {
-      fetchReportsData();
-    }
-  }, [fetchReportsData, canViewReports]);
+  useEffect(() => { if (canViewReports) fetchData(); }, [fetchData, canViewReports]);
 
   useEffect(() => {
     const params = new URLSearchParams();
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value && value !== 'all') {
-        if (value instanceof Date) {
-          params.set(key, value.toISOString().split('T')[0]);
-        } else {
-          params.set(key, value);
-        }
-      }
-    });
+    if (filters.period && filters.period !== 'all') params.set('period', filters.period);
+    if (filters.project) params.set('project', filters.project);
+    if (filters.salesperson) params.set('salesperson', filters.salesperson);
     setSearchParams(params, { replace: true });
-  }, [filters, setSearchParams]);
+  }, [filters.period, filters.project, filters.salesperson, setSearchParams]);
 
-  const handleFilterChange = (field) => (event) => {
-    const value = event.target ? event.target.value : event;
-    setFilters(prev => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
+  // ---------------------------------------------------------------------------
+  // Handlers
+  // ---------------------------------------------------------------------------
 
-  const handleTabChange = (event, newValue) => {
-    setActiveTab(newValue);
-  };
+  const handleFilterChange = (key, value) => setFilters(prev => ({ ...prev, [key]: value }));
+  const clearFilters = () => setFilters({ search: '', period: 'all', project: '', salesperson: '' });
+  const handleSaleClick = (sale) => navigate(`/sales/${sale._id}`);
 
-  const handleExport = async (format) => {
-    setExportMenuAnchor(null);
-    
-    switch (format) {
-      case 'pdf':
-        await exportToPDF(salesData, filters);
-        break;
-      case 'excel':
-        exportToExcel(salesData, analytics, filters);
-        break;
-      case 'csv':
-        exportToCSV(salesData, filters);
-        break;
-      case 'print':
-        handlePrint();
-        break;
-      default:
-        console.log('Unknown export format:', format);
-    }
-  };
+  // Search filter (client-side)
+  const filteredSales = useMemo(() => {
+    if (!filters.search) return salesData;
+    const q = filters.search.toLowerCase();
+    return salesData.filter(s =>
+      getCustomerName(s).toLowerCase().includes(q) ||
+      (s.project?.name || '').toLowerCase().includes(q) ||
+      (s.unit?.unitNumber || '').toLowerCase().includes(q)
+    );
+  }, [salesData, filters.search]);
 
-  const clearFilters = () => {
-    setFilters({
-      period: '30',
-      project: 'all',
-      salesperson: 'all',
-      dateFrom: null,
-      dateTo: null,
-    });
-  };
+  // KPIs: use filtered data if available, fall back to API stats
+  const totalSales = filteredSales.length || apiStats?.totalSales || 0;
+  const totalRevenue = filteredSales.reduce((s, sale) => s + (sale.salePrice || 0), 0) || apiStats?.totalRevenue || 0;
+  const avgValue = totalSales > 0 ? totalRevenue / totalSales : apiStats?.averageSaleValue || 0;
+  const completedCount = filteredSales.filter(s => s.status === 'Completed').length;
+  const completionRate = totalSales > 0 ? ((completedCount / totalSales) * 100).toFixed(1) : '0';
 
-  const refreshData = () => {
-    fetchReportsData(true);
-  };
+  // FilterBar config
+  const salespeople = users.filter(u => u.role?.includes('Sales'));
+  const filterConfig = [
+    { key: 'search', type: 'search', label: 'Sales', placeholder: 'Search sales...' },
+    { key: 'period', type: 'select', label: 'Period', options: TIME_PERIODS },
+    { key: 'project', type: 'select', label: 'Project', options: projects.map(p => ({ value: p._id, label: p.name })) },
+    ...(salespeople.length > 0 ? [{
+      key: 'salesperson', type: 'select', label: 'Salesperson',
+      options: salespeople.map(u => ({ value: u._id, label: `${u.firstName} ${u.lastName}` })),
+    }] : []),
+  ];
 
-  const TabPanel = ({ children, value, index }) => (
-    <div hidden={value !== index}>
-      {value === index && <Box>{children}</Box>}
-    </div>
-  );
+  // ---------------------------------------------------------------------------
+  // Permission guard
+  // ---------------------------------------------------------------------------
 
   if (!canViewReports) {
     return (
       <Box sx={{ p: 3 }}>
-        <Alert severity="error">
-          You don't have permission to view sales reports.
-        </Alert>
+        <Alert severity="error">You don't have permission to view sales reports.</Alert>
       </Box>
     );
   }
 
-  const speedDialActions = [
-    { icon: <PictureAsPdf />, name: 'Export PDF', onClick: () => handleExport('pdf') },
-    { icon: <TableView />, name: 'Export Excel', onClick: () => handleExport('excel') },
-    { icon: <DataSaverOff />, name: 'Export CSV', onClick: () => handleExport('csv') },
-    { icon: <Print />, name: 'Print Report', onClick: () => handleExport('print') },
-  ];
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
 
   return (
-    <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Box sx={{ flexGrow: 1, bgcolor: 'background.default', minHeight: '100vh' }}>
-        
-        {/* Enhanced Header */}
-        <Paper 
-          sx={{ 
-            p: 3, 
-            mb: 3, 
-            background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)}, ${alpha(theme.palette.secondary.main, 0.05)})`,
-            border: 0,
-            borderRadius: 0,
-          }}
+    <Box>
+      {/* Header */}
+      <PageHeader
+        title="Sales Reports"
+        subtitle="Analytics and performance insights"
+        icon={Analytics}
+        actions={
+          <>
+            <Tooltip title="Refresh">
+              <IconButton onClick={() => fetchData(true)} disabled={refreshing}>
+                <Refresh />
+              </IconButton>
+            </Tooltip>
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<CloudDownload />}
+              onClick={(e) => setExportAnchor(e.currentTarget)}
+              sx={{ borderRadius: 2 }}
+            >
+              {!isMobile && 'Export'}
+            </Button>
+          </>
+        }
+      />
+
+      {refreshing && <LinearProgress sx={{ mb: 2, borderRadius: 1 }} />}
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>
+      )}
+
+      {/* KPI Cards */}
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        <Grid item xs={6} sm={6} md={3}>
+          <KPICard title="Total Sales" value={totalSales} icon={Assessment} color="primary" loading={loading} />
+        </Grid>
+        <Grid item xs={6} sm={6} md={3}>
+          <KPICard title="Total Revenue" value={formatCurrency(totalRevenue)} icon={MonetizationOn} color="success" loading={loading} />
+        </Grid>
+        <Grid item xs={6} sm={6} md={3}>
+          <KPICard title="Average Value" value={formatCurrency(avgValue)} icon={TrendingUp} color="info" loading={loading} />
+        </Grid>
+        <Grid item xs={6} sm={6} md={3}>
+          <KPICard title="Completion Rate" value={`${completionRate}%`} icon={CheckCircle} color="warning" loading={loading} />
+        </Grid>
+      </Grid>
+
+      {/* Filters */}
+      <FilterBar
+        filters={filterConfig}
+        values={filters}
+        onChange={handleFilterChange}
+        onClear={clearFilters}
+      />
+
+      {/* Report Tabs */}
+      <Card variant="outlined" sx={{ mt: 1 }}>
+        <Tabs
+          value={activeTab}
+          onChange={(e, v) => setActiveTab(v)}
+          variant={isMobile ? 'fullWidth' : 'standard'}
+          sx={{ borderBottom: '1px solid', borderColor: 'divider', px: 2 }}
         >
-          <Breadcrumbs sx={{ mb: 2 }}>
-            <Link color="inherit" href="/" onClick={() => navigate('/')}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Home fontSize="small" />
-                Dashboard
-              </Box>
-            </Link>
-            <Typography color="text.primary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <Analytics fontSize="small" />
-              Sales Reports
-            </Typography>
-          </Breadcrumbs>
+          <Tab label="Overview" sx={{ textTransform: 'none', fontWeight: 600 }} />
+          <Tab label="Performance" sx={{ textTransform: 'none', fontWeight: 600 }} />
+          <Tab label="Details" sx={{ textTransform: 'none', fontWeight: 600 }} />
+        </Tabs>
 
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 2 }}>
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant="h3" component="h1" fontWeight="bold" gutterBottom>
-                Sales Reports
-              </Typography>
-              <Typography variant="h6" color="text.secondary">
-                Comprehensive sales analytics and performance insights
-              </Typography>
-            </Box>
-            
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
-              <Button
-                variant="outlined"
-                startIcon={<Print />}
-                onClick={() => handleExport('print')}
-              >
-                Print
-              </Button>
-              
-              <Button
-                variant="outlined"
-                startIcon={<CloudDownload />}
-                onClick={(e) => setExportMenuAnchor(e.currentTarget)}
-              >
-                Export
-              </Button>
-              
-              <Button
-                variant="outlined"
-                startIcon={refreshing ? <CircularProgress size={16} /> : <Refresh />}
-                onClick={refreshData}
-                disabled={refreshing}
-              >
-                {refreshing ? 'Refreshing...' : 'Refresh'}
-              </Button>
-            </Box>
-          </Box>
-        </Paper>
-
-        <Box sx={{ px: 3 }} id="report-content">
-          {refreshing && <LinearProgress sx={{ mb: 2 }} />}
-
-          {error && (
-            <Fade in={Boolean(error)}>
-              <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
-                {error}
-              </Alert>
-            </Fade>
+        <Box sx={{ p: { xs: 2, md: 3 } }}>
+          {activeTab === 0 && (
+            <OverviewTab salesData={filteredSales} period={filters.period} loading={loading} />
           )}
-
-          {/* Enhanced Filters */}
-          <Card sx={{ mb: 3 }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom fontWeight="bold">
-                Report Filters
-              </Typography>
-              
-              <Grid container spacing={2} alignItems="center">
-                <Grid item xs={12} sm={6} md={2}>
-                  <FormControl fullWidth size="small">
-                    <InputLabel>Time Period</InputLabel>
-                    <Select
-                      value={filters.period}
-                      label="Time Period"
-                      onChange={handleFilterChange('period')}
-                    >
-                      {TIME_PERIODS.map((period) => (
-                        <MenuItem key={period.value} value={period.value}>
-                          {period.label}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-
-                {filters.period === 'custom' && (
-                  <>
-                    <Grid item xs={12} sm={6} md={2}>
-                      <DatePicker
-                        label="From Date"
-                        value={filters.dateFrom}
-                        onChange={handleFilterChange('dateFrom')}
-                        slotProps={{ textField: { size: 'small', fullWidth: true } }}
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={2}>
-                      <DatePicker
-                        label="To Date"
-                        value={filters.dateTo}
-                        onChange={handleFilterChange('dateTo')}
-                        slotProps={{ textField: { size: 'small', fullWidth: true } }}
-                      />
-                    </Grid>
-                  </>
-                )}
-
-                <Grid item xs={12} sm={6} md={2}>
-                  <FormControl fullWidth size="small">
-                    <InputLabel>Project</InputLabel>
-                    <Select
-                      value={filters.project}
-                      label="Project"
-                      onChange={handleFilterChange('project')}
-                    >
-                      <MenuItem value="all">All Projects</MenuItem>
-                      {projects.map((project) => (
-                        <MenuItem key={project._id} value={project._id}>
-                          {project.name}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-
-                <Grid item xs={12} sm={6} md={2}>
-                  <FormControl fullWidth size="small">
-                    <InputLabel>Salesperson</InputLabel>
-                    <Select
-                      value={filters.salesperson}
-                      label="Salesperson"
-                      onChange={handleFilterChange('salesperson')}
-                    >
-                      <MenuItem value="all">All Salespeople</MenuItem>
-                      {users.filter(u => u.role?.includes('Sales')).map((user) => (
-                        <MenuItem key={user._id} value={user._id}>
-                          {user.firstName} {user.lastName}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-
-                <Grid item xs={12} sm={6} md={2}>
-                  <Button
-                    variant="outlined"
-                    fullWidth
-                    startIcon={<Clear />}
-                    onClick={clearFilters}
-                  >
-                    Clear Filters
-                  </Button>
-                </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
-
-          {/* Enhanced Report Tabs */}
-          <Card sx={{ mb: 4 }}>
-            <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-              <Tabs 
-                value={activeTab} 
-                onChange={handleTabChange} 
-                variant="fullWidth"
-                sx={{
-                  '& .MuiTab-root': {
-                    minHeight: 72,
-                    textTransform: 'none',
-                  },
-                }}
-              >
-                {REPORT_TYPES.map((type, index) => (
-                  <Tab 
-                    key={type.key}
-                    label={
-                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
-                        <type.icon />
-                        <Typography variant="body2" fontWeight="medium">
-                          {type.label}
-                        </Typography>
-                      </Box>
-                    }
-                  />
-                ))}
-              </Tabs>
-            </Box>
-
-            <Box sx={{ p: 3 }}>
-              <TabPanel value={activeTab} index={0}>
-                <EnhancedSalesOverview 
-                  salesData={salesData}
-                  analytics={analytics}
-                  loading={loading}
-                  period={filters.period}
-                />
-              </TabPanel>
-
-              <TabPanel value={activeTab} index={1}>
-                <EnhancedPerformanceAnalysis 
-                  salesData={salesData}
-                  projects={projects}
-                  users={users}
-                  loading={loading}
-                />
-              </TabPanel>
-
-              <TabPanel value={activeTab} index={2}>
-                <Box sx={{ textAlign: 'center', py: 8 }}>
-                  <MonetizationOn sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-                  <Typography variant="h5" color="text.secondary" gutterBottom>
-                    Revenue Analytics Coming Soon
-                  </Typography>
-                  <Typography variant="body1" color="text.secondary">
-                    Advanced revenue forecasting and predictive analytics will be available here.
-                  </Typography>
-                </Box>
-              </TabPanel>
-
-              <TabPanel value={activeTab} index={3}>
-                <DetailedReportsTable 
-                  salesData={salesData}
-                  loading={loading}
-                />
-              </TabPanel>
-            </Box>
-          </Card>
+          {activeTab === 1 && (
+            <PerformanceTab salesData={filteredSales} loading={loading} />
+          )}
+          {activeTab === 2 && (
+            <DetailsTab salesData={filteredSales} loading={loading} onSaleClick={handleSaleClick} />
+          )}
         </Box>
+      </Card>
 
-        {/* Export Menu */}
-        <Menu
-          anchorEl={exportMenuAnchor}
-          open={Boolean(exportMenuAnchor)}
-          onClose={() => setExportMenuAnchor(null)}
-        >
-          {EXPORT_FORMATS.map((format) => (
-            <MenuItem key={format.key} onClick={() => handleExport(format.key)}>
-              <ListItemIcon>
-                <format.icon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText 
-                primary={format.label}
-                secondary={format.description}
-              />
-            </MenuItem>
-          ))}
-        </Menu>
-
-        {/* Floating Action Button */}
-        <SpeedDial
-          ariaLabel="Export Actions"
-          sx={{ position: 'fixed', bottom: 24, right: 24 }}
-          icon={<SpeedDialIcon />}
-        >
-          {speedDialActions.map((action) => (
-            <SpeedDialAction
-              key={action.name}
-              icon={action.icon}
-              tooltipTitle={action.name}
-              onClick={action.onClick}
-            />
-          ))}
-        </SpeedDial>
-      </Box>
-    </LocalizationProvider>
+      {/* Export Menu */}
+      <Menu anchorEl={exportAnchor} open={Boolean(exportAnchor)} onClose={() => setExportAnchor(null)}>
+        <MenuItem onClick={() => { exportToCSV(filteredSales); setExportAnchor(null); }}>
+          <ListItemIcon><TableView fontSize="small" /></ListItemIcon>
+          <ListItemText primary="Export CSV" secondary="Spreadsheet data" />
+        </MenuItem>
+        <MenuItem onClick={() => { window.print(); setExportAnchor(null); }}>
+          <ListItemIcon><Print fontSize="small" /></ListItemIcon>
+          <ListItemText primary="Print Report" secondary="Print-friendly view" />
+        </MenuItem>
+      </Menu>
+    </Box>
   );
 };
 

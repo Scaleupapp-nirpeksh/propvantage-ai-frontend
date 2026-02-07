@@ -80,6 +80,7 @@ import {
 
 import { useAuth } from '../../context/AuthContext';
 import { projectAPI, towerAPI, unitAPI } from '../../services/api';
+import CostSheetGenerator from '../../components/pricing/CostSheetGenerator';
 
 // Utility functions
 const formatCurrency = (amount) => {
@@ -1021,6 +1022,7 @@ const UnitDetailPage = () => {
         >
           <Tab label="Overview" />
           <Tab label="Financial Details" />
+          <Tab label="Cost Sheet" />
           <Tab label="History & Metadata" />
         </Tabs>
       </Paper>
@@ -1028,7 +1030,52 @@ const UnitDetailPage = () => {
       {/* Tab Content */}
       {activeTab === 0 && <UnitOverview unit={unit} />}
       {activeTab === 1 && <FinancialDetails unit={unit} />}
-      {activeTab === 2 && <UnitHistory unit={unit} />}
+      {activeTab === 2 && (
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={8}>
+            <CostSheetGenerator
+              unitId={unitId}
+              unitData={unit}
+              projectData={project}
+              embedded={false}
+            />
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                  Quick Info
+                </Typography>
+                <Stack spacing={2}>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">Unit</Typography>
+                    <Typography variant="body1" fontWeight={600}>{unit?.unitNumber}</Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">Type</Typography>
+                    <Typography variant="body1" fontWeight={600}>{unit?.type || '-'}</Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">Area</Typography>
+                    <Typography variant="body1" fontWeight={600}>{unit?.areaSqft || 0} sq ft</Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">Base Price</Typography>
+                    <Typography variant="h6" color="primary.main" fontWeight={700}>
+                      {formatCurrency(unit?.basePrice)}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">Floor</Typography>
+                    <Typography variant="body1" fontWeight={600}>{unit?.floor || 0}</Typography>
+                  </Box>
+                </Stack>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      )}
+      {activeTab === 3 && <UnitHistory unit={unit} />}
     </Box>
   );
 };

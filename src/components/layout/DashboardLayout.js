@@ -1,6 +1,6 @@
 // File: src/components/layout/DashboardLayout.js
-// Description: Simplified dashboard layout - Single User Management section without nested children
-// Version: 1.10 - Simplified user management navigation structure
+// Description: Redesigned layout - collapsible sidebar, command palette, clean minimal design
+// Version: 2.0
 // Location: src/components/layout/DashboardLayout.js
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -20,7 +20,6 @@ import {
   Badge,
   Tooltip,
   Collapse,
-  ListItem,
   ListItemButton,
   ListItemIcon,
   ListItemText,
@@ -28,8 +27,9 @@ import {
   Link,
   useTheme,
   useMediaQuery,
-  Paper,
   Chip,
+  alpha,
+  Fade,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -47,410 +47,276 @@ import {
   Home,
   AccountCircle,
   ChevronRight,
+  ChevronLeft,
   Apartment,
   LocationCity,
-  Domain,
   PersonPin,
   AttachMoney,
-  Construction,
-  Description,
-  Psychology,
-  AccountBalance,  
-  Receipt,         
-  Payment,         
-  Assessment,      
-  Timeline,        // For Sales Pipeline
-  BarChart,        // For Sales Reports
-  ShowChart,       // Alternative for Reports
-  Handshake,       // For Commission Management
-  AccountBalanceWallet, // For Commission Payments & Payment Dashboard
-  TrendingUpIcon,  // For Commission Analytics
-  MonetizationOn,  // For Payment Dashboard
-  Today,           // For Due Payments
-  Warning,         // For Overdue Payments
-  Speed,           // For Collection Performance
-  NoteAdd,         // For Generate Invoice
-  ReceiptLong,     // Alternative invoice icon
-  // Analytics Icons
-  PieChart,        // For KPI Dashboard
-  DonutLarge,      // For Budget Analytics
-  TrendingFlat,    // For Real-time Financial
-  Insights,        // For Analytics Reports Center
-  CompareArrows,   // For Budget vs Actual
-  Timeline as TimelineIcon, // For Variance Analysis
-  AccountTree,     // For Project Budget Analysis
-  AutoGraph,       // For Advanced Analytics
-  Equalizer,       // For Performance Metrics
-  // AI Icons (for future use)
-  SmartToy,        // For AI Insights
-  Psychology as PsychologyIcon, // For Conversation Analysis
-  PsychologyAlt,   // For Predictive Analytics
-  Lightbulb,       // For Smart Recommendations
+  Receipt,
+  Payment,
+  Assessment,
+  Timeline,
+  BarChart,
+  Handshake,
+  AccountBalanceWallet,
+  MonetizationOn,
+  Today,
+  Warning,
+  NoteAdd,
+  PieChart,
+  TrendingFlat,
+  CompareArrows,
+  AutoGraph,
+  PsychologyAlt,
   QueryStats,
-  // User Management Icons
-  PersonAdd,       // For Invite User
-  Email,           // For Pending Invitations  
-  Link as LinkIcon, // For Invitation Links
-  SupervisorAccount, // For Role Management
-  Security,        // For Security Settings
+  PersonAdd,
+  Search,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
+import CommandPalette from '../navigation/CommandPalette';
+import { useCoachMark } from '../onboarding';
 
 // --- Constants ---
-const DRAWER_WIDTH = 280;
+const DRAWER_WIDTH = 260;
+const COLLAPSED_WIDTH = 72;
 
-// --- Helper Functions & Sub-components ---
-
-/**
- * Generates navigation items based on the user's role and permissions.
- * SIMPLIFIED: Removed nested user management structure
- * @param {string} userRole - The role of the current user.
- * @param {object} canAccess - The access control object from useAuth.
- * @returns {Array} - A filtered array of navigation items.
- */
+// --- Navigation Items ---
 const getNavigationItems = (userRole, canAccess) => {
   const allItems = [
+    // MAIN
     {
-      id: 'dashboard',
-      title: 'Dashboard',
-      icon: Dashboard,
-      path: '/dashboard',
-      requiredAccess: () => true, // Everyone can access dashboard
-    },
-    {
-      id: 'projects',
-      title: 'Projects',
-      icon: Business,
-      path: '/projects',
-      requiredAccess: () => canAccess.viewAllProjects(),
-      children: [
+      section: 'MAIN',
+      items: [
         {
-          id: 'projects-list',
-          title: 'All Projects',
-          icon: Apartment,
-          path: '/projects',
-        },
-        {
-          id: 'projects-create',
-          title: 'Create Project',
-          icon: LocationCity,
-          path: '/projects/create',
-          requiredAccess: () => canAccess.projectManagement(),
-        },
-      ],
-    },
-    {
-      id: 'leads',
-      title: 'Lead Management',
-      icon: People,
-      path: '/leads',
-      requiredAccess: () => canAccess.leadManagement(),
-      children: [
-        {
-          id: 'leads-list',
-          title: 'All Leads',
-          icon: PersonPin,
-          path: '/leads',
-        },
-        {
-          id: 'leads-pipeline',
-          title: 'Sales Pipeline',
-          icon: TrendingUp,
-          path: '/leads/pipeline',
-        },
-        {
-          id: 'leads-create',
-          title: 'Add New Lead',
-          icon: PersonPin,
-          path: '/leads/create',
-        },
-      ],
-    },
-    {
-      id: 'sales',
-      title: 'Sales & Payments',
-      icon: AttachMoney,
-      path: '/sales',
-      requiredAccess: () => canAccess.salesPipeline(),
-      children: [
-        {
-          id: 'sales-list',
-          title: 'All Sales',
-          icon: Assignment,
-          path: '/sales',
-        },
-        {
-          id: 'sales-create',
-          title: 'New Booking',
-          icon: Assignment,
-          path: '/sales/create',
-        },
-        {
-          id: 'sales-pipeline',
-          title: 'Sales Pipeline',
-          icon: Timeline,
-          path: '/sales/pipeline',
-          requiredAccess: () => canAccess.salesPipeline(),
-        },
-        {
-          id: 'sales-reports',
-          title: 'Sales Reports',
-          icon: BarChart,
-          path: '/sales/reports',
-          requiredAccess: () => canAccess.salesReports(),
-        },
-        {
-          id: 'payment-reports',
-          title: 'Payment Reports',
-          icon: Payment,
-          path: '/payments/reports',
-          requiredAccess: () => canAccess.salesReports(),
-        },
-        {
-          id: 'payment-plans',
-          title: 'Payment Plans',
-          icon: AccountBalance,
-          path: '/sales/payment-plans',
-          requiredAccess: () => canAccess.salesPipeline(),
-        },
-        
-        // Commission Management Section
-        {
-          id: 'commission-management',
-          title: 'Commission Management',
-          icon: Handshake,
-          path: '/sales/commissions',
-          requiredAccess: () => canAccess.salesPipeline() || canAccess.viewFinancials(),
-          children: [
-            {
-              id: 'commission-dashboard',
-              title: 'Commission Dashboard',
-              icon: Dashboard,
-              path: '/sales/commissions',
-              requiredAccess: () => canAccess.salesPipeline(),
-            },
-            {
-              id: 'commission-list',
-              title: 'All Commissions',
-              icon: Assignment,
-              path: '/sales/commissions/list',
-              requiredAccess: () => canAccess.salesPipeline(),
-            },
-            {
-              id: 'commission-structures',
-              title: 'Commission Structures',
-              icon: Settings,
-              path: '/sales/commissions/structures',
-              requiredAccess: () => canAccess.projectManagement(),
-            },
-            {
-              id: 'commission-payments',
-              title: 'Commission Payments',
-              icon: AccountBalanceWallet,
-              path: '/sales/commissions/payments',
-              requiredAccess: () => canAccess.viewFinancials(),
-            },
-            {
-              id: 'commission-reports',
-              title: 'Commission Reports',
-              icon: Assessment,
-              path: '/sales/commissions/reports',
-              requiredAccess: () => canAccess.salesReports(),
-            },
-          ],
-        },
-      ],
-    },
-
-    // =============================================================================
-    // ANALYTICS SECTION
-    // =============================================================================
-    {
-      id: 'analytics',
-      title: 'Analytics & Intelligence',
-      icon: Analytics,
-      path: '/analytics',
-      requiredAccess: () => canAccess.salesReports(),
-      children: [
-        {
-          id: 'analytics-dashboard',
-          title: 'Analytics Overview',
+          id: 'dashboard',
+          title: 'Dashboard',
           icon: Dashboard,
-          path: '/analytics',
+          path: '/dashboard',
+          requiredAccess: () => true,
         },
+      ],
+    },
+    // OPERATIONS
+    {
+      section: 'OPERATIONS',
+      items: [
         {
-          id: 'analytics-sales',
-          title: 'Sales Analytics',
-          icon: TrendingUp,
-          path: '/analytics/sales',
-        },
-        {
-          id: 'analytics-revenue',
-          title: 'Revenue Analytics',
-          icon: AttachMoney,
-          path: '/analytics/revenue',
-          requiredAccess: () => canAccess.viewFinancials(),
-        },
-        {
-          id: 'analytics-leads',
-          title: 'Lead Analytics',
-          icon: People,
-          path: '/analytics/leads',
-        },
-        {
-          id: 'budget-variance',
-          title: 'Budget Planning',
-          icon: QueryStats,
-          path: '/analytics/budget-variance',
-          requiredAccess: () => canAccess.viewFinancials(),
-        },
-
-        // Financial Analytics Sub-section
-        {
-          id: 'financial-analytics',
-          title: 'Financial Analytics',
-          icon: DonutLarge,
-          path: '/analytics/budget',
-          requiredAccess: () => canAccess.viewFinancials(),
+          id: 'projects',
+          title: 'Projects',
+          icon: Business,
+          path: '/projects',
+          requiredAccess: () => canAccess.viewAllProjects(),
           children: [
-            {
-              id: 'budget-dashboard',
-              title: 'Budget vs Actual',
-              icon: CompareArrows,
-              path: '/analytics/budget',
-              requiredAccess: () => canAccess.viewFinancials(),
-            },
-            {
-              id: 'financial-realtime',
-              title: 'Real-time Financial',
-              icon: TrendingFlat,
-              path: '/analytics/financial',
-              requiredAccess: () => canAccess.viewFinancials(),
-            },
+            { id: 'projects-list', title: 'All Projects', icon: Apartment, path: '/projects' },
+            { id: 'projects-create', title: 'Create Project', icon: LocationCity, path: '/projects/create', requiredAccess: () => canAccess.projectManagement() },
+          ],
+        },
+        {
+          id: 'leads',
+          title: 'Leads',
+          icon: People,
+          path: '/leads',
+          requiredAccess: () => canAccess.leadManagement(),
+          children: [
+            { id: 'leads-list', title: 'All Leads', icon: PersonPin, path: '/leads' },
+            { id: 'leads-pipeline', title: 'Pipeline', icon: TrendingUp, path: '/leads/pipeline' },
+            { id: 'leads-create', title: 'Add Lead', icon: PersonAdd, path: '/leads/create' },
+          ],
+        },
+        {
+          id: 'sales',
+          title: 'Sales & Bookings',
+          icon: AttachMoney,
+          path: '/sales',
+          requiredAccess: () => canAccess.salesPipeline(),
+          children: [
+            { id: 'sales-list', title: 'All Sales', icon: Assignment, path: '/sales' },
+            { id: 'sales-create', title: 'New Booking', icon: NoteAdd, path: '/sales/create' },
+            { id: 'sales-pipeline', title: 'Pipeline', icon: Timeline, path: '/sales/pipeline', requiredAccess: () => canAccess.salesPipeline() },
+            { id: 'sales-reports', title: 'Sales Reports', icon: BarChart, path: '/sales/reports', requiredAccess: () => canAccess.salesReports() },
+            { id: 'invoices', title: 'Invoices', icon: Receipt, path: '/sales/invoices', requiredAccess: () => canAccess.salesReports() },
+            { id: 'commissions', title: 'Commissions', icon: Handshake, path: '/sales/commissions', requiredAccess: () => canAccess.salesPipeline() || canAccess.viewFinancials() },
+          ],
+        },
+        {
+          id: 'payments',
+          title: 'Payments',
+          icon: Payment,
+          path: '/payments/dashboard',
+          requiredAccess: () => canAccess.salesPipeline(),
+          children: [
+            { id: 'payment-dashboard', title: 'Overview', icon: MonetizationOn, path: '/payments/dashboard' },
+            { id: 'due-today', title: 'Due Today', icon: Today, path: '/payments/due-today' },
+            { id: 'overdue', title: 'Overdue', icon: Warning, path: '/payments/overdue' },
+            { id: 'payment-reports', title: 'Reports', icon: Assessment, path: '/payments/reports', requiredAccess: () => canAccess.salesReports() },
+            { id: 'payment-plans', title: 'Payment Plans', icon: AccountBalanceWallet, path: '/sales/payment-plans', requiredAccess: () => canAccess.salesPipeline() },
           ],
         },
       ],
     },
-
-    // =============================================================================
-    // SIMPLIFIED SETTINGS & ADMINISTRATION SECTION
-    // =============================================================================
+    // INTELLIGENCE
     {
-      id: 'settings',
-      title: 'Admin Panel',
-      icon: Settings,
-      path: '/settings',
-      requiredAccess: () => canAccess.userManagement() || canAccess.projectManagement(),
-      children: [
-        // SIMPLIFIED: Single User Management item (no nested children)
+      section: 'INTELLIGENCE',
+      items: [
         {
-          id: 'user-management',
-          title: 'User Management',
-          icon: People,
-          path: '/settings/users',
-          requiredAccess: () => canAccess.userManagement(),
+          id: 'analytics',
+          title: 'Analytics',
+          icon: Analytics,
+          path: '/analytics',
+          requiredAccess: () => canAccess.salesReports(),
+          children: [
+            { id: 'analytics-dashboard', title: 'Overview', icon: PieChart, path: '/analytics' },
+            { id: 'analytics-sales', title: 'Sales Analytics', icon: TrendingUp, path: '/analytics/sales' },
+            { id: 'analytics-revenue', title: 'Revenue', icon: AttachMoney, path: '/analytics/revenue', requiredAccess: () => canAccess.viewFinancials() },
+            { id: 'analytics-leads', title: 'Lead Analytics', icon: People, path: '/analytics/leads' },
+            { id: 'budget-variance', title: 'Budget Planning', icon: QueryStats, path: '/analytics/budget-variance', requiredAccess: () => canAccess.viewFinancials() },
+            { id: 'budget-vs-actual', title: 'Budget vs Actual', icon: CompareArrows, path: '/analytics/budget', requiredAccess: () => canAccess.viewFinancials() },
+            { id: 'financial-realtime', title: 'Real-time Financial', icon: TrendingFlat, path: '/analytics/financial', requiredAccess: () => canAccess.viewFinancials() },
+            { id: 'predictive', title: 'Predictions', icon: PsychologyAlt, path: '/analytics/predictions', requiredAccess: () => canAccess.viewFinancials() },
+          ],
         },
-        
-
+        {
+          id: 'pricing',
+          title: 'Pricing',
+          icon: MonetizationOn,
+          path: '/pricing/dynamic',
+          requiredAccess: () => canAccess.viewFinancials(),
+          children: [
+            { id: 'dynamic-pricing', title: 'Dynamic Pricing', icon: AutoGraph, path: '/pricing/dynamic', requiredAccess: () => canAccess.viewFinancials() },
+          ],
+        },
+      ],
+    },
+    // SYSTEM
+    {
+      section: 'SYSTEM',
+      items: [
+        {
+          id: 'settings',
+          title: 'Admin',
+          icon: Settings,
+          path: '/settings',
+          requiredAccess: () => canAccess.userManagement() || canAccess.projectManagement(),
+          children: [
+            { id: 'user-management', title: 'Users', icon: People, path: '/settings/users', requiredAccess: () => canAccess.userManagement() },
+          ],
+        },
       ],
     },
   ];
 
-  // Filter items based on access control
-  return allItems.filter(item => {
-    if (item.requiredAccess && !item.requiredAccess()) {
-      return false;
-    }
-    
-    if (item.children) {
-      item.children = item.children.filter(child => {
-        // Recursively filter nested children (for commission and analytics sub-menus)
-        if (child.children) {
-          child.children = child.children.filter(grandchild => {
-            return !grandchild.requiredAccess || grandchild.requiredAccess();
-          });
-        }
-        return !child.requiredAccess || child.requiredAccess();
-      });
-    }
-    
-    return true;
-  });
+  // Filter based on access
+  return allItems.map(section => ({
+    ...section,
+    items: section.items.filter(item => {
+      if (item.requiredAccess && !item.requiredAccess()) return false;
+      if (item.children) {
+        item.children = item.children.filter(c => !c.requiredAccess || c.requiredAccess());
+      }
+      return true;
+    }),
+  })).filter(section => section.items.length > 0);
 };
 
-/**
- * Renders a single navigation item, handling nesting and active states.
- */
-const NavigationItem = ({ item, isActive, onNavigate, isOpen, onToggle, level = 0, openSubMenus = {}, onSubMenuToggle }) => {
+// --- Navigation Item Component ---
+const NavItem = ({ item, isActive, onNavigate, isOpen, onToggle, collapsed, level = 0 }) => {
   const theme = useTheme();
   const hasChildren = item.children && item.children.length > 0;
+  const Icon = item.icon;
 
   const handleClick = () => {
-    if (hasChildren) {
+    if (hasChildren && !collapsed) {
       onToggle();
-    } else if (onNavigate) {
+    } else {
       onNavigate(item.path);
     }
   };
 
+  const isChildActive = hasChildren && item.children.some(c =>
+    window.location.pathname === c.path || window.location.pathname.startsWith(c.path + '/')
+  );
+  const active = isActive && !hasChildren;
+
   return (
     <>
-      <ListItem disablePadding>
+      <Tooltip title={collapsed ? item.title : ''} placement="right" arrow>
         <ListItemButton
           onClick={handleClick}
-          selected={isActive && !hasChildren}
           sx={{
-            pl: 2 + level * 2,
-            borderRadius: 1,
-            mx: 1,
-            my: 0.5,
-            '&.Mui-selected': {
-              bgcolor: theme.palette.primary.main,
-              color: 'white',
-              '&:hover': {
-                bgcolor: theme.palette.primary.dark,
+            minHeight: 38,
+            borderRadius: 2,
+            mx: collapsed ? 0.75 : 1,
+            my: 0.25,
+            px: collapsed ? 0 : 1.5,
+            justifyContent: collapsed ? 'center' : 'flex-start',
+            pl: collapsed ? 0 : 1.5 + level * 2,
+            position: 'relative',
+            // Active state: left border accent
+            ...(active && {
+              bgcolor: alpha(theme.palette.primary.main, 0.08),
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                left: 0,
+                top: 6,
+                bottom: 6,
+                width: 3,
+                borderRadius: '0 3px 3px 0',
+                bgcolor: 'primary.main',
               },
-              '& .MuiListItemIcon-root': {
-                color: 'white',
-              },
+            }),
+            // Parent with active child
+            ...(isChildActive && !active && {
+              bgcolor: alpha(theme.palette.primary.main, 0.04),
+            }),
+            '&:hover': {
+              bgcolor: active
+                ? alpha(theme.palette.primary.main, 0.12)
+                : alpha(theme.palette.grey[500], 0.08),
             },
           }}
         >
-          <ListItemIcon sx={{ minWidth: 40 }}>
-            <item.icon />
-          </ListItemIcon>
-          <ListItemText 
-            primary={item.title}
-            primaryTypographyProps={{
-              fontSize: level === 0 ? '0.875rem' : '0.8rem',
-              fontWeight: isActive ? 600 : 500,
+          <ListItemIcon
+            sx={{
+              minWidth: collapsed ? 0 : 36,
+              justifyContent: 'center',
+              color: active || isChildActive ? 'primary.main' : 'text.secondary',
             }}
-          />
-          {hasChildren && (isOpen ? <ExpandLess /> : <ExpandMore />)}
+          >
+            <Icon sx={{ fontSize: level > 0 ? 18 : 20 }} />
+          </ListItemIcon>
+          {!collapsed && (
+            <>
+              <ListItemText
+                primary={item.title}
+                primaryTypographyProps={{
+                  fontSize: level > 0 ? '0.75rem' : '0.813rem',
+                  fontWeight: active || isChildActive ? 600 : 400,
+                  color: active ? 'primary.main' : 'text.primary',
+                  noWrap: true,
+                }}
+              />
+              {hasChildren && (isOpen ? <ExpandLess sx={{ fontSize: 18 }} /> : <ExpandMore sx={{ fontSize: 18 }} />)}
+            </>
+          )}
         </ListItemButton>
-      </ListItem>
-      
-      {hasChildren && (
+      </Tooltip>
+
+      {hasChildren && !collapsed && (
         <Collapse in={isOpen} timeout="auto" unmountOnExit>
           <List component="div" disablePadding>
-            {item.children.map((child) => {
-              const childHasChildren = child.children && child.children.length > 0;
-              const childIsOpen = openSubMenus && openSubMenus[child.id];
-              
-              return (
-                <NavigationItem
-                  key={child.id}
-                  item={child}
-                  isActive={window.location.pathname === child.path}
-                  onNavigate={onNavigate}
-                  isOpen={childIsOpen}
-                  onToggle={childHasChildren ? () => onSubMenuToggle && onSubMenuToggle(child.id) : undefined}
-                  level={level + 1}
-                  openSubMenus={openSubMenus}
-                  onSubMenuToggle={onSubMenuToggle}
-                />
-              );
-            })}
+            {item.children.map(child => (
+              <NavItem
+                key={child.id}
+                item={child}
+                isActive={window.location.pathname === child.path || window.location.pathname.startsWith(child.path + '/')}
+                onNavigate={onNavigate}
+                isOpen={false}
+                onToggle={() => {}}
+                collapsed={false}
+                level={1}
+              />
+            ))}
           </List>
         </Collapse>
       )}
@@ -458,122 +324,68 @@ const NavigationItem = ({ item, isActive, onNavigate, isOpen, onToggle, level = 
   );
 };
 
-/**
- * Renders the breadcrumb navigation based on the current URL path.
- * SIMPLIFIED: Updated breadcrumb labels for simplified user management
- */
+// --- Breadcrumbs ---
 const DashboardBreadcrumbs = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const getBreadcrumbs = () => {
-    const pathSegments = location.pathname.split('/').filter(Boolean);
-    if (pathSegments.length === 0 || (pathSegments.length === 1 && pathSegments[0] === 'dashboard')) {
-        return []; // No breadcrumbs on the main dashboard page
-    }
-
-    const breadcrumbs = [];
-    let currentPath = '';
-
-    pathSegments.forEach((segment, index) => {
-      currentPath += `/${segment}`;
-      
-      let label = segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, ' ');
-      
-      const labelMap = {
-        // Existing labels
-        'projects': 'Projects', 
-        'leads': 'Leads', 
-        'sales': 'Sales',
-        'analytics': 'Analytics', 
-        'settings': 'Settings', 
-        'create': 'Create New',
-        'pipeline': 'Pipeline', 
-        'reports': 'Reports',
-        'ai-insights': 'AI Insights',
-        'payment-plans': 'Payment Plans',
-        'templates': 'Templates',
-        'active': 'Active Plans',
-        
-        // Commission Management breadcrumb labels
-        'commissions': 'Commission Management',
-        'list': 'All Commissions',
-        'structures': 'Commission Structures',
-        'payments': 'Payments',
-        'dashboard': 'Dashboard',
-        
-        // Payment Management breadcrumb labels
-        'due-today': 'Due Today',
-        'overdue': 'Overdue Payments',
-        'collections': 'Collection Performance',
-        'record': 'Record Payment',
-        'plans': 'Payment Plans',
-        
-        // Invoice Management breadcrumb labels
-        'invoices': 'Invoice Management',
-        'generate': 'Generate Invoice',
-        'invoice-reports': 'Invoice Reports',
-
-        // Analytics breadcrumb labels
-        'budget': 'Budget Analysis',
-        'financial': 'Financial Dashboard',
-        'kpis': 'KPI Dashboard',
-        'variance': 'Variance Analysis',
-        'revenue': 'Revenue Analytics',
-        'budget-variance': 'Budget Variance Dashboard',
-        
-        // SIMPLIFIED: User Management breadcrumb labels (no sub-sections)
-        'users': 'User Management',
-        'organization': 'Organization Settings', 
-        'security': 'Security & Access',
-        
-        // AI Intelligence breadcrumb labels (Phase 2 preparation)
-        'conversation': 'Conversation Analysis',
-        'predictions': 'Predictive Analytics',
-        'recommendations': 'Smart Recommendations',
-        'lead-scoring': 'AI Lead Scoring',
-      };
-      
-      label = labelMap[segment] || label;
-      
-      breadcrumbs.push({
-        label,
-        path: currentPath,
-        isLast: index === pathSegments.length - 1,
-      });
-    });
-
-    return breadcrumbs;
+  const labelMap = {
+    'projects': 'Projects', 'leads': 'Leads', 'sales': 'Sales',
+    'analytics': 'Analytics', 'settings': 'Settings', 'create': 'Create',
+    'pipeline': 'Pipeline', 'reports': 'Reports', 'edit': 'Edit',
+    'commissions': 'Commissions', 'list': 'All', 'structures': 'Structures',
+    'payments': 'Payments', 'dashboard': 'Dashboard',
+    'due-today': 'Due Today', 'overdue': 'Overdue',
+    'record': 'Record Payment', 'plans': 'Plans',
+    'invoices': 'Invoices', 'generate': 'Generate',
+    'budget': 'Budget vs Actual', 'financial': 'Financial',
+    'revenue': 'Revenue', 'budget-variance': 'Budget Planning',
+    'predictions': 'Predictions', 'pricing': 'Pricing',
+    'dynamic': 'Dynamic Pricing', 'cost-sheet': 'Cost Sheet',
+    'users': 'User Management', 'profile': 'Profile',
+    'payment-plans': 'Payment Plans', 'collections': 'Collections',
   };
 
-  const breadcrumbs = getBreadcrumbs();
-  if (breadcrumbs.length === 0) return null;
+  const segments = location.pathname.split('/').filter(Boolean);
+  if (segments.length <= 1 && segments[0] === 'dashboard') return null;
+
+  let path = '';
+  const crumbs = segments.map((seg, i) => {
+    path += `/${seg}`;
+    return {
+      label: labelMap[seg] || seg.charAt(0).toUpperCase() + seg.slice(1).replace(/-/g, ' '),
+      path,
+      isLast: i === segments.length - 1,
+    };
+  });
 
   return (
-    <Breadcrumbs separator={<ChevronRight fontSize="small" />} sx={{ mb: 0 }}>
+    <Breadcrumbs separator={<ChevronRight sx={{ fontSize: 16 }} />} sx={{ fontSize: '0.75rem' }}>
       <Link
         component="button"
         variant="body2"
         onClick={() => navigate('/dashboard')}
-        sx={{ textDecoration: 'none', '&:hover': { textDecoration: 'underline' }, display: 'flex', alignItems: 'center' }}
+        underline="hover"
+        sx={{ display: 'flex', alignItems: 'center', fontSize: '0.75rem', color: 'text.secondary' }}
       >
-        <Home sx={{ mr: 0.5, fontSize: 16 }} />
-        Dashboard
+        <Home sx={{ fontSize: 15, mr: 0.5 }} />
+        Home
       </Link>
-      {breadcrumbs.map((crumb, index) =>
-        crumb.isLast ? (
-          <Typography key={index} color="text.primary" variant="body2">
-            {crumb.label}
+      {crumbs.map((c, i) =>
+        c.isLast ? (
+          <Typography key={i} variant="body2" sx={{ fontSize: '0.75rem', fontWeight: 500, color: 'text.primary' }}>
+            {c.label}
           </Typography>
         ) : (
           <Link
-            key={index}
+            key={i}
             component="button"
             variant="body2"
-            onClick={() => navigate(crumb.path)}
-            sx={{ textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
+            onClick={() => navigate(c.path)}
+            underline="hover"
+            sx={{ fontSize: '0.75rem', color: 'text.secondary' }}
           >
-            {crumb.label}
+            {c.label}
           </Link>
         )
       )}
@@ -581,83 +393,48 @@ const DashboardBreadcrumbs = () => {
   );
 };
 
-/**
- * Enhanced user menu with simplified user management shortcuts
- * SIMPLIFIED: Removed specific user management sub-actions from menu
- */
-const EnhancedUserMenu = () => {
+// --- User Menu ---
+const UserMenu = () => {
   const navigate = useNavigate();
-  const { user, organization, logout, getUserDisplayName, getOrganizationDisplayName, canAccess } = useAuth();
+  const { user, logout, getUserDisplayName, canAccess } = useAuth();
   const [anchorEl, setAnchorEl] = useState(null);
-
-  const handleMenuOpen = (event) => setAnchorEl(event.currentTarget);
-  const handleMenuClose = () => setAnchorEl(null);
-  const handleProfileClick = () => { navigate('/profile'); handleMenuClose(); };
-  const handleSettingsClick = () => { navigate('/settings'); handleMenuClose(); };
-  const handleUserManagementClick = () => { navigate('/settings/users'); handleMenuClose(); };
-  const handleLogout = async () => { await logout(); handleMenuClose(); };
 
   return (
     <>
-      <Tooltip title="Account menu">
-        <IconButton onClick={handleMenuOpen} size="small" sx={{ ml: 2 }}>
-          <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.dark' }}>
+      <Tooltip title="Account">
+        <IconButton onClick={(e) => setAnchorEl(e.currentTarget)} size="small">
+          <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main', fontSize: '0.75rem' }}>
             {user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}
           </Avatar>
         </IconButton>
       </Tooltip>
-      
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
-        PaperProps={{
-          elevation: 8,
-          sx: {
-            overflow: 'visible', 
-            filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.32))',
-            mt: 1.5, 
-            minWidth: 260,
-            '& .MuiAvatar-root': { width: 32, height: 32, ml: -0.5, mr: 1 },
-          },
-        }}
+        onClose={() => setAnchorEl(null)}
         transformOrigin={{ horizontal: 'right', vertical: 'top' }}
         anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
       >
-        {/* User Info Header */}
-        <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-            {getUserDisplayName()}
-          </Typography>
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-            {user?.role} @ {getOrganizationDisplayName()}
-          </Typography>
+        <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider', minWidth: 220 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{getUserDisplayName()}</Typography>
+          <Typography variant="caption" color="text.secondary">{user?.role}</Typography>
         </Box>
-
-        {/* Standard Menu Items */}
-        <MenuItem onClick={handleProfileClick} sx={{ py: 1.5 }}>
+        <MenuItem onClick={() => { navigate('/profile'); setAnchorEl(null); }} sx={{ mt: 0.5 }}>
           <ListItemIcon><AccountCircle fontSize="small" /></ListItemIcon>
           Profile
         </MenuItem>
-        
-        <MenuItem onClick={handleSettingsClick} sx={{ py: 1.5 }}>
+        <MenuItem onClick={() => { navigate('/settings'); setAnchorEl(null); }}>
           <ListItemIcon><Settings fontSize="small" /></ListItemIcon>
           Settings
         </MenuItem>
-
-        {/* SIMPLIFIED: Single User Management shortcut (for authorized users only) */}
         {canAccess.userManagement() && (
-          <>
-            <Divider />
-            <MenuItem onClick={handleUserManagementClick} sx={{ py: 1.5 }}>
-              <ListItemIcon><People fontSize="small" /></ListItemIcon>
-              User Management
-            </MenuItem>
-          </>
+          <MenuItem onClick={() => { navigate('/settings/users'); setAnchorEl(null); }}>
+            <ListItemIcon><People fontSize="small" /></ListItemIcon>
+            User Management
+          </MenuItem>
         )}
-
         <Divider />
-        <MenuItem onClick={handleLogout} sx={{ py: 1.5, color: 'error.main' }}>
+        <MenuItem onClick={() => { logout(); setAnchorEl(null); }} sx={{ color: 'error.main' }}>
           <ListItemIcon><Logout fontSize="small" sx={{ color: 'error.main' }} /></ListItemIcon>
           Logout
         </MenuItem>
@@ -667,159 +444,251 @@ const EnhancedUserMenu = () => {
 };
 
 // =============================================================================
-// MAIN DASHBOARD LAYOUT COMPONENT - SIMPLIFIED
+// MAIN LAYOUT
 // =============================================================================
-
 const DashboardLayout = ({ children }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
   const location = useLocation();
   const { user, canAccess } = useAuth();
+  const { startFlow, isFlowComplete } = useCoachMark();
 
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return localStorage.getItem('sidebar_collapsed') === 'true'; } catch { return false; }
+  });
   const [openMenus, setOpenMenus] = useState({});
-  const [openSubMenus, setOpenSubMenus] = useState({}); // For handling 3-level menus
+  const [paletteOpen, setPaletteOpen] = useState(false);
 
-  // Memoize navigationItems to prevent re-creation on every render
-  const navigationItems = useMemo(() => getNavigationItems(user?.role, canAccess), [user?.role, canAccess]);
+  const sections = useMemo(() => getNavigationItems(user?.role, canAccess), [user?.role, canAccess]);
 
-  // Effect to open the parent menu of the active child on page load
+  // Open parent menu of active route
   useEffect(() => {
-    const currentPath = location.pathname;
-    
-    // Check for 3-level nested items (analytics and commission management)
-    navigationItems.forEach(item => {
-      if (item.children) {
-        item.children.forEach(child => {
-          if (child.children) {
-            const activeGrandchild = child.children.find(grandchild => currentPath === grandchild.path);
-            if (activeGrandchild) {
-              setOpenMenus(prev => ({ ...prev, [item.id]: true }));
-              setOpenSubMenus(prev => ({ ...prev, [child.id]: true }));
-            }
-          } else if (currentPath === child.path) {
+    sections.forEach(section => {
+      section.items.forEach(item => {
+        if (item.children) {
+          const isActive = item.children.some(c =>
+            location.pathname === c.path || location.pathname.startsWith(c.path + '/')
+          );
+          if (isActive) {
             setOpenMenus(prev => ({ ...prev, [item.id]: true }));
           }
-        });
-      }
+        }
+      });
     });
-  }, [location.pathname, navigationItems]);
+  }, [location.pathname, sections]);
 
-  const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
+  // Cmd+K
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setPaletteOpen(p => !p);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
-  const handleNavigation = (path) => {
-    navigate(path);
-    if (isMobile) {
-      setMobileOpen(false);
+  // Auto-start dashboard coach marks for first-time users
+  useEffect(() => {
+    if (location.pathname === '/dashboard' && !isFlowComplete('dashboard')) {
+      startFlow('dashboard');
     }
+  }, [location.pathname, isFlowComplete, startFlow]);
+
+  const handleCollapse = () => {
+    const next = !collapsed;
+    setCollapsed(next);
+    try { localStorage.setItem('sidebar_collapsed', String(next)); } catch {}
   };
 
-  const handleMenuToggle = (itemId) => {
-    setOpenMenus(prev => ({ ...prev, [itemId]: !prev[itemId] }));
+  const handleNavigate = (path) => {
+    navigate(path);
+    if (isMobile) setMobileOpen(false);
   };
 
-  // Handle sub-menu toggle for 3-level menus
-  const handleSubMenuToggle = (itemId) => {
-    setOpenSubMenus(prev => ({ ...prev, [itemId]: !prev[itemId] }));
-  };
-
-  const isPathActive = (path) => {
-    if (path === '/dashboard') return location.pathname === path;
-    return location.pathname === path || location.pathname.startsWith(`${path}/`);
-  };
+  const currentWidth = collapsed && !isMobile ? COLLAPSED_WIDTH : DRAWER_WIDTH;
 
   const sidebarContent = (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Avatar sx={{ bgcolor: 'primary.main', width: 40, height: 40 }}><Business /></Avatar>
-          <Box>
-            <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1 }}>PropVantage</Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>AI POWERED CRM</Typography>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: 'background.paper' }}>
+      {/* Logo */}
+      <Box sx={{ p: collapsed ? 1.5 : 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 1.5, minHeight: 56 }}>
+        <Avatar sx={{ bgcolor: 'primary.main', width: 36, height: 36, fontSize: '0.813rem', fontWeight: 700 }}>PV</Avatar>
+        {!collapsed && (
+          <Box sx={{ minWidth: 0 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700, lineHeight: 1.2 }}>PropVantage</Typography>
+            <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.625rem', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+              AI CRM
+            </Typography>
+          </Box>
+        )}
+      </Box>
+
+      {/* Search shortcut */}
+      {!collapsed && !isMobile && (
+        <Box sx={{ px: 1.5, py: 1.5 }}>
+          <Box
+            onClick={() => setPaletteOpen(true)}
+            data-coach="search-shortcut"
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              px: 1.5,
+              py: 0.75,
+              borderRadius: 2,
+              border: '1px solid',
+              borderColor: 'divider',
+              cursor: 'pointer',
+              '&:hover': { borderColor: 'grey.400', bgcolor: 'grey.50' },
+              transition: 'all 150ms ease',
+            }}
+          >
+            <Search sx={{ fontSize: 16, color: 'text.disabled' }} />
+            <Typography variant="body2" sx={{ color: 'text.disabled', flex: 1, fontSize: '0.75rem' }}>
+              Search...
+            </Typography>
+            <Chip label="⌘K" size="small" sx={{ height: 20, fontSize: '0.625rem', bgcolor: 'grey.100' }} />
           </Box>
         </Box>
+      )}
+
+      {/* Navigation */}
+      <Box data-coach="sidebar-nav" sx={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', py: 0.5 }}>
+        {sections.map((section, si) => (
+          <React.Fragment key={section.section}>
+            {si > 0 && <Divider sx={{ my: 1, mx: collapsed ? 1 : 2 }} />}
+            {!collapsed && (
+              <Typography
+                variant="overline"
+                sx={{ px: 2.5, pt: 1.5, pb: 0.5, display: 'block', fontSize: '0.625rem' }}
+              >
+                {section.section}
+              </Typography>
+            )}
+            <List disablePadding>
+              {section.items.map(item => (
+                <NavItem
+                  key={item.id}
+                  item={item}
+                  isActive={location.pathname === item.path || location.pathname.startsWith(item.path + '/')}
+                  onNavigate={handleNavigate}
+                  isOpen={!!openMenus[item.id]}
+                  onToggle={() => setOpenMenus(prev => ({ ...prev, [item.id]: !prev[item.id] }))}
+                  collapsed={collapsed && !isMobile}
+                />
+              ))}
+            </List>
+          </React.Fragment>
+        ))}
       </Box>
 
-      <Box sx={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', pt: 1 }}>
-        <List>
-          {navigationItems.map((item) => (
-            <NavigationItem
-              key={item.id}
-              item={item}
-              isActive={isPathActive(item.path)}
-              onNavigate={handleNavigation}
-              isOpen={!!openMenus[item.id]}
-              onToggle={() => handleMenuToggle(item.id)}
-              openSubMenus={openSubMenus}
-              onSubMenuToggle={handleSubMenuToggle}
-            />
-          ))}
-        </List>
-      </Box>
-
-      <Box sx={{ p: 2, mt: 'auto', borderTop: '1px solid', borderColor: 'divider' }}>
-        <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', display: 'block' }}>
-          PropVantage AI v1.10.0
-        </Typography>
-      </Box>
+      {/* Footer - collapse toggle */}
+      {!isMobile && (
+        <Box sx={{ borderTop: '1px solid', borderColor: 'divider', p: 1 }}>
+          <Tooltip title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} placement="right">
+            <IconButton
+              onClick={handleCollapse}
+              size="small"
+              sx={{ width: '100%', borderRadius: 2, justifyContent: collapsed ? 'center' : 'flex-start', px: collapsed ? 0 : 1.5 }}
+            >
+              {collapsed ? <ChevronRight sx={{ fontSize: 18 }} /> : <ChevronLeft sx={{ fontSize: 18 }} />}
+              {!collapsed && (
+                <Typography variant="caption" sx={{ ml: 1, color: 'text.secondary' }}>Collapse</Typography>
+              )}
+            </IconButton>
+          </Tooltip>
+        </Box>
+      )}
     </Box>
   );
 
   return (
-    <Box sx={{ display: 'flex', height: '100vh' }}>
+    <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+      {/* AppBar */}
       <AppBar
         position="fixed"
         sx={{
-          width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
-          ml: { md: `${DRAWER_WIDTH}px` },
-          bgcolor: 'background.paper',
-          color: 'text.primary',
-          boxShadow: 'none',
-          borderBottom: '1px solid',
-          borderColor: 'divider',
+          width: { md: `calc(100% - ${currentWidth}px)` },
+          ml: { md: `${currentWidth}px` },
+          transition: 'width 200ms ease, margin-left 200ms ease',
         }}
       >
-        <Toolbar>
+        <Toolbar sx={{ minHeight: '56px !important', gap: 1 }}>
+          {/* Mobile: hamburger menu */}
           <IconButton
-            color="inherit"
-            aria-label="open drawer"
             edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { md: 'none' } }}
+            onClick={() => setMobileOpen(!mobileOpen)}
+            sx={{ display: { md: 'none' } }}
           >
             <MenuIcon />
           </IconButton>
-          <Box sx={{ flex: 1 }}><DashboardBreadcrumbs /></Box>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Tooltip title="Notifications">
-              <IconButton size="large" color="inherit">
-                <Badge badgeContent={3} color="error"><Notifications /></Badge>
-              </IconButton>
-            </Tooltip>
-            <EnhancedUserMenu />
+
+          {/* Desktop: sidebar collapse toggle */}
+          <Tooltip title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+            <IconButton
+              edge="start"
+              onClick={handleCollapse}
+              size="small"
+              sx={{ display: { xs: 'none', md: 'flex' } }}
+            >
+              {collapsed ? <ChevronRight sx={{ fontSize: 20 }} /> : <ChevronLeft sx={{ fontSize: 20 }} />}
+            </IconButton>
+          </Tooltip>
+
+          <Box sx={{ flex: 1 }}>
+            <DashboardBreadcrumbs />
           </Box>
+
+          {/* Search button */}
+          <Tooltip title="Search (⌘K)">
+            <IconButton size="small" onClick={() => setPaletteOpen(true)}>
+              <Search sx={{ fontSize: 20 }} />
+            </IconButton>
+          </Tooltip>
+
+          {/* Notifications */}
+          <Tooltip title="Notifications">
+            <IconButton size="small" data-coach="quick-create">
+              <Badge variant="dot" color="error">
+                <Notifications sx={{ fontSize: 20 }} />
+              </Badge>
+            </IconButton>
+          </Tooltip>
+
+          <UserMenu />
         </Toolbar>
       </AppBar>
 
-      <Box component="nav" sx={{ width: { md: DRAWER_WIDTH }, flexShrink: { md: 0 } }}>
+      {/* Sidebar - Mobile */}
+      <Box component="nav" sx={{ width: { md: currentWidth }, flexShrink: { md: 0 }, transition: 'width 200ms ease' }}>
         <Drawer
           variant="temporary"
           open={mobileOpen}
-          onClose={handleDrawerToggle}
+          onClose={() => setMobileOpen(false)}
           ModalProps={{ keepMounted: true }}
           sx={{
             display: { xs: 'block', md: 'none' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: DRAWER_WIDTH, borderRight: 'none' },
+            '& .MuiDrawer-paper': { width: DRAWER_WIDTH, borderRight: 'none' },
           }}
         >
           {sidebarContent}
         </Drawer>
+
+        {/* Sidebar - Desktop */}
         <Drawer
           variant="permanent"
           sx={{
             display: { xs: 'none', md: 'block' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: DRAWER_WIDTH, borderRight: 'none' },
+            '& .MuiDrawer-paper': {
+              width: currentWidth,
+              borderRight: '1px solid',
+              borderColor: 'divider',
+              transition: 'width 200ms ease',
+              overflowX: 'hidden',
+            },
           }}
           open
         >
@@ -827,19 +696,28 @@ const DashboardLayout = ({ children }) => {
         </Drawer>
       </Box>
 
+      {/* Main Content */}
       <Box
         component="main"
         sx={{
           flexGrow: 1,
-          width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
+          width: { md: `calc(100% - ${currentWidth}px)` },
           height: '100vh',
           overflow: 'auto',
-          bgcolor: 'grey.50',
+          bgcolor: 'background.default',
+          transition: 'width 200ms ease',
         }}
       >
-        <Toolbar />
-        <Box sx={{ p: { xs: 2, sm: 3 } }}>{children}</Box>
+        <Toolbar sx={{ minHeight: '56px !important' }} />
+        <Fade in timeout={200} key={location.pathname}>
+          <Box sx={{ p: { xs: 2, sm: 3 }, maxWidth: 1400, mx: 'auto' }}>
+            {children}
+          </Box>
+        </Fade>
       </Box>
+
+      {/* Command Palette */}
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </Box>
   );
 };

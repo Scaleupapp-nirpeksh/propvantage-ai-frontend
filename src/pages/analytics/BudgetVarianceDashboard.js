@@ -1,1063 +1,542 @@
-// File: src/pages/analytics/BudgetVarianceDashboard.js
-// Description: COMPLETE Budget Variance Dashboard - Production Ready with ALL integrations
-// Version: 2.0.0 - Complete implementation with all tabs and real API integration
-// Location: src/pages/analytics/BudgetVarianceDashboard.js
+// src/pages/analytics/BudgetVarianceDashboard.js
+// Budget variance — target vs actual revenue per project
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import {
-  Box,
-  Grid,
-  Card,
-  CardContent,
-  CardHeader,
-  Typography,
-  Button,
-  IconButton,
-  Chip,
-  Tooltip,
-  CircularProgress,
-  Alert,
-  AlertTitle,
-  Skeleton,
-  Paper,
-  Divider,
-  LinearProgress,
-  useTheme,
-  useMediaQuery,
-  Tab,
-  Tabs,
-  Switch,
-  FormControlLabel,
-  Badge,
-  Breadcrumbs,
-  Link,
-  Fade,
-  Slide,
-  Snackbar,
+  Box, Grid, Card, CardContent, Typography, Alert, Chip, Avatar,
+  List, ListItemButton, ListItemText, ListItemAvatar,
+  IconButton, Tooltip, LinearProgress,
+  useTheme, useMediaQuery, alpha,
 } from '@mui/material';
 import {
-  Refresh,
-  TrendingUp,
-  TrendingDown,
-  Warning,
-  CheckCircle,
-  Error,
-  FilterList,
-  Insights,
-  AccountBalance,
-  MonetizationOn,
-  CompareArrows,
-  Timeline,
-  Assessment,
-  NotificationsActive,
-  Business,
-  Schedule,
-  Home,
-  Analytics,
-  NavigateNext,
-  ArrowBack,
-  AutoGraph,
-  QueryStats,
-  AttachMoney,
-  Assignment,
-  Archive,
-  PriceChange,
+  AccountBalance, CompareArrows, Warning, Refresh, Business,
+  CheckCircle, Error as ErrorIcon, TrendingUp, TrendingDown, Flag,
 } from '@mui/icons-material';
-import { 
-  ResponsiveContainer, 
-  LineChart, 
-  Line, 
-  AreaChart, 
-  Area, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip as RechartsTooltip, 
-  Legend,
-  BarChart as RechartsBarChart,
-  Bar,
-  PieChart as RechartsPieChart,
-  Cell,
-  Pie,
+import {
+  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  Tooltip as RechartsTooltip, PieChart, Pie, Cell, ReferenceLine,
 } from 'recharts';
-
-// Import services and context
+import { PageHeader, KPICard, FilterBar } from '../../components/common';
 import { useAuth } from '../../context/AuthContext';
-import { projectAPI } from '../../services/api';
-import { budgetVarianceAPI, budgetHelpers } from '../../services/budgetAPI';
+import { projectAPI, salesAPI } from '../../services/api';
+import { formatCurrency } from '../../utils/formatters';
 
-// Import all tab components
-import BudgetVarianceFilters from './BudgetVarianceFilters';
-import BudgetVarianceSummaryCards from './BudgetVarianceSummaryCards';
-import VarianceOverviewTab from './VarianceOverviewTab';
-import AlertsActionsTab from './AlertsActionsTab';
-import PricingSuggestionsTab from './PricingSuggestionsTab';
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
-// =============================================================================
-// CONSTANTS AND CONFIGURATION
-// =============================================================================
+const THRESHOLDS = { CRITICAL: 20, WARNING: 10 };
 
-const DASHBOARD_CONFIG = {
-  AUTO_REFRESH_INTERVAL: 5 * 60 * 1000, // 5 minutes
-  MANUAL_REFRESH_DEBOUNCE: 1000, // 1 second
-  
-  VARIANCE_THRESHOLDS: {
-    CRITICAL: 20,    // 20% variance - red
-    WARNING: 10,     // 10% variance - orange  
-    GOOD: 5,         // 5% variance - green
-  },
-  
-  COLORS: {
-    PRIMARY: '#1976d2',
-    SUCCESS: '#2e7d32', 
-    WARNING: '#ed6c02',
-    ERROR: '#d32f2f',
-    INFO: '#0288d1',
-  },
-  
-  CHARTS: {
-    HEIGHT: 300,
-    MOBILE_HEIGHT: 200,
-    ANIMATION_DURATION: 750,
-  },
+const getStatus = (v) => {
+  const a = Math.abs(v);
+  if (a >= THRESHOLDS.CRITICAL) return { label: 'Critical', color: 'error' };
+  if (a >= THRESHOLDS.WARNING) return { label: 'Warning', color: 'warning' };
+  return { label: 'On Track', color: 'success' };
 };
 
-const FILTER_OPTIONS = {
-  PROJECT_STATUS: [
-    { value: 'all', label: 'All Projects' },
-    { value: 'active', label: 'Active Projects' },
-    { value: 'launched', label: 'Launched Projects' },
-    { value: 'pre-launch', label: 'Pre-Launch Projects' },
-  ],
-  
-  VARIANCE_LEVEL: [
-    { value: 'all', label: 'All Variance Levels' },
-    { value: 'critical', label: 'Critical (>20%)' },
-    { value: 'warning', label: 'Warning (10-20%)' },
-    { value: 'normal', label: 'Normal (<10%)' },
-  ],
+const ChartTooltipContent = ({ active, payload }) => {
+  if (!active || !payload?.[0]) return null;
+  const d = payload[0].payload;
+  const s = getStatus(d.variance);
+  return (
+    <Box sx={{ bgcolor: 'background.paper', p: 1.5, borderRadius: 1, border: '1px solid', borderColor: 'divider', minWidth: 180 }}>
+      <Typography variant="subtitle2" gutterBottom>{d.name}</Typography>
+      <Typography variant="body2" color="text.secondary">Target: {formatCurrency(d.target)}</Typography>
+      <Typography variant="body2" color="text.secondary">Actual: {formatCurrency(d.actual)}</Typography>
+      <Typography variant="body2" fontWeight={600} color={`${s.color}.main`}>
+        Variance: {d.variance >= 0 ? '+' : ''}{d.variance.toFixed(1)}%
+      </Typography>
+      <Typography variant="body2" color="text.secondary">
+        Units: {d.sold}/{d.total}
+      </Typography>
+    </Box>
+  );
 };
 
-const DASHBOARD_TABS = [
-  { 
-    label: 'Variance Overview', 
-    value: 0, 
-    icon: <AutoGraph />,
-    description: 'Real-time budget variance summary'
-  },
-  { 
-    label: 'Project Analysis', 
-    value: 1, 
-    icon: <Assessment />,
-    description: 'Detailed project-wise analysis'
-  },
-  { 
-    label: 'Alerts & Actions', 
-    value: 2, 
-    icon: <NotificationsActive />,
-    description: 'Critical alerts and recommendations'
-  },
-  { 
-    label: 'Pricing Suggestions', 
-    value: 3, 
-    icon: <PriceChange />,
-    description: 'AI-powered pricing optimization'
-  },
-  { 
-    label: 'Historical Analysis', 
-    value: 4, 
-    icon: <Archive />,
-    description: 'Historical variance trends'
-  },
-];
-
-// =============================================================================
-// HELPER FUNCTIONS
-// =============================================================================
-
-const generateBreadcrumbs = (projectId, projectName) => [
-  { label: 'Dashboard', href: '/dashboard', icon: <Home fontSize="small" /> },
-  { label: 'Analytics', href: '/analytics', icon: <Analytics fontSize="small" /> },
-  { 
-    label: 'Budget Variance', 
-    href: '/analytics/budget-variance',
-    icon: <QueryStats fontSize="small" />
-  },
-  ...(projectId && projectName ? [
-    { 
-      label: projectName, 
-      href: `/analytics/budget-variance?project=${projectId}`,
-      icon: <Business fontSize="small" />
-    }
-  ] : []),
-];
-
-const getVarianceStatusConfig = (variance) => {
-  const absVariance = Math.abs(variance);
-  
-  if (absVariance >= DASHBOARD_CONFIG.VARIANCE_THRESHOLDS.CRITICAL) {
-    return {
-      status: 'Critical',
-      severity: 'error',
-      color: DASHBOARD_CONFIG.COLORS.ERROR,
-      bgColor: '#ffebee',
-      icon: <Error />,
-    };
-  } else if (absVariance >= DASHBOARD_CONFIG.VARIANCE_THRESHOLDS.WARNING) {
-    return {
-      status: 'Warning', 
-      severity: 'warning',
-      color: DASHBOARD_CONFIG.COLORS.WARNING,
-      bgColor: '#fff3e0',
-      icon: <Warning />,
-    };
-  } else {
-    return {
-      status: 'On Track',
-      severity: 'success', 
-      color: DASHBOARD_CONFIG.COLORS.SUCCESS,
-      bgColor: '#e8f5e8',
-      icon: <CheckCircle />,
-    };
-  }
-};
-
-// =============================================================================
-// MAIN BUDGET VARIANCE DASHBOARD COMPONENT
-// =============================================================================
+// ---------------------------------------------------------------------------
+// Main Component
+// ---------------------------------------------------------------------------
 
 const BudgetVarianceDashboard = () => {
-  console.log('🚀 BudgetVarianceDashboard component mounting...');
-  
   const theme = useTheme();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { user, canAccess, isAuthenticated } = useAuth();
-  const [searchParams, setSearchParams] = useSearchParams();
-  
-  // Permission check
-  useEffect(() => {
-    console.log('=== BUDGET VARIANCE DASHBOARD DEBUG ===');
-    console.log('User:', user);
-    console.log('User Role:', user?.role);
-    console.log('Is Authenticated:', isAuthenticated);
-    
-    if (canAccess && typeof canAccess.viewFinancials === 'function') {
-      console.log('Can Access viewFinancials:', canAccess.viewFinancials());
-    } else {
-      console.error('ERROR: viewFinancials method not found in canAccess:', canAccess);
-    }
-  }, [user, canAccess, isAuthenticated]);
-  
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  
-  // =============================================================================
-  // STATE MANAGEMENT
-  // =============================================================================
-  
+  const { canAccess } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState(0);
-  const [lastUpdated, setLastUpdated] = useState(new Date());
-  const [autoRefresh, setAutoRefresh] = useState(true);
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
-  
-  // Filter state
+  const [error, setError] = useState(null);
+  const [projects, setProjects] = useState([]);
+  const [sales, setSales] = useState([]);
+
   const [filters, setFilters] = useState({
-    project: searchParams.get('project') || 'all',
-    projectStatus: 'active',
-    varianceLevel: 'all',
-    timePeriod: 'real_time',
-    startDate: null,
-    endDate: null,
-    searchTerm: '',
-    onlyProblemsProjects: false,
+    project: searchParams.get('project') || '',
+    level: '',
   });
-  
-  // Filter options data
-  const [filterOptions, setFilterOptions] = useState({
-    projects: [],
-    loading: false,
-  });
-  
-  // Dashboard data
-  const [dashboardData, setDashboardData] = useState({
-    portfolioSummary: {
-      totalProjects: 0,
-      projectsNeedingAttention: 0,
-      criticalProjects: 0,
-      warningProjects: 0,
-      totalBudgetTarget: 0,
-      totalRevenue: 0,
-      projects: [],
-    },
-    projectVariance: null,
-    alerts: [],
-    recommendedActions: [],
-    pricingSuggestions: [],
-    loadingStates: {
-      portfolio: true,
-      projectDetails: false,
-      alerts: false,
-      actions: false,
-      pricing: false,
-    },
-  });
-  
-  // =============================================================================
-  // COMPUTED VALUES
-  // =============================================================================
-  
-  const selectedProject = useMemo(() => {
-    if (filters.project === 'all' || !dashboardData.portfolioSummary.projects) {
-      return null;
-    }
-    return dashboardData.portfolioSummary.projects.find(
-      project => project.projectId === filters.project
-    );
-  }, [filters.project, dashboardData.portfolioSummary.projects]);
-  
-  const dashboardStats = useMemo(() => {
-    const { portfolioSummary } = dashboardData;
-    
-    if (filters.project !== 'all' && dashboardData.projectVariance) {
-      const { project, calculations } = dashboardData.projectVariance;
-      return {
-        totalBudget: project?.budgetTarget || 0,
-        totalRevenue: calculations?.actualRevenue || 0,
-        totalVariance: calculations?.variancePercentage || 0,
-        projectsCount: 1,
-      };
-    } else {
-      return {
-        totalBudget: portfolioSummary.totalBudgetTarget || 0,
-        totalRevenue: portfolioSummary.totalRevenue || 0,
-        totalVariance: portfolioSummary.totalBudgetTarget > 0 ? 
-          ((portfolioSummary.totalRevenue - portfolioSummary.totalBudgetTarget) / 
-           portfolioSummary.totalBudgetTarget) * 100 : 0,
-        projectsCount: portfolioSummary.totalProjects || 0,
-      };
-    }
-  }, [dashboardData, filters.project]);
-  
-  const breadcrumbs = useMemo(() => {
-    const projectName = selectedProject?.projectName || null;
-    return generateBreadcrumbs(filters.project !== 'all' ? filters.project : null, projectName);
-  }, [filters.project, selectedProject]);
-  
-  // =============================================================================
-  // DATA FETCHING FUNCTIONS
-  // =============================================================================
-  
-  const fetchFilterOptions = useCallback(async () => {
+
+  const canView = canAccess?.viewFinancials ? canAccess.viewFinancials() : true;
+
+  // ---------------------------------------------------------------------------
+  // Data fetching
+  // ---------------------------------------------------------------------------
+
+  const fetchData = useCallback(async () => {
     try {
-      setFilterOptions(prev => ({ ...prev, loading: true }));
-      
-      console.log('🔄 Fetching filter options...');
-      const response = await projectAPI.getProjects();
-      const projects = response.data?.data || [];
-      
-      console.log('✅ Filter options loaded:', { projectsCount: projects.length });
-      
-      setFilterOptions({
-        projects: Array.isArray(projects) ? projects : [],
-        loading: false,
-      });
-      
-    } catch (error) {
-      console.error('❌ Error fetching filter options:', error);
-      setFilterOptions(prev => ({ ...prev, loading: false }));
-      setError('Failed to load filter options');
-    }
-  }, []);
-  
-  const fetchPortfolioSummary = useCallback(async () => {
-    try {
-      setDashboardData(prev => ({
-        ...prev,
-        loadingStates: { ...prev.loadingStates, portfolio: true }
-      }));
-      
-      console.log('🔄 Fetching portfolio budget variance summary...');
-      
-      const response = await budgetVarianceAPI.getMultiProjectBudgetSummary({
-        limit: 50,
-        status: filters.projectStatus !== 'all' ? filters.projectStatus : undefined,
-      });
-      
-      const summaryData = response.data?.data || {};
-      
-      console.log('✅ Portfolio summary loaded:', summaryData);
-      
-      setDashboardData(prev => ({
-        ...prev,
-        portfolioSummary: {
-          totalProjects: summaryData.summary?.totalProjects || 0,
-          projectsNeedingAttention: summaryData.summary?.projectsNeedingAttention || 0,
-          criticalProjects: summaryData.summary?.criticalProjects || 0,
-          warningProjects: summaryData.summary?.warningProjects || 0,
-          totalBudgetTarget: summaryData.summary?.totalBudgetTarget || 0,
-          totalRevenue: summaryData.summary?.totalRevenue || 0,
-          projects: summaryData.projects || [],
-        },
-        loadingStates: { ...prev.loadingStates, portfolio: false }
-      }));
-      
-    } catch (error) {
-      console.error('❌ Error fetching portfolio summary:', error);
-      setError('Failed to load portfolio summary');
-      setDashboardData(prev => ({
-        ...prev,
-        loadingStates: { ...prev.loadingStates, portfolio: false }
-      }));
-    }
-  }, [filters.projectStatus]);
-  
-  const fetchProjectVariance = useCallback(async (projectId) => {
-    if (!projectId || projectId === 'all') {
-      setDashboardData(prev => ({
-        ...prev,
-        projectVariance: null,
-        pricingSuggestions: [], // Clear pricing suggestions
-        loadingStates: { ...prev.loadingStates, projectDetails: false, pricing: false }
-      }));
-      return;
-    }
-    
-    try {
-      setDashboardData(prev => ({
-        ...prev,
-        loadingStates: { ...prev.loadingStates, projectDetails: true, pricing: true }
-      }));
-      
-      console.log(`🔄 Fetching variance data for project: ${projectId}`);
-      
-      const response = await budgetVarianceAPI.getProjectBudgetVariance(projectId);
-      const varianceData = response.data?.data || {};
-      
-      console.log('✅ Project variance data loaded:', varianceData);
-      
-      setDashboardData(prev => ({
-        ...prev,
-        projectVariance: varianceData,
-        pricingSuggestions: varianceData.pricingSuggestions || [], // Extract pricing suggestions
-        loadingStates: { ...prev.loadingStates, projectDetails: false, pricing: false }
-      }));
-      
-    } catch (error) {
-      console.error(`❌ Error fetching project variance for ${projectId}:`, error);
-      setError(`Failed to load variance data for selected project`);
-      setDashboardData(prev => ({
-        ...prev,
-        projectVariance: null,
-        pricingSuggestions: [],
-        loadingStates: { ...prev.loadingStates, projectDetails: false, pricing: false }
-      }));
-    }
-  }, []);
-  
-  const fetchAlerts = useCallback(async () => {
-    try {
-      setDashboardData(prev => ({
-        ...prev,
-        loadingStates: { ...prev.loadingStates, alerts: true }
-      }));
-      
-      console.log('🔄 Fetching budget alerts...');
-      
-      const response = await budgetVarianceAPI.getBudgetAlerts(
-        filters.project !== 'all' ? filters.project : null
-      );
-      
-      const alerts = response.data?.data || [];
-      
-      console.log('✅ Budget alerts loaded:', { alertsCount: alerts.length });
-      
-      setDashboardData(prev => ({
-        ...prev,
-        alerts,
-        loadingStates: { ...prev.loadingStates, alerts: false }
-      }));
-      
-    } catch (error) {
-      console.error('❌ Error fetching alerts:', error);
-      setDashboardData(prev => ({
-        ...prev,
-        alerts: [],
-        loadingStates: { ...prev.loadingStates, alerts: false }
-      }));
-    }
-  }, [filters.project]);
-  
-  const fetchRecommendedActions = useCallback(async () => {
-    try {
-      setDashboardData(prev => ({
-        ...prev,
-        loadingStates: { ...prev.loadingStates, actions: true }
-      }));
-      
-      console.log('🔄 Fetching recommended actions...');
-      
-      const response = await budgetVarianceAPI.getRecommendedActions(
-        filters.project !== 'all' ? filters.project : null
-      );
-      
-      const actions = response.data?.data || [];
-      
-      console.log('✅ Recommended actions loaded:', { actionsCount: actions.length });
-      
-      setDashboardData(prev => ({
-        ...prev,
-        recommendedActions: actions,
-        loadingStates: { ...prev.loadingStates, actions: false }
-      }));
-      
-    } catch (error) {
-      console.error('❌ Error fetching recommended actions:', error);
-      setDashboardData(prev => ({
-        ...prev,
-        recommendedActions: [],
-        loadingStates: { ...prev.loadingStates, actions: false }
-      }));
-    }
-  }, [filters.project]);
-  
-  const fetchPricingSuggestions = useCallback(async () => {
-    // Don't make a separate API call - pricing suggestions are included in project variance data
-    if (dashboardData.projectVariance && dashboardData.projectVariance.pricingSuggestions) {
-      setDashboardData(prev => ({
-        ...prev,
-        pricingSuggestions: dashboardData.projectVariance.pricingSuggestions,
-        loadingStates: { ...prev.loadingStates, pricing: false }
-      }));
-    } else {
-      setDashboardData(prev => ({
-        ...prev,
-        pricingSuggestions: [],
-        loadingStates: { ...prev.loadingStates, pricing: false }
-      }));
-    }
-  }, [dashboardData.projectVariance]);
-  
-  const refreshDashboard = useCallback(async (showRefreshIndicator = true) => {
-    try {
-      if (showRefreshIndicator) {
-        setRefreshing(true);
-      }
-      
-      console.log('🔄 Refreshing budget variance dashboard...');
-      
-      // Fetch all data in parallel - REMOVE fetchPricingSuggestions
-      await Promise.all([
-        fetchPortfolioSummary(),
-        filters.project !== 'all' ? fetchProjectVariance(filters.project) : Promise.resolve(),
-        fetchAlerts(),
-        fetchRecommendedActions(),
-        // ❌ REMOVE: filters.project !== 'all' ? fetchPricingSuggestions() : Promise.resolve(),
+      setError(null);
+      const [pRes, sRes] = await Promise.allSettled([
+        projectAPI.getProjects(),
+        salesAPI.getSales({ limit: 5000 }),
       ]);
-      
-      setLastUpdated(new Date());
-      console.log('✅ Dashboard refresh completed');
-      
-      setSnackbar({
-        open: true,
-        message: 'Dashboard data refreshed successfully',
-        severity: 'success'
-      });
-      
-    } catch (error) {
-      console.error('❌ Error refreshing dashboard:', error);
-      setError('Failed to refresh dashboard data');
-      setSnackbar({
-        open: true,
-        message: 'Failed to refresh dashboard data',
-        severity: 'error'
-      });
+      setProjects(pRes.status === 'fulfilled' ? (pRes.value.data?.data || []) : []);
+      setSales(sRes.status === 'fulfilled' ? (sRes.value.data?.data || []) : []);
+    } catch {
+      setError('Failed to load data');
     } finally {
-      if (showRefreshIndicator) {
-        setRefreshing(false);
-      }
       setLoading(false);
+      setRefreshing(false);
     }
-  }, [fetchPortfolioSummary, fetchProjectVariance, fetchAlerts, fetchRecommendedActions, filters.project]);
-  // =============================================================================
-  // EVENT HANDLERS
-  // =============================================================================
-  
-  const handleFilterChange = useCallback((filterKey, value) => {
-    console.log(`🔧 Filter changed: ${filterKey} = ${value}`);
-    
-    setFilters(prev => {
-      const newFilters = { ...prev, [filterKey]: value };
-      
-      if (filterKey === 'project') {
-        const newSearchParams = new URLSearchParams(searchParams);
-        if (value === 'all') {
-          newSearchParams.delete('project');
-        } else {
-          newSearchParams.set('project', value);
-        }
-        setSearchParams(newSearchParams);
-      }
-      
-      return newFilters;
-    });
-  }, [searchParams, setSearchParams]);
-  
-  const handleTabChange = useCallback((event, newValue) => {
-    setActiveTab(newValue);
   }, []);
-  
-  const handleManualRefresh = useCallback(() => {
-    refreshDashboard(true);
-  }, [refreshDashboard]);
-  
-  const handleAutoRefreshToggle = useCallback((event) => {
-    setAutoRefresh(event.target.checked);
-  }, []);
-  
-  const handleNavigateBack = useCallback(() => {
-    navigate('/analytics');
-  }, [navigate]);
-  
-  const applyFilters = useCallback(() => {
-    refreshDashboard(false);
-  }, [refreshDashboard]);
-  
-  const clearFilters = useCallback(() => {
-    setFilters({
-      project: 'all',
-      projectStatus: 'active',
-      varianceLevel: 'all',
-      timePeriod: 'real_time',
-      startDate: null,
-      endDate: null,
-      searchTerm: '',
-      onlyProblemsProjects: false,
-    });
-  }, []);
-  
-  // Alert and Action Handlers
-  const handleAlertAcknowledge = useCallback(async (alertId, userId) => {
-    try {
-      await budgetVarianceAPI.acknowledgeAlert(alertId, userId);
-      await fetchAlerts(); // Refresh alerts
-      setSnackbar({
-        open: true,
-        message: 'Alert acknowledged successfully',
-        severity: 'success'
-      });
-    } catch (error) {
-      console.error('Error acknowledging alert:', error);
-      setSnackbar({
-        open: true,
-        message: 'Failed to acknowledge alert',
-        severity: 'error'
-      });
-    }
-  }, [fetchAlerts]);
-  
-  const handleActionStatusChange = useCallback(async (actionId, newStatus, userId) => {
-    try {
-      await budgetVarianceAPI.updateActionStatus(actionId, newStatus, userId);
-      await fetchRecommendedActions(); // Refresh actions
-      setSnackbar({
-        open: true,
-        message: 'Action status updated successfully',
-        severity: 'success'
-      });
-    } catch (error) {
-      console.error('Error updating action status:', error);
-      setSnackbar({
-        open: true,
-        message: 'Failed to update action status',
-        severity: 'error'
-      });
-    }
-  }, [fetchRecommendedActions]);
-  
-  // Pricing Handlers
-  const handlePriceUpdate = useCallback(async (unitNumber, newPrice) => {
-    if (!filters.project || filters.project === 'all') return;
-    
-    try {
-      await budgetVarianceAPI.updateUnitPricing(filters.project, unitNumber, newPrice);
-      await fetchPricingSuggestions(); // Refresh pricing suggestions
-      await fetchProjectVariance(filters.project); // Refresh project variance
-      setSnackbar({
-        open: true,
-        message: 'Unit pricing updated successfully',
-        severity: 'success'
-      });
-    } catch (error) {
-      console.error('Error updating unit pricing:', error);
-      setSnackbar({
-        open: true,
-        message: 'Failed to update unit pricing',
-        severity: 'error'
-      });
-    }
-  }, [filters.project, fetchPricingSuggestions, fetchProjectVariance]);
-  
-  const handleBulkPriceUpdate = useCallback(async (updates) => {
-    if (!filters.project || filters.project === 'all') return;
-    
-    try {
-      await budgetVarianceAPI.bulkUpdateUnitPricing(filters.project, updates);
-      await fetchPricingSuggestions(); // Refresh pricing suggestions
-      await fetchProjectVariance(filters.project); // Refresh project variance
-      setSnackbar({
-        open: true,
-        message: `${updates.length} unit prices updated successfully`,
-        severity: 'success'
-      });
-    } catch (error) {
-      console.error('Error bulk updating unit pricing:', error);
-      setSnackbar({
-        open: true,
-        message: 'Failed to update unit pricing',
-        severity: 'error'
-      });
-    }
-  }, [filters.project, fetchPricingSuggestions, fetchProjectVariance]);
-  
-  // =============================================================================
-  // EFFECTS
-  // =============================================================================
-  
+
+  useEffect(() => { if (canView) fetchData(); }, [fetchData, canView]);
+
   useEffect(() => {
-    console.log('🚀 Budget Variance Dashboard initializing...');
-    fetchFilterOptions();
-    refreshDashboard(false);
-  }, []);
-  
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      refreshDashboard(false);
-    }, DASHBOARD_CONFIG.MANUAL_REFRESH_DEBOUNCE);
-    
-    return () => clearTimeout(timeoutId);
-  }, [filters]);
-  
-  // Auto-refresh effect
-  useEffect(() => {
-    if (!autoRefresh) return;
-    
-    const intervalId = setInterval(() => {
-      refreshDashboard(false);
-    }, DASHBOARD_CONFIG.AUTO_REFRESH_INTERVAL);
-    
-    return () => clearInterval(intervalId);
-  }, [autoRefresh, refreshDashboard]);
-  
-  // =============================================================================
-  // RENDER FUNCTIONS
-  // =============================================================================
-  
-  const renderDashboardHeader = () => (
-    <Box sx={{ mb: 4 }}>
-      <Breadcrumbs 
-        aria-label="breadcrumb" 
-        sx={{ mb: 2 }}
-        separator={<NavigateNext fontSize="small" />}
-      >
-        {breadcrumbs.map((crumb, index) => (
-          <Link
-            key={index}
-            color={index === breadcrumbs.length - 1 ? 'text.primary' : 'inherit'}
-            href={crumb.href}
-            onClick={(e) => {
-              e.preventDefault();
-              navigate(crumb.href);
-            }}
-            sx={{ 
-              display: 'flex', 
-              alignItems: 'center',
-              textDecoration: 'none',
-              '&:hover': { textDecoration: 'underline' }
-            }}
-          >
-            {crumb.icon}
-            <Typography sx={{ ml: 0.5 }}>{crumb.label}</Typography>
-          </Link>
-        ))}
-      </Breadcrumbs>
-      
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'space-between',
-        flexDirection: isMobile ? 'column' : 'row',
-        gap: 2,
-      }}>
-        <Box>
-          <Typography variant="h4" component="h1" gutterBottom>
-            Budget Variance Dashboard
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Real-time budget tracking and variance analysis
-          </Typography>
-        </Box>
-        
-        <Box sx={{ 
-          display: 'flex', 
-          gap: 2, 
-          alignItems: 'center',
-          flexDirection: isMobile ? 'column' : 'row',
-        }}>
-          <FormControlLabel
-            control={
-              <Switch
-                checked={autoRefresh}
-                onChange={handleAutoRefreshToggle}
-                color="primary"
-              />
-            }
-            label="Auto-refresh"
-          />
-          
-          <Tooltip title="Refresh Dashboard">
-            <IconButton 
-              onClick={handleManualRefresh}
-              disabled={refreshing}
-              color="primary"
-              size="large"
-            >
-              <Refresh sx={{ 
+    const p = new URLSearchParams();
+    if (filters.project) p.set('project', filters.project);
+    setSearchParams(p, { replace: true });
+  }, [filters.project, setSearchParams]);
+
+  const handleFilter = (k, v) => setFilters(prev => ({ ...prev, [k]: v }));
+  const clearFilters = () => setFilters({ project: '', level: '' });
+  const handleRefresh = () => { setRefreshing(true); fetchData(); };
+
+  // ---------------------------------------------------------------------------
+  // Computed data
+  // ---------------------------------------------------------------------------
+
+  const variances = useMemo(() => {
+    return projects
+      .filter(p => (p.targetRevenue || 0) > 0)
+      .map(p => {
+        const pSales = sales.filter(
+          s => (s.project?._id || s.project) === p._id && s.status !== 'Cancelled',
+        );
+        const actual = pSales.reduce((sum, s) => sum + (s.salePrice || 0), 0);
+        const target = p.targetRevenue;
+        const variance = ((actual - target) / target) * 100;
+        return {
+          id: p._id,
+          name: p.name,
+          shortName: p.name?.length > 16 ? p.name.slice(0, 16) + '\u2026' : p.name,
+          target, actual,
+          variance: Math.round(variance * 10) / 10,
+          total: p.totalUnits || 0,
+          sold: pSales.length,
+          progress: p.totalUnits > 0 ? (pSales.length / p.totalUnits) * 100 : 0,
+        };
+      })
+      .sort((a, b) => Math.abs(b.variance) - Math.abs(a.variance));
+  }, [projects, sales]);
+
+  const filtered = useMemo(() => {
+    if (!filters.level) return variances;
+    if (filters.level === 'critical')
+      return variances.filter(p => Math.abs(p.variance) >= THRESHOLDS.CRITICAL);
+    if (filters.level === 'warning')
+      return variances.filter(p => {
+        const a = Math.abs(p.variance);
+        return a >= THRESHOLDS.WARNING && a < THRESHOLDS.CRITICAL;
+      });
+    if (filters.level === 'on_track')
+      return variances.filter(p => Math.abs(p.variance) < THRESHOLDS.WARNING);
+    return variances;
+  }, [variances, filters.level]);
+
+  const stats = useMemo(() => {
+    const tgt = filtered.reduce((s, p) => s + p.target, 0);
+    const act = filtered.reduce((s, p) => s + p.actual, 0);
+    const v = tgt > 0 ? ((act - tgt) / tgt) * 100 : 0;
+    const crit = filtered.filter(p => Math.abs(p.variance) >= THRESHOLDS.CRITICAL).length;
+    const warn = filtered.filter(p => {
+      const a = Math.abs(p.variance);
+      return a >= THRESHOLDS.WARNING && a < THRESHOLDS.CRITICAL;
+    }).length;
+    return {
+      tgt, act,
+      variance: Math.round(v * 10) / 10,
+      crit, warn,
+      onTrack: filtered.length - crit - warn,
+      count: filtered.length,
+    };
+  }, [filtered]);
+
+  const detail = useMemo(() => {
+    if (!filters.project) return null;
+    return variances.find(p => p.id === filters.project) || null;
+  }, [filters.project, variances]);
+
+  const chartData = useMemo(
+    () => filtered.slice(0, 12).map(p => ({
+      ...p,
+      fill: theme.palette[getStatus(p.variance).color].main,
+    })),
+    [filtered, theme],
+  );
+
+  const pieData = useMemo(() => [
+    { name: 'Critical', value: stats.crit, color: theme.palette.error.main },
+    { name: 'Warning', value: stats.warn, color: theme.palette.warning.main },
+    { name: 'On Track', value: stats.onTrack, color: theme.palette.success.main },
+  ].filter(d => d.value > 0), [stats, theme]);
+
+  const projectOpts = useMemo(() => [
+    { value: '', label: 'All Projects' },
+    ...variances.map(p => ({ value: p.id, label: p.name })),
+  ], [variances]);
+
+  const kpis = detail ? [
+    { title: 'Target Revenue', value: formatCurrency(detail.target), icon: AccountBalance, color: theme.palette.primary.main },
+    { title: 'Actual Revenue', value: formatCurrency(detail.actual), icon: TrendingUp, color: theme.palette.success.main },
+    { title: 'Variance', value: `${detail.variance >= 0 ? '+' : ''}${detail.variance}%`, icon: CompareArrows, color: theme.palette[getStatus(detail.variance).color].main },
+    { title: 'Units Sold', value: `${detail.sold} / ${detail.total}`, icon: Business, color: theme.palette.info.main, subtitle: `${detail.progress.toFixed(0)}% inventory sold` },
+  ] : [
+    { title: 'Total Target', value: formatCurrency(stats.tgt), icon: AccountBalance, color: theme.palette.primary.main },
+    { title: 'Total Revenue', value: formatCurrency(stats.act), icon: TrendingUp, color: theme.palette.success.main },
+    { title: 'Overall Variance', value: `${stats.variance >= 0 ? '+' : ''}${stats.variance}%`, icon: CompareArrows, color: theme.palette[getStatus(stats.variance).color].main },
+    { title: 'At Risk', value: `${stats.crit + stats.warn}`, icon: Flag, color: theme.palette.warning.main, subtitle: `${stats.crit} critical \u00b7 ${stats.warn} warning` },
+  ];
+
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
+
+  if (!canView) {
+    return (
+      <Alert severity="warning" sx={{ m: 3 }}>
+        You don&apos;t have permission to view financial data.
+      </Alert>
+    );
+  }
+
+  return (
+    <Box sx={{ p: { xs: 2, sm: 3 } }}>
+      <PageHeader
+        title="Budget Variance"
+        subtitle={`Tracking ${stats.count} project${stats.count !== 1 ? 's' : ''} with revenue targets`}
+        icon={CompareArrows}
+        actions={
+          <Tooltip title="Refresh">
+            <IconButton onClick={handleRefresh} disabled={refreshing}>
+              <Refresh sx={{
                 animation: refreshing ? 'spin 1s linear infinite' : 'none',
-                '@keyframes spin': {
-                  '0%': { transform: 'rotate(0deg)' },
-                  '100%': { transform: 'rotate(360deg)' },
-                }
+                '@keyframes spin': { '0%': { transform: 'rotate(0deg)' }, '100%': { transform: 'rotate(360deg)' } },
               }} />
             </IconButton>
           </Tooltip>
-          
-          <Button
-            variant="outlined"
-            startIcon={<ArrowBack />}
-            onClick={handleNavigateBack}
-            size={isMobile ? 'small' : 'medium'}
-          >
-            Back to Analytics
-          </Button>
-        </Box>
-      </Box>
-      
-      <Box sx={{ mt: 2 }}>
-        <Typography variant="caption" color="text.secondary">
-          Last updated: {lastUpdated.toLocaleString()}
-          {autoRefresh && (
-            <Chip 
-              label="Auto-refresh ON" 
-              size="small" 
-              color="primary" 
-              sx={{ ml: 1 }}
-            />
-          )}
-        </Typography>
-      </Box>
-    </Box>
-  );
-
-  const renderDashboardTabs = () => (
-    <Paper sx={{ mb: 3 }}>
-      <Tabs 
-        value={activeTab} 
-        onChange={handleTabChange} 
-        variant={isMobile ? 'scrollable' : 'fullWidth'}
-        scrollButtons="auto"
-        allowScrollButtonsMobile
-      >
-        {DASHBOARD_TABS.map((tab) => (
-          <Tab
-            key={tab.value}
-            label={
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                {tab.icon}
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                  <Typography variant="body2" fontWeight={600}>
-                    {tab.label}
-                  </Typography>
-                  {!isMobile && (
-                    <Typography variant="caption" color="text.secondary">
-                      {tab.description}
-                    </Typography>
-                  )}
-                </Box>
-              </Box>
-            }
-            sx={{ 
-              textAlign: 'left',
-              alignItems: 'flex-start',
-              minHeight: 72,
-            }}
-          />
-        ))}
-      </Tabs>
-    </Paper>
-  );
-
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case 0: // Variance Overview
-        return (
-          <VarianceOverviewTab
-            portfolioSummary={dashboardData.portfolioSummary}
-            projectVariance={dashboardData.projectVariance}
-            loadingStates={dashboardData.loadingStates}
-            onProjectSelect={(projectId) => handleFilterChange('project', projectId)}
-            onRefreshData={handleManualRefresh}
-          />
-        );
-        
-      case 1: // Project Analysis
-        if (filters.project === 'all') {
-          return (
-            <Alert severity="info" sx={{ mb: 3 }}>
-              <AlertTitle>Select a Project</AlertTitle>
-              Please select a specific project from the filters above to view detailed analysis.
-            </Alert>
-          );
         }
-        return (
-          <VarianceOverviewTab
-            portfolioSummary={dashboardData.portfolioSummary}
-            projectVariance={dashboardData.projectVariance}
-            loadingStates={dashboardData.loadingStates}
-            onProjectSelect={(projectId) => handleFilterChange('project', projectId)}
-            onRefreshData={handleManualRefresh}
-          />
-        );
-        
-      case 2: // Alerts & Actions
-        return (
-          <AlertsActionsTab
-            portfolioSummary={dashboardData.portfolioSummary}
-            projectVariance={dashboardData.projectVariance}
-            alerts={dashboardData.alerts}
-            recommendedActions={dashboardData.recommendedActions}
-            loadingStates={dashboardData.loadingStates}
-            onAlertAcknowledge={handleAlertAcknowledge}
-            onActionStatusChange={handleActionStatusChange}
-          />
-        );
-        
-      case 3: // Pricing Suggestions
-        return (
-          <PricingSuggestionsTab
-            projectVariance={{
-              ...dashboardData.projectVariance,
-              pricingSuggestions: dashboardData.pricingSuggestions,
-            }}
-            loadingStates={{
-              ...dashboardData.loadingStates,
-              pricingSuggestions: dashboardData.loadingStates.pricing,
-            }}
-            onPriceUpdate={handlePriceUpdate}
-            onBulkPriceUpdate={handleBulkPriceUpdate}
-          />
-        );
-        
-      case 4: // Historical Analysis
-        return (
-          <Alert severity="info">
-            <AlertTitle>Historical Analysis Coming Soon</AlertTitle>
-            Historical variance trends and analytics will be available in the next update.
-          </Alert>
-        );
-        
-      default:
-        return null;
-    }
-  };
-  
-  // =============================================================================
-  // MAIN RENDER
-  // =============================================================================
-  
-  console.log('🎨 Rendering BudgetVarianceDashboard...');
-  
-  return (
-    <Fade in timeout={500}>
-      <Box sx={{ flexGrow: 1, p: { xs: 2, sm: 3 } }}>
-        {renderDashboardHeader()}
-        
-        {error && (
-          <Slide direction="down" in={!!error} mountOnEnter unmountOnExit>
-            <Alert 
-              severity="error" 
-              sx={{ mb: 3 }} 
-              onClose={() => setError(null)}
-              action={
-                <Button color="inherit" size="small" onClick={handleManualRefresh}>
-                  Retry
-                </Button>
-              }
-            >
-              <AlertTitle>Error Loading Dashboard</AlertTitle>
-              {error}
-            </Alert>
-          </Slide>
-        )}
-        
-        {loading && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
-            <CircularProgress size={60} />
-          </Box>
-        )}
-        
-        {!loading && (
-          <Fade in timeout={750}>
-            <Box>
-              <BudgetVarianceFilters
-                filters={filters}
-                onFilterChange={handleFilterChange}
-                projects={filterOptions.projects}
-                onApplyFilters={applyFilters}
-                onClearFilters={clearFilters}
-                loading={filterOptions.loading || loading}
-              />
-              
-              <BudgetVarianceSummaryCards
-                dashboardStats={dashboardStats}
-                portfolioSummary={dashboardData.portfolioSummary}
-                projectVariance={dashboardData.projectVariance}
-                alerts={dashboardData.alerts}
-                loadingStates={dashboardData.loadingStates}
-                onNavigateToProject={(projectId) => handleFilterChange('project', projectId)}
-                onViewAlerts={() => setActiveTab(2)}
-                onRefreshData={handleManualRefresh}
-              />
-              
-              {renderDashboardTabs()}
-              
-              <Box sx={{ mt: 3 }}>
-                {renderTabContent()}
-              </Box>
-            </Box>
-          </Fade>
-        )}
-        
-        {/* Snackbar for notifications */}
-        <Snackbar
-          open={snackbar.open}
-          autoHideDuration={6000}
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        >
-          <Alert 
-            onClose={() => setSnackbar({ ...snackbar, open: false })} 
-            severity={snackbar.severity}
-            sx={{ width: '100%' }}
-          >
-            {snackbar.message}
-          </Alert>
-        </Snackbar>
-      </Box>
-    </Fade>
+      />
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
+
+      {/* KPI Cards */}
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        {kpis.map((k, i) => (
+          <Grid item xs={6} md={3} key={i}>
+            <KPICard
+              title={k.title}
+              value={k.value}
+              icon={k.icon}
+              color={k.color}
+              subtitle={k.subtitle}
+              loading={loading}
+            />
+          </Grid>
+        ))}
+      </Grid>
+
+      {/* Filters */}
+      <FilterBar
+        filters={[
+          { key: 'project', label: 'Project', type: 'select', options: projectOpts },
+          { key: 'level', label: 'Variance Level', type: 'select', options: [
+            { value: '', label: 'All Levels' },
+            { value: 'critical', label: 'Critical (>20%)' },
+            { value: 'warning', label: 'Warning (10-20%)' },
+            { value: 'on_track', label: 'On Track (<10%)' },
+          ]},
+        ]}
+        values={filters}
+        onChange={handleFilter}
+        onClear={clearFilters}
+      />
+
+      {!loading && (
+        <>
+          {/* ---- Selected Project Detail ---- */}
+          {detail && (
+            <Card sx={{ mb: 3 }}>
+              <CardContent>
+                <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+                  {detail.name}
+                </Typography>
+
+                <Grid container spacing={3}>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      Revenue Progress
+                    </Typography>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                      <Typography variant="body2">{formatCurrency(detail.actual)}</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        of {formatCurrency(detail.target)}
+                      </Typography>
+                    </Box>
+                    <LinearProgress
+                      variant="determinate"
+                      value={Math.min((detail.actual / detail.target) * 100, 100)}
+                      color={getStatus(detail.variance).color}
+                      sx={{ height: 10, borderRadius: 5 }}
+                    />
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                      {((detail.actual / detail.target) * 100).toFixed(1)}% achieved
+                    </Typography>
+                  </Grid>
+
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      Units Progress
+                    </Typography>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                      <Typography variant="body2">{detail.sold} sold</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        of {detail.total} total
+                      </Typography>
+                    </Box>
+                    <LinearProgress
+                      variant="determinate"
+                      value={detail.progress}
+                      sx={{ height: 10, borderRadius: 5 }}
+                    />
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                      {detail.progress.toFixed(1)}% inventory sold
+                    </Typography>
+                  </Grid>
+                </Grid>
+
+                {detail.total > detail.sold && detail.target > detail.actual && (
+                  <Alert severity="info" sx={{ mt: 2 }}>
+                    <strong>{detail.total - detail.sold} units remaining</strong> need{' '}
+                    {formatCurrency(detail.target - detail.actual)} to hit target &mdash; avg.{' '}
+                    {formatCurrency(
+                      (detail.target - detail.actual) /
+                      Math.max(detail.total - detail.sold, 1),
+                    )}{' '}
+                    per unit
+                  </Alert>
+                )}
+
+                {detail.actual >= detail.target && (
+                  <Alert severity="success" sx={{ mt: 2 }} icon={<CheckCircle />}>
+                    This project has met or exceeded its revenue target.
+                  </Alert>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* ---- Portfolio Charts ---- */}
+          {!detail && (
+            <Grid container spacing={3} sx={{ mb: 3 }}>
+              <Grid item xs={12} md={8}>
+                <Card sx={{ height: '100%' }}>
+                  <CardContent>
+                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                      Variance by Project
+                    </Typography>
+                    {chartData.length === 0 ? (
+                      <Alert severity="info">No projects with revenue targets found.</Alert>
+                    ) : (
+                      <ResponsiveContainer width="100%" height={isMobile ? 240 : 340}>
+                        <BarChart
+                          data={chartData}
+                          margin={{ top: 10, right: 10, left: 0, bottom: isMobile ? 70 : 50 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" stroke={alpha(theme.palette.text.primary, 0.08)} />
+                          <XAxis
+                            dataKey="shortName"
+                            angle={-35}
+                            textAnchor="end"
+                            fontSize={11}
+                            height={isMobile ? 80 : 60}
+                          />
+                          <YAxis tickFormatter={v => `${v}%`} fontSize={11} />
+                          <RechartsTooltip content={<ChartTooltipContent />} />
+                          <ReferenceLine y={0} stroke={theme.palette.text.secondary} strokeDasharray="2 2" />
+                          <ReferenceLine
+                            y={THRESHOLDS.WARNING}
+                            stroke={theme.palette.warning.main}
+                            strokeDasharray="4 4"
+                            strokeOpacity={0.4}
+                          />
+                          <ReferenceLine
+                            y={-THRESHOLDS.WARNING}
+                            stroke={theme.palette.warning.main}
+                            strokeDasharray="4 4"
+                            strokeOpacity={0.4}
+                          />
+                          <Bar
+                            dataKey="variance"
+                            radius={[4, 4, 0, 0]}
+                            cursor="pointer"
+                            onClick={(d) => handleFilter('project', d.id)}
+                          >
+                            {chartData.map((entry, idx) => (
+                              <Cell key={idx} fill={entry.fill} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    )}
+                  </CardContent>
+                </Card>
+              </Grid>
+
+              <Grid item xs={12} md={4}>
+                <Card sx={{ height: '100%' }}>
+                  <CardContent>
+                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                      Portfolio Health
+                    </Typography>
+                    {pieData.length === 0 ? (
+                      <Alert severity="info">No data</Alert>
+                    ) : (
+                      <>
+                        <ResponsiveContainer width="100%" height={isMobile ? 160 : 200}>
+                          <PieChart>
+                            <Pie
+                              data={pieData}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={isMobile ? 35 : 45}
+                              outerRadius={isMobile ? 60 : 75}
+                              paddingAngle={4}
+                              dataKey="value"
+                            >
+                              {pieData.map((entry, i) => (
+                                <Cell key={i} fill={entry.color} />
+                              ))}
+                            </Pie>
+                            <RechartsTooltip
+                              formatter={(v, name) => [`${v} project${v > 1 ? 's' : ''}`, name]}
+                            />
+                          </PieChart>
+                        </ResponsiveContainer>
+                        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1.5, flexWrap: 'wrap', mt: 1 }}>
+                          {pieData.map((d, i) => (
+                            <Chip
+                              key={i}
+                              size="small"
+                              label={`${d.name}: ${d.value}`}
+                              sx={{ bgcolor: alpha(d.color, 0.1), color: d.color, fontWeight: 600 }}
+                            />
+                          ))}
+                        </Box>
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+              </Grid>
+            </Grid>
+          )}
+
+          {/* ---- Project List ---- */}
+          {!detail && (
+            <Card>
+              <CardContent sx={{ p: { xs: 1, sm: 2 } }}>
+                <Typography variant="subtitle2" color="text.secondary" sx={{ px: 1, mb: 1 }}>
+                  {filtered.length} Project{filtered.length !== 1 ? 's' : ''}
+                </Typography>
+                {filtered.length === 0 ? (
+                  <Alert severity="info">No projects match the current filters.</Alert>
+                ) : (
+                  <List disablePadding>
+                    {filtered.map((p) => {
+                      const s = getStatus(p.variance);
+                      const revProgress = p.target > 0
+                        ? Math.min((p.actual / p.target) * 100, 100)
+                        : 0;
+                      return (
+                        <ListItemButton
+                          key={p.id}
+                          onClick={() => handleFilter('project', p.id)}
+                          sx={{
+                            borderRadius: 2, mb: 1,
+                            border: '1px solid', borderColor: 'divider',
+                            '&:hover': { borderColor: `${s.color}.main` },
+                          }}
+                        >
+                          <ListItemAvatar>
+                            <Avatar sx={{
+                              bgcolor: alpha(theme.palette[s.color].main, 0.1),
+                              color: `${s.color}.main`,
+                              width: 36, height: 36,
+                            }}>
+                              {s.color === 'error'
+                                ? <ErrorIcon fontSize="small" />
+                                : s.color === 'warning'
+                                ? <Warning fontSize="small" />
+                                : <CheckCircle fontSize="small" />}
+                            </Avatar>
+                          </ListItemAvatar>
+                          <ListItemText
+                            primary={
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Typography variant="subtitle2">{p.name}</Typography>
+                                <Chip
+                                  size="small"
+                                  icon={p.variance >= 0
+                                    ? <TrendingUp fontSize="small" />
+                                    : <TrendingDown fontSize="small" />}
+                                  label={`${p.variance >= 0 ? '+' : ''}${p.variance}%`}
+                                  color={s.color}
+                                  sx={{ fontWeight: 600 }}
+                                />
+                              </Box>
+                            }
+                            secondary={
+                              <Box sx={{ mt: 1 }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                                  <Typography variant="caption" color="text.secondary">
+                                    Target: {formatCurrency(p.target)}
+                                  </Typography>
+                                  <Typography variant="caption" color="text.secondary">
+                                    Actual: {formatCurrency(p.actual)} &middot; Units: {p.sold}/{p.total}
+                                  </Typography>
+                                </Box>
+                                <LinearProgress
+                                  variant="determinate"
+                                  value={revProgress}
+                                  color={s.color}
+                                  sx={{ height: 4, borderRadius: 2 }}
+                                />
+                              </Box>
+                            }
+                          />
+                        </ListItemButton>
+                      );
+                    })}
+                  </List>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </>
+      )}
+    </Box>
   );
 };
 

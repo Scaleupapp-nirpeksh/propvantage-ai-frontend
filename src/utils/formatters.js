@@ -476,10 +476,26 @@ export const formatCurrency = (amount, options = {}) => {
   };
   
   /**
+   * Compact currency shortcut - the format used on most dashboard/list pages.
+   * ₹7Cr, ₹45.2L, ₹8.5K, ₹500
+   * @param {number} amount
+   * @returns {string}
+   */
+  export const fmtCurrency = (amount) => {
+    if (amount === null || amount === undefined || isNaN(amount)) return '₹0';
+    const n = Number(amount);
+    if (Math.abs(n) >= 10000000) return `₹${(n / 10000000).toFixed(1)}Cr`;
+    if (Math.abs(n) >= 100000) return `₹${(n / 100000).toFixed(1)}L`;
+    if (Math.abs(n) >= 1000) return `₹${(n / 1000).toFixed(1)}K`;
+    return `₹${n.toLocaleString('en-IN')}`;
+  };
+
+  /**
    * Default export object with all formatters
    */
   const formatters = {
     formatCurrency,
+    fmtCurrency,
     formatNumber,
     formatDate,
     formatDateTime,
@@ -492,5 +508,5 @@ export const formatCurrency = (amount, options = {}) => {
     truncateText,
     formatName,
   };
-  
+
   export default formatters;

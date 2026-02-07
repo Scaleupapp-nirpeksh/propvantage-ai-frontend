@@ -1,13 +1,15 @@
-/* File: src/styles/index.css */
-/* Description: Global CSS styles for PropVantage AI application */
-/* Version: 1.0 - Essential global styles and custom overrides */
-/* Location: src/styles/index.css */
+/* File: src/index.css */
+/* PropVantage AI - Global Styles v2.0 */
+/* Clean minimal design system foundation */
 
-/* Import Inter font from Google Fonts */
+/* Import Inter font */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
-/* Global reset and base styles */
-* {
+/* ============================================================ */
+/* RESET & BASE                                                  */
+/* ============================================================ */
+
+*, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -15,15 +17,14 @@
 
 html, body {
   height: 100%;
-  margin: 0;
-  padding: 0;
 }
 
 body {
-  font-family: 'Inter', 'Roboto', 'Helvetica', 'Arial', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #fafafa;
+  background-color: #f8f9fa;
+  color: #212121;
 }
 
 #root {
@@ -31,170 +32,215 @@ body {
   width: 100%;
 }
 
-/* Custom scrollbar styles */
+/* ============================================================ */
+/* SCROLLBARS - Subtle & minimal                                 */
+/* ============================================================ */
+
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 4px;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+  background: rgba(0, 0, 0, 0.25);
 }
 
-/* Firefox scrollbar */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #c1c1c1 #f1f1f1;
+  scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
 }
 
-/* Custom utility classes */
-.text-truncate {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+/* ============================================================ */
+/* FOCUS & ACCESSIBILITY                                         */
+/* ============================================================ */
+
+/* Keyboard-only focus ring */
+:focus-visible {
+  outline: 2px solid #1e88e5;
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
-.text-center {
-  text-align: center;
+:focus:not(:focus-visible) {
+  outline: none;
 }
 
-.d-flex {
-  display: flex;
-}
-
-.align-items-center {
-  align-items: center;
-}
-
-.justify-content-center {
-  justify-content: center;
-}
-
-.justify-content-between {
-  justify-content: space-between;
-}
-
-.w-100 {
-  width: 100%;
-}
-
-.h-100 {
-  height: 100%;
-}
-
-/* Loading animation */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.fade-in {
-  animation: fadeIn 0.3s ease-in-out;
-}
-
-/* Custom Material-UI overrides */
-.MuiCard-root {
-  transition: box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out !important;
-}
-
-.MuiButton-root {
-  text-transform: none !important;
-  font-weight: 500 !important;
-}
-
-.MuiChip-root {
-  font-weight: 500 !important;
-}
-
-/* Print styles */
-@media print {
-  body {
-    background: white !important;
-  }
-  
-  .no-print {
-    display: none !important;
-  }
-}
-
-/* High contrast mode support */
-@media (prefers-contrast: high) {
-  .MuiCard-root {
-    border: 1px solid #000 !important;
-  }
-}
-
-/* Reduced motion support */
-@media (prefers-reduced-motion: reduce) {
-  * {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-
-/* Focus management for accessibility */
+/* Skip link for screen readers */
 .skip-link {
   position: absolute;
   top: -40px;
   left: 6px;
-  background: #000;
+  background: #212121;
   color: #fff;
-  padding: 8px;
+  padding: 8px 16px;
   text-decoration: none;
   z-index: 9999;
+  border-radius: 0 0 8px 8px;
+  font-size: 0.813rem;
+  font-weight: 500;
 }
 
 .skip-link:focus {
-  top: 6px;
+  top: 0;
 }
 
-/* Error boundary styles */
+/* ============================================================ */
+/* SELECTION                                                     */
+/* ============================================================ */
+
+::selection {
+  background: rgba(30, 136, 229, 0.15);
+  color: inherit;
+}
+
+/* ============================================================ */
+/* ANIMATIONS                                                    */
+/* ============================================================ */
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.6; }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.fade-in       { animation: fadeIn 300ms ease-out; }
+.fade-in-up    { animation: fadeInUp 400ms ease-out; }
+.slide-in-right { animation: slideInRight 300ms ease-out; }
+
+/* ============================================================ */
+/* PRINT STYLES                                                  */
+/* ============================================================ */
+
+@media print {
+  body {
+    background: white !important;
+    color: #000 !important;
+  }
+
+  .no-print,
+  .MuiDrawer-root,
+  .MuiAppBar-root {
+    display: none !important;
+  }
+
+  .MuiCard-root {
+    border: 1px solid #ddd !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+}
+
+/* ============================================================ */
+/* REDUCED MOTION                                                */
+/* ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================================ */
+/* HIGH CONTRAST                                                 */
+/* ============================================================ */
+
+@media (prefers-contrast: high) {
+  .MuiCard-root {
+    border: 2px solid #000 !important;
+  }
+}
+
+/* ============================================================ */
+/* CHART OVERRIDES                                               */
+/* ============================================================ */
+
+.recharts-responsive-container {
+  width: 100% !important;
+}
+
+.recharts-tooltip-wrapper {
+  z-index: 10 !important;
+}
+
+/* Cleaner recharts tooltip styling */
+.recharts-default-tooltip {
+  background: #fff !important;
+  border: 1px solid #e0e0e0 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+  padding: 10px 14px !important;
+}
+
+.recharts-tooltip-label {
+  font-weight: 600 !important;
+  color: #212121 !important;
+  font-size: 0.75rem !important;
+  margin-bottom: 4px !important;
+}
+
+.recharts-tooltip-item {
+  font-size: 0.75rem !important;
+  padding: 2px 0 !important;
+}
+
+/* ============================================================ */
+/* ERROR BOUNDARY                                                */
+/* ============================================================ */
+
 .error-boundary {
-  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
   text-align: center;
-  color: #721c24;
-  background-color: #f8d7da;
-  border: 1px solid #f5c6cb;
-  border-radius: 4px;
-  margin: 20px;
+  color: #c62828;
+  background-color: #ffebee;
+  border: 1px solid #ffcdd2;
+  border-radius: 12px;
+  margin: 24px;
 }
 
-/* Custom loading spinner */
+/* ============================================================ */
+/* LOADING                                                       */
+/* ============================================================ */
+
 .loading-container {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 200px;
+  min-height: 200px;
   flex-direction: column;
   gap: 16px;
-}
-
-/* Responsive typography */
-@media (max-width: 600px) {
-  .responsive-text {
-    font-size: 0.875rem !important;
-  }
-}
-
-/* Chart responsive container override */
-.recharts-responsive-container {
-  width: 100% !important;
-  height: 100% !important;
 }

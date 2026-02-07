@@ -455,7 +455,7 @@ const LoginPage = () => {
         {/* Footer */}
         <Box sx={{ textAlign: 'center', mt: 4 }}>
           <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
-            © 2025 PropVantage AI. All rights reserved.
+            © {new Date().getFullYear()} PropVantage AI. All rights reserved.
           </Typography>
         </Box>
       </Container>

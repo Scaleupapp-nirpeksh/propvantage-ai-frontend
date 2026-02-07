@@ -1,1292 +1,584 @@
-// File: src/pages/analytics/RealTimeFinancialDashboard.js
-// Description: FIXED Real-time Financial Dashboard with proper API integration
-// Version: 1.1 - Fixed to work with actual API responses and added filtering
-// Location: src/pages/analytics/RealTimeFinancialDashboard.js
+// src/pages/analytics/RealTimeFinancialDashboard.js
+// Financial Overview — holistic view across revenue, costs, sales, and leads
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  Box,
-  Grid,
-  Card,
-  CardContent,
-  Typography,
-  Button,
-  IconButton,
-  Chip,
-  Tooltip,
-  CircularProgress,
-  Alert,
-  Skeleton,
-  Paper,
-  Divider,
-  LinearProgress,
-  Avatar,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemAvatar,
-  ListItemIcon,
-  useTheme,
-  useMediaQuery,
-  Switch,
-  FormControlLabel,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Badge,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TablePagination,
-  TextField,
-  InputAdornment,
-  Collapse,
-  CardHeader,
+  Box, Grid, Card, CardContent, Typography, Alert, Chip,
+  IconButton, Tooltip, LinearProgress,
+  useTheme, useMediaQuery, alpha,
 } from '@mui/material';
 import {
-  Refresh,
-  TrendingUp,
-  TrendingDown,
-  TrendingFlat,
-  Warning,
-  CheckCircle,
-  Info,
-  Error,
-  FilterList,
-  GetApp,
-  Insights,
-  AccountBalance,
-  MonetizationOn,
-  CompareArrows,
-  Timeline,
-  Assessment,
-  ShowChart,
-  NotificationsActive,
-  Business,
-  AttachMoney,
-  Schedule,
-  Flag,
-  AccountBalanceWallet,
-  CreditCard,
-  Wallet,
-  TrendingDownOutlined,
-  ArrowUpward,
-  ArrowDownward,
-  SwapHoriz,
-  Speed,
-  PaymentOutlined,
-  ReceiptOutlined,
-  LocalAtm,
-  CalendarToday,
-  Search,
-  Clear,
-  ExpandMore,
-  ExpandLess,
+  AccountBalance, TrendingUp, People, Storefront, Assessment,
+  Refresh, Flag, Insights as InsightsIcon, Warning,
+  CheckCircle, Speed,
 } from '@mui/icons-material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { 
-  ResponsiveContainer, 
-  LineChart, 
-  Line, 
-  AreaChart, 
-  Area, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip as RechartsTooltip, 
-  Legend,
-  PieChart as RechartsPieChart,
-  Pie,
-  Cell,
-  BarChart as RechartsBarChart,
-  Bar,
-  ComposedChart,
-  ReferenceLine,
+import {
+  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  Tooltip as RechartsTooltip, Legend, PieChart, Pie, Cell,
 } from 'recharts';
+import { PageHeader, KPICard, FilterBar } from '../../components/common';
 import { useAuth } from '../../context/AuthContext';
-import { budgetVsActualAPI, analyticsAPI, projectAPI } from '../../services/api';
+import { budgetVsActualAPI } from '../../services/api';
+import { formatCurrency } from '../../utils/formatters';
 
-// =============================================================================
-// DASHBOARD CONFIGURATION
-// =============================================================================
+// ---------------------------------------------------------------------------
+// Config
+// ---------------------------------------------------------------------------
 
-/**
- * Real-time update intervals
- */
-const UPDATE_INTERVALS = {
-  live: 30 * 1000,      // 30 seconds
-  frequent: 60 * 1000,   // 1 minute
-  normal: 5 * 60 * 1000, // 5 minutes
-};
-
-/**
- * Financial alert thresholds
- */
-const FINANCIAL_THRESHOLDS = {
-  cashFlow: {
-    critical: 1000000,    // Critical cash flow level (10L)
-    warning: 5000000,     // Warning cash flow level (50L)
-  },
-  variance: {
-    critical: 25,         // 25% variance threshold
-    warning: 15,          // 15% variance threshold
-  },
-  growth: {
-    target: 10,           // 10% target growth rate
-    excellent: 20,        // 20% excellent growth rate
-  },
-};
-
-/**
- * Color system for financial indicators
- */
-const FINANCIAL_COLORS = {
-  positive: '#2e7d32',      // Green - positive trends
-  negative: '#d32f2f',      // Red - negative trends
-  warning: '#ed6c02',       // Orange - warning levels
-  neutral: '#1976d2',       // Blue - neutral/info
-  excellent: '#4caf50',     // Light green - excellent performance
-  critical: '#f44336',      // Deep red - critical alerts
-  chart: ['#1976d2', '#dc004e', '#2e7d32', '#ed6c02', '#9c27b0', '#f57c00'],
-};
-
-/**
- * Time period options for real-time data
- */
-const REALTIME_PERIODS = [
-  { value: 'live', label: 'Live (30s)', interval: UPDATE_INTERVALS.live },
-  { value: 'minute', label: '1 Minute', interval: UPDATE_INTERVALS.frequent },
-  { value: 'hour', label: 'Last Hour', interval: UPDATE_INTERVALS.normal },
-  { value: 'today', label: 'Today', interval: UPDATE_INTERVALS.normal },
-  { value: 'current_month', label: 'This Month', interval: UPDATE_INTERVALS.normal },
+const PERIODS = [
+  { value: 'current_month', label: 'This Month' },
+  { value: 'current_quarter', label: 'This Quarter' },
+  { value: 'current_year', label: 'This Year' },
+  { value: 'ytd', label: 'Year to Date' },
 ];
 
-/**
- * Utility functions for formatting
- */
-const formatCurrency = (value) => {
-  if (value >= 10000000) {
-    return `₹${(value / 10000000).toFixed(1)}Cr`;
-  } else if (value >= 100000) {
-    return `₹${(value / 100000).toFixed(1)}L`;
-  } else if (value >= 1000) {
-    return `₹${(value / 1000).toFixed(1)}K`;
-  }
-  return `₹${value?.toFixed(0) || 0}`;
-};
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
-const formatPercentage = (value, decimals = 1) => {
-  return `${(value || 0).toFixed(decimals)}%`;
-};
+const pct = (v) => `${(v ?? 0).toFixed(1)}%`;
 
-const calculatePercentageChange = (current, previous) => {
-  if (!previous || previous === 0) return 0;
-  return ((current - previous) / previous) * 100;
-};
-
-// =============================================================================
-// UTILITY COMPONENTS
-// =============================================================================
-
-/**
- * Enhanced Financial Filters Component
- */
-const FinancialFilters = ({ 
-  filters, 
-  onFilterChange, 
-  projects = [], 
-  onApplyFilters,
-  onClearFilters,
-  loading = false 
-}) => {
-  const [expanded, setExpanded] = useState(false);
-
-  const handleFilterChange = (field, value) => {
-    onFilterChange(field, value);
-  };
-
+const MetricRow = ({ label, actual, target, unit = '', color }) => {
+  const progress = target > 0 ? Math.min((actual / target) * 100, 100) : 0;
   return (
-    <Card sx={{ mb: 3 }}>
-      <CardHeader
-        title={
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <FilterList />
-            <Typography variant="h6">Financial Analysis Filters</Typography>
-          </Box>
-        }
-        action={
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button
-              variant="outlined"
-              size="small"
-              startIcon={<Clear />}
-              onClick={onClearFilters}
-            >
-              Clear
-            </Button>
-            <Button
-              variant="contained"
-              size="small"
-              startIcon={<Assessment />}
-              onClick={onApplyFilters}
-              disabled={loading}
-            >
-              Apply Filters
-            </Button>
-            <IconButton onClick={() => setExpanded(!expanded)}>
-              {expanded ? <ExpandLess /> : <ExpandMore />}
-            </IconButton>
-          </Box>
-        }
-      />
-      
-      <Collapse in={expanded}>
-        <CardContent>
-          <Grid container spacing={3}>
-            {/* Time Period */}
-            <Grid item xs={12} md={3}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Time Period</InputLabel>
-                <Select
-                  value={filters.period}
-                  onChange={(e) => handleFilterChange('period', e.target.value)}
-                  label="Time Period"
-                >
-                  {REALTIME_PERIODS.map((period) => (
-                    <MenuItem key={period.value} value={period.value}>
-                      {period.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-
-            {/* Custom Date Range */}
-            {filters.period === 'custom' && (
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <Grid item xs={12} md={2}>
-                  <DatePicker
-                    label="Start Date"
-                    value={filters.startDate}
-                    onChange={(date) => handleFilterChange('startDate', date)}
-                    renderInput={(params) => (
-                      <TextField {...params} fullWidth size="small" />
-                    )}
-                  />
-                </Grid>
-                <Grid item xs={12} md={2}>
-                  <DatePicker
-                    label="End Date"
-                    value={filters.endDate}
-                    onChange={(date) => handleFilterChange('endDate', date)}
-                    renderInput={(params) => (
-                      <TextField {...params} fullWidth size="small" />
-                    )}
-                  />
-                </Grid>
-              </LocalizationProvider>
-            )}
-
-            {/* Project Filter */}
-            <Grid item xs={12} md={3}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Project</InputLabel>
-                <Select
-                  value={filters.project}
-                  onChange={(e) => handleFilterChange('project', e.target.value)}
-                  label="Project"
-                >
-                  <MenuItem value="all">All Projects</MenuItem>
-                  {projects.map((project) => (
-                    <MenuItem key={project._id} value={project._id}>
-                      {project.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-
-            {/* Metric Focus */}
-            <Grid item xs={12} md={3}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Focus Area</InputLabel>
-                <Select
-                  value={filters.focus}
-                  onChange={(e) => handleFilterChange('focus', e.target.value)}
-                  label="Focus Area"
-                >
-                  <MenuItem value="all">All Metrics</MenuItem>
-                  <MenuItem value="revenue">Revenue Focus</MenuItem>
-                  <MenuItem value="cash_flow">Cash Flow</MenuItem>
-                  <MenuItem value="alerts">Alerts Only</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-          </Grid>
-        </CardContent>
-      </Collapse>
-    </Card>
-  );
-};
-
-/**
- * Real-time status indicator
- */
-const RealTimeStatusIndicator = ({ isLive, lastUpdate, updateInterval }) => {
-  const [timeSinceUpdate, setTimeSinceUpdate] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setTimeSinceUpdate(Date.now() - lastUpdate);
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [lastUpdate]);
-
-  const getStatusColor = () => {
-    if (!isLive) return 'default';
-    if (timeSinceUpdate < updateInterval * 1.5) return 'success';
-    if (timeSinceUpdate < updateInterval * 2) return 'warning';
-    return 'error';
-  };
-
-  return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-      <Badge
-        variant="dot"
-        color={getStatusColor()}
-        sx={{
-          '& .MuiBadge-badge': {
-            animation: isLive && getStatusColor() === 'success' ? 'pulse 2s infinite' : 'none',
-          },
-        }}
-      >
-        <Typography variant="caption" color="text.secondary">
-          {isLive ? 'LIVE' : 'OFFLINE'}
+    <Box sx={{ mb: 2 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+        <Typography variant="body2">{label}</Typography>
+        <Typography variant="body2" fontWeight={600}>
+          {unit === '₹' ? formatCurrency(actual) : actual}{!unit || unit === '₹' ? '' : unit}
+          <Typography component="span" variant="caption" color="text.secondary">
+            {' '}/ {unit === '₹' ? formatCurrency(target) : target}{!unit || unit === '₹' ? '' : unit}
+          </Typography>
         </Typography>
-      </Badge>
-      <Typography variant="caption" color="text.secondary">
-        Updated {Math.floor(timeSinceUpdate / 1000)}s ago
-      </Typography>
-      <style jsx>{`
-        @keyframes pulse {
-          0% { opacity: 1; }
-          50% { opacity: 0.5; }
-          100% { opacity: 1; }
-        }
-      `}</style>
+      </Box>
+      <LinearProgress
+        variant="determinate"
+        value={progress}
+        color={color || (progress >= 70 ? 'success' : progress >= 40 ? 'warning' : 'error')}
+        sx={{ height: 6, borderRadius: 3 }}
+      />
     </Box>
   );
 };
 
-/**
- * Financial metric card with real-time indicators
- */
-const FinancialMetricCard = ({ 
-  title, 
-  value, 
-  previousValue,
-  target,
-  unit = 'currency', 
-  icon: Icon, 
-  color = 'primary',
-  loading = false,
-  trend = null,
-  isRealTime = false,
-  alertLevel = null,
-}) => {
-  const theme = useTheme();
-  
-  // Calculate trend and variance
-  const calculatedTrend = useMemo(() => {
-    if (!previousValue || !value) return null;
-    const change = calculatePercentageChange(value, previousValue);
-    return {
-      direction: change > 0 ? 'up' : change < 0 ? 'down' : 'flat',
-      percentage: Math.abs(change),
-      value: value - previousValue,
-    };
-  }, [value, previousValue]);
-
-  const targetVariance = useMemo(() => {
-    if (!target || !value) return null;
-    return calculatePercentageChange(value, target);
-  }, [value, target]);
-
-  const displayTrend = trend || calculatedTrend;
-
-  const getTrendIcon = () => {
-    if (!displayTrend) return null;
-    switch (displayTrend.direction) {
-      case 'up': return <ArrowUpward fontSize="small" color="success" />;
-      case 'down': return <ArrowDownward fontSize="small" color="error" />;
-      default: return <SwapHoriz fontSize="small" color="info" />;
-    }
-  };
-
-  const getAlertColor = () => {
-    if (alertLevel === 'critical') return 'error';
-    if (alertLevel === 'warning') return 'warning';
-    return color;
-  };
-
-  const formatValue = () => {
-    if (loading) return <CircularProgress size={20} />;
-    if (unit === 'currency') return formatCurrency(value);
-    if (unit === 'percentage') return formatPercentage(value);
-    if (unit === 'number') return (value || 0).toLocaleString();
-    return `${value}${unit}`;
-  };
-
-  return (
-    <Card 
-      sx={{ 
-        height: '100%', 
-        position: 'relative',
-        border: alertLevel ? `2px solid ${theme.palette[getAlertColor()].main}` : 'none',
-        boxShadow: alertLevel ? theme.shadows[4] : theme.shadows[1],
-      }}
-    >
-      <CardContent>
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 2 }}>
-          <Box sx={{ flex: 1 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-              <Typography variant="body2" color="text.secondary">
-                {title}
-              </Typography>
-              {isRealTime && (
-                <Chip label="LIVE" size="small" color="success" variant="outlined" />
-              )}
-            </Box>
-            
-            <Typography variant="h4" component="div" sx={{ fontWeight: 600, mb: 1 }}>
-              {formatValue()}
-            </Typography>
-            
-            {target && (
-              <Typography variant="caption" color="text.secondary">
-                Target: {formatCurrency(target)}
-              </Typography>
-            )}
-          </Box>
-          
-          <Avatar 
-            sx={{ 
-              bgcolor: `${getAlertColor()}.main`, 
-              width: 48, 
-              height: 48,
-              ml: 2,
-            }}
-          >
-            <Icon />
-          </Avatar>
-        </Box>
-
-        {/* Trend Display */}
-        {displayTrend && !loading && (
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              {getTrendIcon()}
-              <Typography 
-                variant="body2" 
-                sx={{ 
-                  ml: 0.5,
-                  color: displayTrend.direction === 'up' ? 'success.main' : 
-                         displayTrend.direction === 'down' ? 'error.main' : 'text.secondary'
-                }}
-              >
-                {formatPercentage(displayTrend.percentage, 1)}
-              </Typography>
-            </Box>
-            <Typography variant="caption" color="text.secondary">
-              vs previous
-            </Typography>
-          </Box>
-        )}
-
-        {/* Target Variance */}
-        {targetVariance !== null && !loading && (
-          <Box sx={{ mt: 1 }}>
-            <LinearProgress
-              variant="determinate"
-              value={Math.min(Math.abs(targetVariance), 100)}
-              color={Math.abs(targetVariance) <= 5 ? 'success' : Math.abs(targetVariance) <= 15 ? 'warning' : 'error'}
-              sx={{ height: 6, borderRadius: 3 }}
-            />
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-              {targetVariance > 0 ? 'Above' : 'Below'} target by {formatPercentage(Math.abs(targetVariance))}
-            </Typography>
-          </Box>
-        )}
-
-        {/* Alert Indicator */}
-        {alertLevel && (
-          <Alert severity={alertLevel} sx={{ mt: 1, py: 0 }}>
-            <Typography variant="caption">
-              {alertLevel === 'critical' ? 'Immediate attention required' : 'Monitor closely'}
-            </Typography>
-          </Alert>
-        )}
-      </CardContent>
-    </Card>
-  );
-};
-
-/**
- * Cash flow indicator component
- */
-const CashFlowIndicator = ({ revenue, expenses, netFlow, loading = false }) => {
-  const getFlowColor = (flow) => {
-    if (flow > 0) return 'success';
-    if (flow < 0) return 'error';
-    return 'info';
-  };
-
-  return (
-    <Card>
-      <CardContent>
-        <Typography variant="h6" gutterBottom>
-          Cash Flow Status
-        </Typography>
-        
-        {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-            <CircularProgress />
-          </Box>
-        ) : (
-          <Grid container spacing={2}>
-            <Grid item xs={4}>
-              <Box sx={{ textAlign: 'center' }}>
-                <ArrowDownward color="success" sx={{ fontSize: 32 }} />
-                <Typography variant="h6" color="success.main">
-                  {formatCurrency(revenue)}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Revenue
-                </Typography>
-              </Box>
-            </Grid>
-            
-            <Grid item xs={4}>
-              <Box sx={{ textAlign: 'center' }}>
-                <ArrowUpward color="error" sx={{ fontSize: 32 }} />
-                <Typography variant="h6" color="error.main">
-                  {formatCurrency(expenses)}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Expenses
-                </Typography>
-              </Box>
-            </Grid>
-            
-            <Grid item xs={4}>
-              <Box sx={{ textAlign: 'center' }}>
-                <SwapHoriz color={getFlowColor(netFlow)} sx={{ fontSize: 32 }} />
-                <Typography variant="h6" color={`${getFlowColor(netFlow)}.main`}>
-                  {formatCurrency(netFlow)}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Net Flow
-                </Typography>
-              </Box>
-            </Grid>
-          </Grid>
-        )}
-      </CardContent>
-    </Card>
-  );
-};
-
-// =============================================================================
-// MAIN REAL-TIME FINANCIAL DASHBOARD COMPONENT
-// =============================================================================
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
 
 const RealTimeFinancialDashboard = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const { user, canAccess } = useAuth();
+  const { canAccess } = useAuth();
 
-  // =============================================================================
-  // STATE MANAGEMENT
-  // =============================================================================
-  
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
-  const [isLiveMode, setIsLiveMode] = useState(false); // Start with false
-  const [lastUpdated, setLastUpdated] = useState(Date.now());
-  const [updateInterval, setUpdateInterval] = useState(UPDATE_INTERVALS.normal);
-  
-  // Enhanced filters state
-  const [filters, setFilters] = useState({
-    period: 'current_month',
-    startDate: null,
-    endDate: null,
-    project: 'all',
-    focus: 'all',
-  });
+  const [period, setPeriod] = useState('current_month');
+  const [report, setReport] = useState(null);
+  const [dashboard, setDashboard] = useState(null);
 
-  // Filter options
-  const [projects, setProjects] = useState([]);
-  
-  // Financial data state - FIXED to match actual API response
-  const [financialData, setFinancialData] = useState({
-    kpis: [],
-    alerts: [],
-    revenue: {},
-    sales: {},
-    leads: {},
-    cashFlow: {},
-    trends: [],
-    recentActivities: [],
-    projections: {},
-  });
+  const canView = canAccess?.viewFinancials ? canAccess.viewFinancials() : true;
 
-  // Loading states for individual sections
-  const [loadingStates, setLoadingStates] = useState({
-    dashboard: true,
-    comprehensive: true,
-    revenue: true,
-    cashFlow: true,
-    alerts: true,
-  });
+  // ---------------------------------------------------------------------------
+  // Data fetching
+  // ---------------------------------------------------------------------------
 
-  // =============================================================================
-  // FILTER FUNCTIONS
-  // =============================================================================
-
-  /**
-   * Generate API query parameters from current filters
-   */
-  const getApiParams = useCallback(() => {
-    const params = {
-      period: filters.period,
-    };
-
-    // Add custom date range
-    if (filters.period === 'custom' && filters.startDate && filters.endDate) {
-      params.startDate = filters.startDate.toISOString();
-      params.endDate = filters.endDate.toISOString();
-    }
-
-    // Add project filter
-    if (filters.project !== 'all') {
-      params.projectId = filters.project;
-    }
-
-    // Add focus filter
-    if (filters.focus !== 'all') {
-      params.focus = filters.focus;
-    }
-
-    return params;
-  }, [filters]);
-
-  /**
-   * Handle filter changes
-   */
-  const handleFilterChange = (field, value) => {
-    setFilters(prev => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  /**
-   * Apply filters and refresh data
-   */
-  const applyFilters = () => {
-    refreshFinancialData();
-  };
-
-  /**
-   * Clear all filters
-   */
-  const clearFilters = () => {
-    setFilters({
-      period: 'current_month',
-      startDate: null,
-      endDate: null,
-      project: 'all',
-      focus: 'all',
-    });
-  };
-
-  // =============================================================================
-  // DATA FETCHING FUNCTIONS - FIXED FOR ACTUAL API STRUCTURE
-  // =============================================================================
-
-  /**
-   * Fetch filter options (projects)
-   */
-  const fetchFilterOptions = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     try {
-      const projectsResponse = await projectAPI.getProjects();
-      const projectsData = projectsResponse.data?.data || [];
-      setProjects(Array.isArray(projectsData) ? projectsData : []);
-    } catch (error) {
-      console.error('Error fetching filter options:', error);
-    }
-  }, []);
-
-  /**
-   * Fetch financial dashboard KPIs - FIXED for actual API response
-   */
-  const fetchFinancialDashboard = useCallback(async () => {
-    try {
-      setLoadingStates(prev => ({ ...prev, dashboard: true }));
-      
-      const params = getApiParams();
-      console.log('🔄 Calling budgetVsActualAPI.getBudgetDashboard for financial data with params:', params);
-      
-      const response = await budgetVsActualAPI.getBudgetDashboard(params);
-      console.log('✅ Financial Dashboard API Response:', response.data);
-
-      // FIXED: Parse actual API response structure
-      const dashboardData = response.data?.data || {};
-      
-      setFinancialData(prev => ({
-        ...prev,
-        kpis: dashboardData.kpis || [],
-        alerts: dashboardData.alerts || [],
-        projections: dashboardData.projections || {},
-      }));
-
-    } catch (error) {
-      console.error('Error fetching financial dashboard:', error);
-      setError(`Failed to load financial dashboard: ${error.message}`);
-    } finally {
-      setLoadingStates(prev => ({ ...prev, dashboard: false }));
-    }
-  }, [getApiParams]);
-
-  /**
-   * Fetch comprehensive financial report - FIXED for actual API response
-   */
-  const fetchComprehensiveFinancialReport = useCallback(async () => {
-    try {
-      setLoadingStates(prev => ({ ...prev, comprehensive: true }));
-      
-      const params = getApiParams();
-      console.log('🔄 Calling budgetVsActualAPI.getBudgetVsActual for comprehensive financial data with params:', params);
-      
-      const response = await budgetVsActualAPI.getBudgetVsActual(params);
-      console.log('✅ Comprehensive Financial Report API Response:', response.data);
-
-      // FIXED: Parse actual API response structure
-      const reportData = response.data?.data || {};
-      
-      // Calculate cash flow from revenue and estimated expenses
-      const totalRevenue = reportData.revenue?.actual?.totalRevenue || 0;
-      const estimatedExpenses = totalRevenue * 0.3; // Estimate 30% expenses
-      const netCashFlow = totalRevenue - estimatedExpenses;
-
-      setFinancialData(prev => ({
-        ...prev,
-        revenue: reportData.revenue || {},
-        sales: reportData.sales || {},
-        leads: reportData.leads || {},
-        cashFlow: {
-          inflow: totalRevenue,
-          outflow: estimatedExpenses,
-          netFlow: netCashFlow,
-        },
-      }));
-
-    } catch (error) {
-      console.error('Error fetching comprehensive financial report:', error);
-      setError(`Failed to load comprehensive financial report: ${error.message}`);
-    } finally {
-      setLoadingStates(prev => ({ ...prev, comprehensive: false }));
-    }
-  }, [getApiParams]);
-
-  /**
-   * Fetch revenue trends - FIXED for actual API response
-   */
-  const fetchRevenueTrends = useCallback(async () => {
-    try {
-      setLoadingStates(prev => ({ ...prev, revenue: true }));
-      
-      const params = { ...getApiParams(), include: 'trends,projections' };
-      console.log('🔄 Calling budgetVsActualAPI.getRevenueAnalysis for trends with params:', params);
-      
-      const response = await budgetVsActualAPI.getRevenueAnalysis(params);
-      console.log('✅ Revenue Trends API Response:', response.data);
-
-      // FIXED: Parse actual API response structure
-      const revenueData = response.data?.data || {};
-      
-      // Transform monthly trend data for charts
-      const trends = [];
-      if (revenueData.revenue?.trend?.monthly) {
-        trends.push(...revenueData.revenue.trend.monthly.map(item => ({
-          period: `${item._id?.year}-${String(item._id?.month).padStart(2, '0')}`,
-          revenue: item.revenue || 0,
-          salesCount: item.salesCount || 0,
-          // Estimate expenses and profit
-          expenses: (item.revenue || 0) * 0.3,
-          profit: (item.revenue || 0) * 0.7,
-        })));
-      }
-
-      setFinancialData(prev => ({
-        ...prev,
-        trends,
-      }));
-
-    } catch (error) {
-      console.error('Error fetching revenue trends:', error);
-    } finally {
-      setLoadingStates(prev => ({ ...prev, revenue: false }));
-    }
-  }, [getApiParams]);
-
-  /**
-   * Refresh all financial data
-   */
-  const refreshFinancialData = useCallback(async () => {
-    console.log('🔄 Starting financial dashboard refresh with filters:', filters);
-    setLoading(true);
-    setError(null);
-    setLastUpdated(Date.now());
-
-    try {
-      await Promise.all([
-        fetchFinancialDashboard(),
-        fetchComprehensiveFinancialReport(),
-        fetchRevenueTrends(),
+      setError(null);
+      const params = { period };
+      const [dashRes, reportRes] = await Promise.allSettled([
+        budgetVsActualAPI.getBudgetDashboard(params),
+        budgetVsActualAPI.getBudgetVsActual({ ...params, include: 'variance,analysis' }),
       ]);
-      
-      console.log('✅ Financial dashboard refresh completed successfully');
-    } catch (error) {
-      console.error('❌ Error refreshing financial dashboard:', error);
-      setError('Failed to refresh financial data');
+      setDashboard(dashRes.status === 'fulfilled' ? dashRes.value.data?.data : null);
+      setReport(reportRes.status === 'fulfilled' ? reportRes.value.data?.data : null);
+    } catch {
+      setError('Failed to load financial data');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  }, [
-    fetchFinancialDashboard,
-    fetchComprehensiveFinancialReport,
-    fetchRevenueTrends,
-  ]);
+  }, [period]);
 
-  // =============================================================================
-  // EFFECTS
-  // =============================================================================
+  useEffect(() => { if (canView) fetchData(); }, [fetchData, canView]);
 
-  // Initial data load
-  useEffect(() => {
-    console.log('🚀 Financial Dashboard initializing...');
-    fetchFilterOptions();
-    refreshFinancialData();
-  }, []);
+  const handleRefresh = () => { setRefreshing(true); fetchData(); };
 
-  // Refresh data when filters change (debounced)
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      refreshFinancialData();
-    }, 500); // 500ms debounce
+  // ---------------------------------------------------------------------------
+  // Derived data
+  // ---------------------------------------------------------------------------
 
-    return () => clearTimeout(timeoutId);
-  }, [filters]);
+  const revenue = report?.revenue || {};
+  const sales = report?.sales || {};
+  const leads = report?.leads || {};
+  const costs = report?.costs || {};
+  const projects = report?.projects || [];
+  const alerts = dashboard?.alerts || [];
+  const projections = dashboard?.projections || {};
+  const insights = dashboard?.topInsights || [];
+  const actions = dashboard?.quickActions || [];
 
-  // Auto-refresh based on selected period
-  useEffect(() => {
-    if (!isLiveMode) return;
+  const kpis = useMemo(() => [
+    {
+      title: 'Total Revenue',
+      value: formatCurrency(revenue.actual?.totalRevenue || 0),
+      icon: AccountBalance,
+      color: theme.palette.primary.main,
+      subtitle: `Target: ${formatCurrency(revenue.target?.totalRevenue || 0)}`,
+    },
+    {
+      title: 'Sell-Through Rate',
+      value: pct(sales.performance?.sellThroughRate),
+      icon: Storefront,
+      color: (sales.performance?.sellThroughRate || 0) >= 50
+        ? theme.palette.success.main
+        : theme.palette.warning.main,
+      subtitle: `${sales.actual?.soldUnits || 0} of ${sales.target?.totalUnits || 0} units`,
+    },
+    {
+      title: 'Lead Conversion',
+      value: pct(leads.performance?.conversionRate),
+      icon: People,
+      color: (leads.performance?.conversionRate || 0) >= 5
+        ? theme.palette.success.main
+        : theme.palette.error.main,
+      subtitle: `${leads.actual?.totalLeads || 0} total leads`,
+    },
+    {
+      title: 'Cost Efficiency',
+      value: costs.available && costs.variance
+        ? (costs.variance.status === 'under_budget' ? 'Under Budget' : 'Over Budget')
+        : 'N/A',
+      icon: Speed,
+      color: costs.variance?.status === 'under_budget'
+        ? theme.palette.success.main
+        : theme.palette.warning.main,
+      subtitle: costs.available
+        ? `Planned: ${formatCurrency(costs.target?.totalPlannedCost || 0)}`
+        : 'Cost data not available',
+    },
+  ], [revenue, sales, leads, costs, theme]);
 
-    const interval = setInterval(refreshFinancialData, updateInterval);
-    return () => clearInterval(interval);
-  }, [isLiveMode, updateInterval, refreshFinancialData]);
-
-  // Update interval when period changes
-  useEffect(() => {
-    const period = REALTIME_PERIODS.find(p => p.value === filters.period);
-    if (period) {
-      setUpdateInterval(period.interval);
-    }
-  }, [filters.period]);
-
-  // =============================================================================
-  // EVENT HANDLERS
-  // =============================================================================
-
-  const handleLiveModeToggle = (event) => {
-    setIsLiveMode(event.target.checked);
-    if (event.target.checked) {
-      refreshFinancialData();
-    }
-  };
-
-  const handleManualRefresh = () => {
-    refreshFinancialData();
-  };
-
-  // =============================================================================
-  // RENDER FUNCTIONS
-  // =============================================================================
-
-  /**
-   * Render financial KPI metrics - FIXED for actual data structure
-   */
-  const renderFinancialKPIs = () => {
-    // Get cash alert level
-    const getCashAlert = () => {
-      const balance = financialData.cashFlow.netFlow || 0;
-      if (balance < FINANCIAL_THRESHOLDS.cashFlow.critical) return 'critical';
-      if (balance < FINANCIAL_THRESHOLDS.cashFlow.warning) return 'warning';
-      return null;
+  // Inventory pie data
+  const inventoryData = useMemo(() => {
+    if (!sales.actual?.inventoryStatus) return [];
+    const colorMap = {
+      available: theme.palette.success.main,
+      sold: theme.palette.primary.main,
+      booked: theme.palette.info.main,
+      blocked: theme.palette.warning.main,
     };
+    return sales.actual.inventoryStatus.map(s => ({
+      name: s._id?.charAt(0).toUpperCase() + s._id?.slice(1),
+      value: s.count,
+      color: colorMap[s._id] || theme.palette.grey[400],
+    }));
+  }, [sales, theme]);
 
-    // Extract values from actual API data
-    const totalRevenue = financialData.revenue?.actual?.totalRevenue || 0;
-    const previousRevenue = financialData.revenue?.trend?.monthly?.[0]?.revenue || 0;
-    const targetRevenue = financialData.revenue?.target?.totalRevenue || 0;
-    
-    const totalExpenses = financialData.cashFlow.outflow || 0;
-    const netProfit = financialData.cashFlow.netFlow || 0;
-    const cashBalance = netProfit; // Use net profit as cash balance approximation
+  // Project chart data
+  const projectChartData = useMemo(() =>
+    projects.map(p => ({
+      name: p.name?.length > 14 ? p.name.slice(0, 14) + '\u2026' : p.name,
+      fullName: p.name,
+      target: p.targetRevenue || 0,
+      actual: p.actualRevenue || 0,
+    })),
+  [projects]);
 
+  const ChartTooltipContent = ({ active, payload }) => {
+    if (!active || !payload?.[0]) return null;
+    const d = payload[0].payload;
     return (
-      <Grid container spacing={3}>
-        <Grid item xs={12} sm={6} md={3}>
-          <FinancialMetricCard
-            title="Total Revenue"
-            value={totalRevenue}
-            previousValue={previousRevenue}
-            target={targetRevenue}
-            unit="currency"
-            icon={MonetizationOn}
-            color="success"
-            loading={loadingStates.dashboard}
-            isRealTime={isLiveMode}
-          />
-        </Grid>
-        
-        <Grid item xs={12} sm={6} md={3}>
-          <FinancialMetricCard
-            title="Total Expenses"
-            value={totalExpenses}
-            previousValue={previousRevenue * 0.3} // Estimate previous expenses
-            unit="currency"
-            icon={PaymentOutlined}
-            color="error"
-            loading={loadingStates.dashboard}
-            isRealTime={isLiveMode}
-          />
-        </Grid>
-        
-        <Grid item xs={12} sm={6} md={3}>
-          <FinancialMetricCard
-            title="Net Profit"
-            value={netProfit}
-            previousValue={previousRevenue * 0.7} // Estimate previous profit
-            unit="currency"
-            icon={TrendingUp}
-            color="primary"
-            loading={loadingStates.dashboard}
-            isRealTime={isLiveMode}
-          />
-        </Grid>
-        
-        <Grid item xs={12} sm={6} md={3}>
-          <FinancialMetricCard
-            title="Cash Flow"
-            value={cashBalance}
-            previousValue={previousRevenue * 0.7} // Estimate previous cash flow
-            unit="currency"
-            icon={AccountBalanceWallet}
-            color="info"
-            loading={loadingStates.dashboard}
-            isRealTime={isLiveMode}
-            alertLevel={getCashAlert()}
-          />
-        </Grid>
-      </Grid>
+      <Box sx={{ bgcolor: 'background.paper', p: 1.5, borderRadius: 1, border: '1px solid', borderColor: 'divider', minWidth: 180 }}>
+        <Typography variant="subtitle2" gutterBottom>{d.fullName || d.name}</Typography>
+        {d.target !== undefined && (
+          <Typography variant="body2" color="text.secondary">Target: {formatCurrency(d.target)}</Typography>
+        )}
+        {d.actual !== undefined && (
+          <Typography variant="body2" color="text.secondary">Actual: {formatCurrency(d.actual)}</Typography>
+        )}
+      </Box>
     );
   };
 
-  /**
-   * Render financial trends chart - FIXED for actual data structure
-   */
-  const renderFinancialTrends = () => (
-    <Card>
-      <CardContent>
-        <Typography variant="h6" gutterBottom>
-          Financial Trends
-        </Typography>
-        
-        {loadingStates.revenue ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', height: 300 }}>
-            <CircularProgress />
-          </Box>
-        ) : financialData.trends.length === 0 ? (
-          <Alert severity="info">
-            No trend data available for the selected period.
-          </Alert>
-        ) : (
-          <ResponsiveContainer width="100%" height={300}>
-            <ComposedChart data={financialData.trends}>
-              <XAxis dataKey="period" />
-              <YAxis />
-              <CartesianGrid strokeDasharray="3 3" />
-              <RechartsTooltip 
-                formatter={(value, name) => [
-                  formatCurrency(value), 
-                  name.charAt(0).toUpperCase() + name.slice(1)
-                ]}
-              />
-              <Legend />
-              <Area 
-                type="monotone" 
-                dataKey="revenue" 
-                stackId="1"
-                stroke={FINANCIAL_COLORS.positive}
-                fill={FINANCIAL_COLORS.positive}
-                fillOpacity={0.6}
-                name="Revenue"
-              />
-              <Area 
-                type="monotone" 
-                dataKey="expenses" 
-                stackId="2"
-                stroke={FINANCIAL_COLORS.negative}
-                fill={FINANCIAL_COLORS.negative}
-                fillOpacity={0.6}
-                name="Expenses"
-              />
-              <Line 
-                type="monotone" 
-                dataKey="profit" 
-                stroke={FINANCIAL_COLORS.neutral}
-                strokeWidth={3}
-                name="Net Profit"
-              />
-              <ReferenceLine y={0} stroke="#000" strokeDasharray="2 2" />
-            </ComposedChart>
-          </ResponsiveContainer>
-        )}
-      </CardContent>
-    </Card>
-  );
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
 
-  /**
-   * Render financial alerts - FIXED for actual data structure
-   */
-  const renderFinancialAlerts = () => (
-    <Card>
-      <CardContent>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-          <Typography variant="h6">
-            Financial Alerts
-          </Typography>
-          <Badge badgeContent={financialData.alerts.length} color="error">
-            <NotificationsActive />
-          </Badge>
-        </Box>
-        
-        {loadingStates.dashboard ? (
-          <Box>
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} height={60} sx={{ mb: 1 }} />
-            ))}
-          </Box>
-        ) : financialData.alerts.length === 0 ? (
-          <Alert severity="success">
-            No financial alerts at this time. All metrics are within normal thresholds.
-          </Alert>
-        ) : (
-          <List>
-            {financialData.alerts.slice(0, 5).map((alert, index) => (
-              <ListItem key={index} divider={index < Math.min(financialData.alerts.length, 5) - 1}>
-                <ListItemIcon>
-                  {alert.type === 'critical' ? 
-                    <Error color="error" /> : 
-                    <Warning color="warning" />
-                  }
-                </ListItemIcon>
-                <ListItemText
-                  primary={alert.category?.toUpperCase() + ' Alert'}
-                  secondary={
-                    <Box>
-                      <Typography variant="body2" color="text.secondary">
-                        {alert.message}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Impact: {alert.impact}
-                      </Typography>
-                    </Box>
-                  }
-                />
-              </ListItem>
-            ))}
-          </List>
-        )}
-      </CardContent>
-    </Card>
-  );
-
-  /**
-   * Render financial projections
-   */
-  const renderProjections = () => (
-    <Card>
-      <CardContent>
-        <Typography variant="h6" gutterBottom>
-          Financial Projections
-        </Typography>
-        
-        {financialData.projections?.endOfYear ? (
-          <Grid container spacing={2}>
-            <Grid item xs={4}>
-              <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="h5" color="primary">
-                  {formatCurrency(financialData.projections.endOfYear.projectedRevenue)}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Projected Revenue
-                </Typography>
-              </Box>
-            </Grid>
-            <Grid item xs={4}>
-              <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="h5" color="success.main">
-                  {Math.round(financialData.projections.endOfYear.projectedSales)}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Projected Sales
-                </Typography>
-              </Box>
-            </Grid>
-            <Grid item xs={4}>
-              <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="h5" color="info.main">
-                  {formatPercentage(financialData.projections.confidence)}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Confidence Level
-                </Typography>
-              </Box>
-            </Grid>
-          </Grid>
-        ) : (
-          <Typography variant="body2" color="text.secondary">
-            No projection data available for the selected period.
-          </Typography>
-        )}
-      </CardContent>
-    </Card>
-  );
-
-  // =============================================================================
-  // MAIN RENDER
-  // =============================================================================
+  if (!canView) {
+    return (
+      <Alert severity="warning" sx={{ m: 3 }}>
+        You don&apos;t have permission to view financial data.
+      </Alert>
+    );
+  }
 
   return (
-    <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Box sx={{ flexGrow: 1 }}>
-        {/* Header Section */}
-        <Box sx={{ mb: 4 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-            <Box>
-              <Typography variant="h4" component="h1" gutterBottom>
-                Real-time Financial Dashboard
-              </Typography>
-              <Typography variant="body1" color="text.secondary">
-                Live financial monitoring with real-time KPIs, cash flow tracking, and alerts
-              </Typography>
-            </Box>
-            
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-              {/* Live Mode Toggle */}
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={isLiveMode}
-                    onChange={handleLiveModeToggle}
-                    color="primary"
+    <Box sx={{ p: { xs: 2, sm: 3 } }}>
+      <PageHeader
+        title="Financial Overview"
+        subtitle="Revenue, costs, sales velocity, and lead performance"
+        icon={Assessment}
+        actions={
+          <Tooltip title="Refresh">
+            <IconButton onClick={handleRefresh} disabled={refreshing}>
+              <Refresh sx={{
+                animation: refreshing ? 'spin 1s linear infinite' : 'none',
+                '@keyframes spin': { '0%': { transform: 'rotate(0deg)' }, '100%': { transform: 'rotate(360deg)' } },
+              }} />
+            </IconButton>
+          </Tooltip>
+        }
+      />
+
+      {/* Critical alerts */}
+      {!loading && alerts.filter(a => a.type === 'critical').map((a, i) => (
+        <Alert key={i} severity="error" sx={{ mb: 2 }}>
+          <strong>{a.category?.toUpperCase()}:</strong> {a.message}
+        </Alert>
+      ))}
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
+
+      {/* Filter */}
+      <FilterBar
+        filters={[
+          { key: 'period', label: 'Period', type: 'select', options: PERIODS },
+        ]}
+        values={{ period }}
+        onChange={(k, v) => setPeriod(v)}
+        onClear={() => setPeriod('current_month')}
+      />
+
+      {/* KPI Cards */}
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        {kpis.map((k, i) => (
+          <Grid item xs={6} md={3} key={i}>
+            <KPICard {...k} loading={loading} />
+          </Grid>
+        ))}
+      </Grid>
+
+      {!loading && (
+        <>
+          {/* Revenue & Sales Section */}
+          <Grid container spacing={3} sx={{ mb: 3 }}>
+            {/* Revenue & Costs */}
+            <Grid item xs={12} md={6}>
+              <Card sx={{ height: '100%' }}>
+                <CardContent>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    Revenue & Costs
+                  </Typography>
+
+                  <MetricRow
+                    label="Revenue"
+                    actual={revenue.actual?.totalRevenue || 0}
+                    target={revenue.target?.totalRevenue || 0}
+                    unit="₹"
                   />
-                }
-                label="Live Mode"
-              />
-              
-              {/* Manual Refresh Button */}
-              <Tooltip title="Refresh Data">
-                <IconButton 
-                  onClick={handleManualRefresh} 
-                  disabled={loading}
-                  color="primary"
-                >
-                  <Refresh />
-                </IconButton>
-              </Tooltip>
-            </Box>
-          </Box>
 
-          {/* Real-time Status */}
-          <RealTimeStatusIndicator 
-            isLive={isLiveMode} 
-            lastUpdate={lastUpdated} 
-            updateInterval={updateInterval}
-          />
-        </Box>
+                  {costs.available && (
+                    <MetricRow
+                      label="Costs"
+                      actual={costs.actual?.totalActualCost || 0}
+                      target={costs.target?.totalPlannedCost || 0}
+                      unit="₹"
+                      color={costs.variance?.status === 'under_budget' ? 'success' : 'error'}
+                    />
+                  )}
 
-        {/* Enhanced Filters */}
-        <FinancialFilters
-          filters={filters}
-          onFilterChange={handleFilterChange}
-          projects={projects}
-          onApplyFilters={applyFilters}
-          onClearFilters={clearFilters}
-          loading={loading}
-        />
+                  <Box
+                    sx={{
+                      mt: 2, p: 2, borderRadius: 2,
+                      bgcolor: (revenue.variance?.percentage || 0) >= 0
+                        ? alpha(theme.palette.success.main, 0.06)
+                        : alpha(theme.palette.error.main, 0.06),
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Typography variant="body2" color="text.secondary">
+                        Revenue Variance
+                      </Typography>
+                      <Chip
+                        size="small"
+                        label={revenue.variance?.status || 'behind'}
+                        color={revenue.variance?.status === 'ahead' ? 'success' : 'error'}
+                        sx={{ textTransform: 'capitalize' }}
+                      />
+                    </Box>
+                    <Typography variant="h5" fontWeight={700} sx={{ mt: 0.5 }}>
+                      {(revenue.variance?.percentage || 0) >= 0 ? '+' : ''}
+                      {(revenue.variance?.percentage || 0).toFixed(1)}%
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {formatCurrency(Math.abs(revenue.variance?.absolute || 0))}{' '}
+                      {(revenue.variance?.percentage || 0) >= 0 ? 'above' : 'below'} target
+                    </Typography>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
 
-        {/* Error Alert */}
-        {error && (
-          <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
-            {error}
-          </Alert>
-        )}
+            {/* Sales & Leads */}
+            <Grid item xs={12} md={6}>
+              <Card sx={{ height: '100%' }}>
+                <CardContent>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    Sales & Lead Pipeline
+                  </Typography>
 
-        {/* Main Dashboard Content */}
-        <Grid container spacing={3}>
-          {/* Financial KPIs Row */}
-          <Grid item xs={12}>
-            {renderFinancialKPIs()}
+                  <MetricRow
+                    label="Units Sold"
+                    actual={sales.actual?.soldUnits || 0}
+                    target={sales.target?.targetSales || 0}
+                  />
+
+                  <MetricRow
+                    label="Total Leads"
+                    actual={leads.actual?.totalLeads || 0}
+                    target={leads.target?.totalLeads || 0}
+                  />
+
+                  <MetricRow
+                    label="Qualified Leads"
+                    actual={leads.actual?.qualifiedLeads || 0}
+                    target={leads.target?.qualifiedLeads || 0}
+                  />
+
+                  <MetricRow
+                    label="Booked Leads"
+                    actual={leads.actual?.bookedLeads || 0}
+                    target={leads.target?.bookedLeads || 0}
+                  />
+
+                  <Box sx={{ display: 'flex', gap: 1, mt: 2, flexWrap: 'wrap' }}>
+                    <Chip
+                      size="small"
+                      label={`Qualification: ${pct(leads.performance?.qualificationRate)}`}
+                      color={leads.performance?.qualificationRate >= 20 ? 'success' : 'warning'}
+                      variant="outlined"
+                    />
+                    <Chip
+                      size="small"
+                      label={`Conversion: ${pct(leads.performance?.conversionRate)}`}
+                      color={leads.performance?.conversionRate >= 3 ? 'success' : 'warning'}
+                      variant="outlined"
+                    />
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
           </Grid>
 
-          {/* Cash Flow Indicator */}
-          <Grid item xs={12} md={4}>
-            <CashFlowIndicator
-              revenue={financialData.cashFlow.inflow}
-              expenses={financialData.cashFlow.outflow}
-              netFlow={financialData.cashFlow.netFlow}
-              loading={loadingStates.comprehensive}
-            />
+          {/* Inventory & Project Comparison */}
+          <Grid container spacing={3} sx={{ mb: 3 }}>
+            {/* Inventory Breakdown */}
+            {inventoryData.length > 0 && (
+              <Grid item xs={12} md={4}>
+                <Card sx={{ height: '100%' }}>
+                  <CardContent>
+                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                      Inventory Breakdown
+                    </Typography>
+                    <ResponsiveContainer width="100%" height={isMobile ? 160 : 200}>
+                      <PieChart>
+                        <Pie
+                          data={inventoryData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={isMobile ? 35 : 45}
+                          outerRadius={isMobile ? 60 : 75}
+                          paddingAngle={4}
+                          dataKey="value"
+                        >
+                          {inventoryData.map((entry, i) => (
+                            <Cell key={i} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <RechartsTooltip
+                          formatter={(v, name) => [`${v} units`, name]}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, flexWrap: 'wrap', mt: 1 }}>
+                      {inventoryData.map((d, i) => (
+                        <Chip
+                          key={i}
+                          size="small"
+                          label={`${d.name}: ${d.value}`}
+                          sx={{ bgcolor: alpha(d.color, 0.1), color: d.color, fontWeight: 600 }}
+                        />
+                      ))}
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+            )}
+
+            {/* Project Revenue Comparison */}
+            {projectChartData.length > 0 && (
+              <Grid item xs={12} md={inventoryData.length > 0 ? 8 : 12}>
+                <Card sx={{ height: '100%' }}>
+                  <CardContent>
+                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                      Revenue by Project
+                    </Typography>
+                    <ResponsiveContainer width="100%" height={isMobile ? 220 : 280}>
+                      <BarChart
+                        data={projectChartData}
+                        margin={{ top: 10, right: 10, left: 0, bottom: isMobile ? 70 : 50 }}
+                      >
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          stroke={alpha(theme.palette.text.primary, 0.08)}
+                        />
+                        <XAxis
+                          dataKey="name"
+                          angle={-30}
+                          textAnchor="end"
+                          fontSize={11}
+                          height={isMobile ? 80 : 60}
+                        />
+                        <YAxis tickFormatter={v => formatCurrency(v)} fontSize={11} />
+                        <RechartsTooltip content={<ChartTooltipContent />} />
+                        <Legend />
+                        <Bar
+                          dataKey="target"
+                          name="Target"
+                          fill={alpha(theme.palette.primary.main, 0.3)}
+                          radius={[4, 4, 0, 0]}
+                        />
+                        <Bar
+                          dataKey="actual"
+                          name="Actual"
+                          fill={theme.palette.success.main}
+                          radius={[4, 4, 0, 0]}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              </Grid>
+            )}
           </Grid>
 
-          {/* Financial Projections */}
-          <Grid item xs={12} md={4}>
-            {renderProjections()}
-          </Grid>
+          {/* Projections */}
+          {projections?.endOfYear && (
+            <Card sx={{ mb: 3 }}>
+              <CardContent>
+                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                  End of Year Projections
+                </Typography>
+                <Grid container spacing={3}>
+                  <Grid item xs={4}>
+                    <Typography variant="body2" color="text.secondary">Projected Revenue</Typography>
+                    <Typography variant="h5" fontWeight={700}>
+                      {formatCurrency(projections.endOfYear.projectedRevenue || 0)}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={4}>
+                    <Typography variant="body2" color="text.secondary">Projected Sales</Typography>
+                    <Typography variant="h5" fontWeight={700}>
+                      {projections.endOfYear.projectedSales || 0}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={4}>
+                    <Typography variant="body2" color="text.secondary">Confidence</Typography>
+                    <Typography variant="h5" fontWeight={700}>
+                      {projections.confidence || 0}%
+                    </Typography>
+                    <LinearProgress
+                      variant="determinate"
+                      value={projections.confidence || 0}
+                      color={projections.confidence >= 70 ? 'success' : projections.confidence >= 40 ? 'warning' : 'error'}
+                      sx={{ height: 6, borderRadius: 3, mt: 1 }}
+                    />
+                  </Grid>
+                </Grid>
+                {projections.assumptions?.length > 0 && (
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="caption" color="text.secondary">
+                      Assumptions: {projections.assumptions.join(' · ')}
+                    </Typography>
+                  </Box>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
-          {/* Financial Alerts */}
-          <Grid item xs={12} md={4}>
-            {renderFinancialAlerts()}
-          </Grid>
+          {/* Insights & Actions */}
+          {(insights.length > 0 || actions.length > 0) && (
+            <Grid container spacing={3} sx={{ mb: 3 }}>
+              {insights.length > 0 && (
+                <Grid item xs={12} md={6}>
+                  <Card sx={{ height: '100%' }}>
+                    <CardContent>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                        <InsightsIcon fontSize="small" color="primary" />
+                        <Typography variant="subtitle2" color="text.secondary">
+                          Key Insights
+                        </Typography>
+                      </Box>
+                      {insights.map((insight, i) => (
+                        <Box key={i} sx={{ display: 'flex', gap: 1.5, mb: 1.5, alignItems: 'flex-start' }}>
+                          <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: 'primary.main', mt: 0.8, flexShrink: 0 }} />
+                          <Typography variant="body2">{insight}</Typography>
+                        </Box>
+                      ))}
+                    </CardContent>
+                  </Card>
+                </Grid>
+              )}
 
-          {/* Financial Trends */}
-          <Grid item xs={12}>
-            {renderFinancialTrends()}
-          </Grid>
-        </Grid>
-      </Box>
-    </LocalizationProvider>
+              {actions.length > 0 && (
+                <Grid item xs={12} md={6}>
+                  <Card sx={{ height: '100%' }}>
+                    <CardContent>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                        <Flag fontSize="small" color="warning" />
+                        <Typography variant="subtitle2" color="text.secondary">
+                          Recommended Actions
+                        </Typography>
+                      </Box>
+                      {actions.map((action, i) => (
+                        <Alert key={i} severity="info" sx={{ mb: 1 }}>
+                          <Typography variant="body2" fontWeight={600}>{action.action}</Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Priority: {action.priority} · Est. Impact: {action.estimatedImpact}
+                          </Typography>
+                        </Alert>
+                      ))}
+                    </CardContent>
+                  </Card>
+                </Grid>
+              )}
+            </Grid>
+          )}
+
+          {/* Warning alerts */}
+          {alerts.filter(a => a.type === 'warning').length > 0 && (
+            <Card>
+              <CardContent>
+                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                  Warnings
+                </Typography>
+                {alerts.filter(a => a.type === 'warning').map((a, i) => (
+                  <Alert key={i} severity="warning" sx={{ mb: 1 }}>
+                    {a.message}
+                  </Alert>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+        </>
+      )}
+    </Box>
   );
 };
 

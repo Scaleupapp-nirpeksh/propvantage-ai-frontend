@@ -12,6 +12,7 @@ import { SnackbarProvider } from 'notistack';
 // Theme and Context Providers
 import theme from './theme';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { CoachMarkProvider, FLOWS } from './components/onboarding';
 
 // Layout Components
 import AuthLayout from './components/layout/AuthLayout';
@@ -95,12 +96,9 @@ const RealTimeFinancialDashboard = React.lazy(() => import('./pages/analytics/Re
 const BudgetVarianceDashboard = React.lazy(() => import('./pages/analytics/BudgetVarianceDashboard'));
 
 
-// NEW: Phase 2 Preparation - AI & Intelligence Pages (to be implemented in Phase 2)
-// These imports will be uncommented when Phase 2 components are created
-// const AIInsightsDashboard = React.lazy(() => import('./pages/ai/AIInsightsDashboard'));
-// const ConversationAnalytics = React.lazy(() => import('./pages/ai/ConversationAnalytics'));
-// const PredictiveAnalytics = React.lazy(() => import('./pages/ai/PredictiveAnalytics'));
-// const SmartRecommendations = React.lazy(() => import('./pages/ai/SmartRecommendations'));
+// Phase 2 - Predictive Analytics & Dynamic Pricing
+const PredictiveAnalyticsPage = React.lazy(() => import('./pages/analytics/PredictiveAnalyticsPage'));
+const DynamicPricingPage = React.lazy(() => import('./pages/pricing/DynamicPricingPage'));
 
 // Invoice Management Pages - UNCHANGED
 const InvoiceListPage = React.lazy(() => import('./pages/sales/InvoiceListPage'));
@@ -124,27 +122,74 @@ const UnauthorizedPage = React.lazy(() => import('./pages/error/UnauthorizedPage
  * Enhanced Loading Component with contextual messages for different sections
  * ENHANCED: Added specific loading messages for analytics components
  */
-const LoadingFallback = ({ message = 'Loading...', section = null }) => (
-  <Box
-    sx={{
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'center',
-      alignItems: 'center',
-      height: '100vh',
-      gap: 2,
-    }}
-  >
-    <CircularProgress size={40} />
-    <Typography variant="body1" color="text.secondary">
-      {section === 'analytics' ? 'Loading analytics dashboard...' : 
-       section === 'budget' ? 'Loading financial data...' :
-       section === 'realtime' ? 'Connecting to real-time data...' :
-       section === 'invitation' ? 'Loading invitation...' :
-       message}
-    </Typography>
-  </Box>
-);
+const LoadingFallback = ({ message = 'Loading...', section = null }) => {
+  const displayMessage = section === 'analytics' ? 'Loading analytics dashboard...' :
+    section === 'budget' ? 'Loading financial data...' :
+    section === 'realtime' ? 'Connecting to real-time data...' :
+    section === 'invitation' ? 'Loading invitation...' :
+    message;
+
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        gap: 2.5,
+        animation: 'fadeIn 0.3s ease',
+      }}
+    >
+      {/* Animated logo placeholder */}
+      <Box
+        sx={{
+          width: 48,
+          height: 48,
+          borderRadius: '12px',
+          background: (t) => `linear-gradient(135deg, ${t.palette.primary.main}, ${t.palette.primary.dark})`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          animation: 'pulse 1.5s ease-in-out infinite',
+        }}
+      >
+        <Typography sx={{ color: '#fff', fontWeight: 800, fontSize: '1.25rem' }}>P</Typography>
+      </Box>
+      <Box sx={{ textAlign: 'center' }}>
+        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+          {displayMessage}
+        </Typography>
+        {/* Subtle progress bar */}
+        <Box
+          sx={{
+            width: 120,
+            height: 3,
+            borderRadius: 2,
+            bgcolor: 'grey.200',
+            overflow: 'hidden',
+            mt: 1.5,
+            mx: 'auto',
+          }}
+        >
+          <Box
+            sx={{
+              width: '40%',
+              height: '100%',
+              borderRadius: 2,
+              bgcolor: 'primary.main',
+              animation: 'loading-slide 1.2s ease-in-out infinite',
+              '@keyframes loading-slide': {
+                '0%': { transform: 'translateX(-100%)' },
+                '100%': { transform: 'translateX(350%)' },
+              },
+            }}
+          />
+        </Box>
+      </Box>
+    </Box>
+  );
+};
 
 // =============================================================================
 // PROTECTED ROUTE COMPONENT - UNCHANGED
@@ -870,52 +915,30 @@ const AppRoutes = () => {
       } />
 
       {/* ========================================= */}
-      {/* PHASE 2 PREPARATION - AI ROUTES (COMMENTED OUT) */}
+      {/* PHASE 2 - PREDICTIVE ANALYTICS & PRICING */}
       {/* ========================================= */}
 
-      {/* 
-      These routes will be uncommented in Phase 2 when AI components are implemented
-      
-      <Route path="/ai-insights" element={
-        <ProtectedRoute requiredPermission={(canAccess) => canAccess.leadManagement()}>
-          <DashboardLayout>
-            <Suspense fallback={<LoadingFallback section="ai" message="Loading AI insights..." />}>
-              <AIInsightsDashboard />
-            </Suspense>
-          </DashboardLayout>
-        </ProtectedRoute>
-      } />
-
-      <Route path="/ai-insights/conversation" element={
-        <ProtectedRoute requiredPermission={(canAccess) => canAccess.leadManagement()}>
-          <DashboardLayout>
-            <Suspense fallback={<LoadingFallback section="ai" message="Loading conversation analysis..." />}>
-              <ConversationAnalytics />
-            </Suspense>
-          </DashboardLayout>
-        </ProtectedRoute>
-      } />
-
-      <Route path="/ai-insights/predictions" element={
+      {/* Predictive Analytics Page */}
+      <Route path="/analytics/predictions" element={
         <ProtectedRoute requiredPermission="MANAGEMENT">
           <DashboardLayout>
-            <Suspense fallback={<LoadingFallback section="ai" message="Loading predictive analytics..." />}>
-              <PredictiveAnalytics />
+            <Suspense fallback={<LoadingFallback section="analytics" message="Loading predictive analytics..." />}>
+              <PredictiveAnalyticsPage />
             </Suspense>
           </DashboardLayout>
         </ProtectedRoute>
       } />
 
-      <Route path="/ai-insights/recommendations" element={
-        <ProtectedRoute requiredPermission={(canAccess) => canAccess.leadManagement()}>
+      {/* Dynamic Pricing Page */}
+      <Route path="/pricing/dynamic" element={
+        <ProtectedRoute requiredPermission="MANAGEMENT">
           <DashboardLayout>
-            <Suspense fallback={<LoadingFallback section="ai" message="Loading smart recommendations..." />}>
-              <SmartRecommendations />
+            <Suspense fallback={<LoadingFallback message="Loading dynamic pricing..." />}>
+              <DynamicPricingPage />
             </Suspense>
           </DashboardLayout>
         </ProtectedRoute>
       } />
-      */}
 
       {/* ========================================= */}
       {/* PROFILE AND SETTINGS ROUTES - UNCHANGED */}
@@ -993,11 +1016,13 @@ const App = () => {
         autoHideDuration={5000}
       >
         <AuthProvider>
-          <Router>
-            <Suspense fallback={<LoadingFallback message="Loading PropVantage AI..." />}>
-              <AppRoutes />
-            </Suspense>
-          </Router>
+          <CoachMarkProvider flows={FLOWS}>
+            <Router>
+              <Suspense fallback={<LoadingFallback message="Loading PropVantage AI..." />}>
+                <AppRoutes />
+              </Suspense>
+            </Router>
+          </CoachMarkProvider>
         </AuthProvider>
       </SnackbarProvider>
     </ThemeProvider>

@@ -1,6 +1,6 @@
 // File: src/pages/analytics/AnalyticsDashboard.js
-// Description: Fixed Analytics Dashboard with Enhanced Filtering
-// Version: 1.2 - Fixed React rendering errors and added comprehensive filtering
+// Description: Analytics Dashboard — fully responsive, mobile-first
+// Version: 2.0 - Responsive redesign, single API fetch, mobile-friendly
 // Location: src/pages/analytics/AnalyticsDashboard.js
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -17,24 +17,15 @@ import {
   CircularProgress,
   Alert,
   Skeleton,
-  Paper,
   Divider,
-  LinearProgress,
   Avatar,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemAvatar,
+  Stack,
   useTheme,
   useMediaQuery,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
-  TextField,
-  InputAdornment,
-  Collapse,
-  CardHeader,
 } from '@mui/material';
 import {
   Refresh,
@@ -42,1215 +33,581 @@ import {
   TrendingDown,
   TrendingFlat,
   Analytics,
-  PieChart,
-  BarChart,
-  Timeline,
   AttachMoney,
   People,
   Assignment,
-  Warning,
-  CheckCircle,
-  Info,
-  FilterList,
-  GetApp,
   Insights,
-  Speed,
-  AccountBalance,
   MonetizationOn,
-  Search,
-  Clear,
-  ExpandMore,
-  ExpandLess,
-  CalendarToday,
+  FilterList,
+  Timeline,
+  Visibility,
+  LocationOn,
 } from '@mui/icons-material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { 
-  ResponsiveContainer, 
-  LineChart, 
-  Line, 
-  AreaChart, 
-  Area, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip as RechartsTooltip, 
-  Legend,
-  PieChart as RechartsPieChart,
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  PieChart,
   Pie,
   Cell,
-  BarChart as RechartsBarChart,
+  BarChart,
   Bar,
 } from 'recharts';
 import { useAuth } from '../../context/AuthContext';
-import { analyticsAPI, budgetVsActualAPI, analyticsUtils, projectAPI, userAPI } from '../../services/api';
+import { analyticsAPI, projectAPI, userAPI } from '../../services/api';
+import { useNavigate } from 'react-router-dom';
 
-// =============================================================================
-// DASHBOARD CONFIGURATION
-// =============================================================================
-
-/**
- * Dashboard configuration for different time periods
- */
+// ─── Constants ───────────────────────────────────────────────────────────────
 const TIME_PERIODS = [
-  { value: 'today', label: 'Today' },
-  { value: 'week', label: 'This Week' },
   { value: 'month', label: 'This Month' },
   { value: 'quarter', label: 'This Quarter' },
   { value: 'year', label: 'This Year' },
-  { value: 'custom', label: 'Custom Range' },
 ];
 
-/**
- * Color palette for charts and indicators
- */
-const COLORS = {
-  primary: '#1976d2',
-  secondary: '#dc004e',
-  success: '#2e7d32',
-  warning: '#ed6c02',
-  error: '#d32f2f',
-  info: '#0288d1',
-  chart: ['#1976d2', '#dc004e', '#2e7d32', '#ed6c02', '#9c27b0', '#f57c00'],
+const CHART_COLORS = ['#1976d2', '#2e7d32', '#ed6c02', '#d32f2f', '#9c27b0', '#0288d1'];
+
+// ─── Utility ─────────────────────────────────────────────────────────────────
+const fmtCurrency = (amount) => {
+  if (!amount && amount !== 0) return '₹0';
+  if (amount >= 10000000) return `₹${(amount / 10000000).toFixed(1)}Cr`;
+  if (amount >= 100000) return `₹${(amount / 100000).toFixed(1)}L`;
+  if (amount >= 1000) return `₹${(amount / 1000).toFixed(0)}K`;
+  return `₹${Math.round(amount).toLocaleString('en-IN')}`;
 };
 
-// =============================================================================
-// UTILITY COMPONENTS
-// =============================================================================
+// ─── KPI Card ────────────────────────────────────────────────────────────────
+const KPICard = ({ title, value, prevValue, unit, icon: Icon, color, loading }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-/**
- * Loading skeleton for dashboard cards
- */
-const DashboardCardSkeleton = () => (
-  <Card sx={{ height: '100%' }}>
-    <CardContent>
-      <Skeleton variant="text" width="60%" height={24} />
-      <Skeleton variant="text" width="40%" height={32} sx={{ mt: 1 }} />
-      <Skeleton variant="rectangular" width="100%" height={60} sx={{ mt: 2 }} />
-    </CardContent>
-  </Card>
-);
+  const trend = useMemo(() => {
+    if (!prevValue || prevValue === 0 || loading) return null;
+    const pct = ((value - prevValue) / prevValue) * 100;
+    return { dir: pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat', pct: Math.abs(pct) };
+  }, [value, prevValue, loading]);
 
-/**
- * Enhanced Filters Component
- */
-const DashboardFilters = ({ 
-  filters, 
-  onFilterChange, 
-  projects = [], 
-  salespeople = [],
-  onApplyFilters,
-  onClearFilters,
-  loading = false 
-}) => {
-  const [expanded, setExpanded] = useState(false);
-
-  const handleFilterChange = (field, value) => {
-    onFilterChange(field, value);
+  const display = () => {
+    if (loading) return <Skeleton width={70} height={32} />;
+    const v = value || 0;
+    if (unit === 'currency') return fmtCurrency(v);
+    if (unit === '%') return `${v.toFixed(1)}%`;
+    return v.toLocaleString('en-IN');
   };
 
+  const TrendIcon = trend?.dir === 'up' ? TrendingUp : trend?.dir === 'down' ? TrendingDown : TrendingFlat;
+  const trendColor = trend?.dir === 'up' ? 'success.main' : trend?.dir === 'down' ? 'error.main' : 'text.secondary';
+
   return (
-    <Card sx={{ mb: 3 }}>
-      <CardHeader
-        title={
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <FilterList />
-            <Typography variant="h6">Analytics Filters</Typography>
-          </Box>
-        }
-        action={
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button
-              variant="outlined"
-              size="small"
-              startIcon={<Clear />}
-              onClick={onClearFilters}
-            >
-              Clear
-            </Button>
-            <Button
-              variant="contained"
-              size="small"
-              startIcon={<Analytics />}
-              onClick={onApplyFilters}
-              disabled={loading}
-            >
-              Apply Filters
-            </Button>
-            <IconButton onClick={() => setExpanded(!expanded)}>
-              {expanded ? <ExpandLess /> : <ExpandMore />}
-            </IconButton>
-          </Box>
-        }
-      />
-      
-      <Collapse in={expanded}>
-        <CardContent>
-          <Grid container spacing={3}>
-            {/* Time Period */}
-            <Grid item xs={12} md={3}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Time Period</InputLabel>
-                <Select
-                  value={filters.period}
-                  onChange={(e) => handleFilterChange('period', e.target.value)}
-                  label="Time Period"
-                >
-                  {TIME_PERIODS.map((period) => (
-                    <MenuItem key={period.value} value={period.value}>
-                      {period.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-
-            {/* Custom Date Range */}
-            {filters.period === 'custom' && (
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <Grid item xs={12} md={2}>
-                  <DatePicker
-                    label="Start Date"
-                    value={filters.startDate}
-                    onChange={(date) => handleFilterChange('startDate', date)}
-                    renderInput={(params) => (
-                      <TextField {...params} fullWidth size="small" />
-                    )}
-                  />
-                </Grid>
-                <Grid item xs={12} md={2}>
-                  <DatePicker
-                    label="End Date"
-                    value={filters.endDate}
-                    onChange={(date) => handleFilterChange('endDate', date)}
-                    renderInput={(params) => (
-                      <TextField {...params} fullWidth size="small" />
-                    )}
-                  />
-                </Grid>
-              </LocalizationProvider>
-            )}
-
-            {/* Project Filter */}
-            <Grid item xs={12} md={3}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Project</InputLabel>
-                <Select
-                  value={filters.project}
-                  onChange={(e) => handleFilterChange('project', e.target.value)}
-                  label="Project"
-                >
-                  <MenuItem value="all">All Projects</MenuItem>
-                  {projects.map((project) => (
-                    <MenuItem key={project._id} value={project._id}>
-                      {project.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-
-            {/* Salesperson Filter */}
-            <Grid item xs={12} md={3}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Salesperson</InputLabel>
-                <Select
-                  value={filters.salesperson}
-                  onChange={(e) => handleFilterChange('salesperson', e.target.value)}
-                  label="Salesperson"
-                >
-                  <MenuItem value="all">All Salespeople</MenuItem>
-                  {salespeople.map((person) => (
-                    <MenuItem key={person._id} value={person._id}>
-                      {person.firstName} {person.lastName}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-
-            {/* Search */}
-            <Grid item xs={12} md={4}>
-              <TextField
-                fullWidth
-                size="small"
-                placeholder="Search analytics data..."
-                value={filters.search}
-                onChange={(e) => handleFilterChange('search', e.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Search />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Grid>
-
-            {/* Metric Type Filter */}
-            <Grid item xs={12} md={3}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Metric Type</InputLabel>
-                <Select
-                  value={filters.metricType}
-                  onChange={(e) => handleFilterChange('metricType', e.target.value)}
-                  label="Metric Type"
-                >
-                  <MenuItem value="all">All Metrics</MenuItem>
-                  <MenuItem value="revenue">Revenue Only</MenuItem>
-                  <MenuItem value="sales">Sales Count</MenuItem>
-                  <MenuItem value="leads">Lead Data</MenuItem>
-                  <MenuItem value="conversion">Conversion Rates</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-
-            {/* Comparison Mode */}
-            <Grid item xs={12} md={3}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Compare With</InputLabel>
-                <Select
-                  value={filters.compareWith}
-                  onChange={(e) => handleFilterChange('compareWith', e.target.value)}
-                  label="Compare With"
-                >
-                  <MenuItem value="none">No Comparison</MenuItem>
-                  <MenuItem value="previous_period">Previous Period</MenuItem>
-                  <MenuItem value="same_period_last_year">Same Period Last Year</MenuItem>
-                  <MenuItem value="average">Historical Average</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-          </Grid>
-        </CardContent>
-      </Collapse>
+    <Card sx={{ height: '100%' }}>
+      <CardContent sx={{ p: { xs: 1.5, sm: 2.5 }, '&:last-child': { pb: { xs: 1.5, sm: 2.5 } } }}>
+        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 1 }}>
+          <Avatar
+            sx={{
+              bgcolor: `${color}.100`,
+              color: `${color}.700`,
+              width: isMobile ? 36 : 42,
+              height: isMobile ? 36 : 42,
+            }}
+          >
+            <Icon sx={{ fontSize: isMobile ? 18 : 22 }} />
+          </Avatar>
+          {trend && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.3 }}>
+              <TrendIcon sx={{ fontSize: 14, color: trendColor }} />
+              <Typography variant="caption" sx={{ color: trendColor, fontWeight: 600, fontSize: '0.65rem' }}>
+                {trend.pct.toFixed(1)}%
+              </Typography>
+            </Box>
+          )}
+        </Box>
+        <Typography variant={isMobile ? 'h6' : 'h5'} sx={{ fontWeight: 700, lineHeight: 1.2, wordBreak: 'break-word' }}>
+          {display()}
+        </Typography>
+        <Typography variant="caption" color="text.secondary" noWrap>
+          {title}
+        </Typography>
+      </CardContent>
     </Card>
   );
 };
 
-/**
- * Metric card component for displaying KPIs
- */
-const MetricCard = ({ 
-  title, 
-  value, 
-  previousValue, 
-  unit = '', 
-  icon: Icon, 
-  color = 'primary',
-  loading = false,
-  trend = null,
-  subtitle = null,
-}) => {
+// ─── Chart Wrapper ───────────────────────────────────────────────────────────
+const ChartCard = ({ title, loading, children, minHeight = 260, action }) => {
   const theme = useTheme();
-  
-  // Calculate trend if previous value is provided
-  const calculatedTrend = useMemo(() => {
-    if (!previousValue || !value || previousValue === 0) return null;
-    const change = ((value - previousValue) / previousValue) * 100;
-    return {
-      direction: change > 0 ? 'up' : change < 0 ? 'down' : 'flat',
-      percentage: Math.abs(change),
-    };
-  }, [value, previousValue]);
-
-  const displayTrend = trend || calculatedTrend;
-
-  const getTrendIcon = () => {
-    if (!displayTrend) return null;
-    switch (displayTrend.direction) {
-      case 'up': return <TrendingUp fontSize="small" color="success" />;
-      case 'down': return <TrendingDown fontSize="small" color="error" />;
-      default: return <TrendingFlat fontSize="small" color="info" />;
-    }
-  };
-
-  const formatValue = () => {
-    if (loading) return <CircularProgress size={20} />;
-    
-    // Show loading if value is null (not loaded yet)
-    if (value === null || value === undefined) return <CircularProgress size={20} />;
-    
-    // Handle zero and actual values
-    const safeValue = value || 0;
-    
-    if (unit === 'currency') return `₹${(safeValue / 10000000).toFixed(1)}Cr`;
-    if (unit === 'percentage') return `${safeValue.toFixed(1)}%`;
-    if (unit === 'number') return safeValue.toLocaleString();
-    return `${safeValue}${unit}`;
-  };
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const h = isMobile ? Math.min(minHeight, 220) : minHeight;
 
   return (
-    <Card sx={{ height: '100%', position: 'relative' }}>
-      <CardContent>
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-          <Box sx={{ flex: 1 }}>
-            <Typography variant="body2" color="text.secondary" gutterBottom>
-              {title}
-            </Typography>
-            <Typography variant="h4" component="div" sx={{ fontWeight: 600, mb: 1 }}>
-              {formatValue()}
-            </Typography>
-            {subtitle && (
-              <Typography variant="caption" color="text.secondary">
-                {subtitle}
-              </Typography>
-            )}
-          </Box>
-          <Avatar 
-            sx={{ 
-              bgcolor: `${color}.main`, 
-              width: 48, 
-              height: 48,
-              ml: 2,
-            }}
-          >
-            <Icon />
-          </Avatar>
+    <Card sx={{ height: '100%' }}>
+      <CardContent sx={{ p: { xs: 2, sm: 3 }, '&:last-child': { pb: { xs: 2, sm: 3 } } }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+          <Typography variant="subtitle1" fontWeight={600}>
+            {title}
+          </Typography>
+          {action}
         </Box>
-        
-        {displayTrend && !loading && (
-          <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
-            {getTrendIcon()}
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                ml: 0.5,
-                color: displayTrend.direction === 'up' ? 'success.main' : 
-                       displayTrend.direction === 'down' ? 'error.main' : 'text.secondary'
-              }}
-            >
-              {displayTrend.percentage.toFixed(1)}% vs previous period
-            </Typography>
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: h }}>
+            <CircularProgress size={28} />
           </Box>
+        ) : (
+          <Box sx={{ width: '100%', minHeight: h }}>{children}</Box>
         )}
       </CardContent>
     </Card>
   );
 };
 
-/**
- * Chart container with loading and error states
- */
-const ChartContainer = ({ title, children, loading = false, error = null, actions = null }) => (
-  <Card sx={{ height: '100%' }}>
-    <CardContent>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-        <Typography variant="h6" component="div">
-          {title}
-        </Typography>
-        {actions && (
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            {actions}
-          </Box>
-        )}
-      </Box>
-      
-      {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 300 }}>
-          <CircularProgress />
-        </Box>
-      ) : error ? (
-        <Alert severity="error" sx={{ mt: 2 }}>
-          {error}
-        </Alert>
-      ) : (
-        <Box sx={{ height: 300 }}>
-          {children}
-        </Box>
-      )}
-    </CardContent>
-  </Card>
-);
-
-// =============================================================================
-// MAIN ANALYTICS DASHBOARD COMPONENT
-// =============================================================================
-
+// ─── Main Component ──────────────────────────────────────────────────────────
 const AnalyticsDashboard = () => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const { user, canAccess } = useAuth();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isMd = useMediaQuery(theme.breakpoints.down('md'));
+  const navigate = useNavigate();
+  const { canAccess } = useAuth();
 
-  // =============================================================================
-  // STATE MANAGEMENT
-  // =============================================================================
-  
+  // ── State ──
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [lastUpdated, setLastUpdated] = useState(new Date());
-  
-  // Enhanced filters state
-  const [filters, setFilters] = useState({
-    period: 'year',
-    startDate: null,
-    endDate: null,
-    project: 'all',
-    salesperson: 'all',
-    search: '',
-    metricType: 'all',
-    compareWith: 'previous_period',
-  });
-
-  // Filter options
+  const [period, setPeriod] = useState('year');
+  const [projectFilter, setProjectFilter] = useState('all');
   const [projects, setProjects] = useState([]);
-  const [salespeople, setSalespeople] = useState([]);
-  
-  // Dashboard data state
-  const [dashboardData, setDashboardData] = useState({
-    kpis: {
-      totalRevenue: null,
-      previousRevenue: null,
-      totalSales: null,
-      previousSales: null,
-      totalLeads: null,
-      previousLeads: null,
-      conversionRate: null,
-      previousConversionRate: null,
-      averageDealSize: null,
-      previousDealSize: null,
-      activePipeline: null,
-      previousPipeline: null,
-    },
+  const [data, setData] = useState({
+    overview: {},
     salesTrend: [],
-    leadFunnel: [],
-    revenueBreakdown: [],
-    topProjects: [],
+    funnel: [],
+    revenueByProject: [],
     teamPerformance: [],
-    recentActivities: [],
   });
+  const [recentSales, setRecentSales] = useState([]);
 
-  // Loading states for individual sections
-  const [loadingStates, setLoadingStates] = useState({
-    kpis: true,
-    salesTrend: true,
-    leadFunnel: true,
-    revenue: true,
-    projects: true,
-    team: true,
-    activities: true,
-  });
-
-  // =============================================================================
-  // FILTER FUNCTIONS
-  // =============================================================================
-
-  /**
-   * Generate API query parameters from current filters
-   */
-  const getApiParams = useCallback(() => {
-    const params = {
-      period: filters.period,
-    };
-
-    // Add custom date range
-    if (filters.period === 'custom' && filters.startDate && filters.endDate) {
-      params.startDate = filters.startDate.toISOString();
-      params.endDate = filters.endDate.toISOString();
-    }
-
-    // Add project filter
-    if (filters.project !== 'all') {
-      params.projectId = filters.project;
-    }
-
-    // Add salesperson filter
-    if (filters.salesperson !== 'all') {
-      params.salespersonId = filters.salesperson;
-    }
-
-    // Add search
-    if (filters.search) {
-      params.search = filters.search;
-    }
-
-    return params;
-  }, [filters]);
-
-  /**
-   * Handle filter changes
-   */
-  const handleFilterChange = (field, value) => {
-    setFilters(prev => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  /**
-   * Apply filters and refresh data
-   */
-  const applyFilters = () => {
-    refreshDashboard();
-  };
-
-  /**
-   * Clear all filters
-   */
-  const clearFilters = () => {
-    setFilters({
-      period: 'year',
-      startDate: null,
-      endDate: null,
-      project: 'all',
-      salesperson: 'all',
-      search: '',
-      metricType: 'all',
-      compareWith: 'previous_period',
-    });
-  };
-
-  // =============================================================================
-  // DATA FETCHING FUNCTIONS
-  // =============================================================================
-
-  /**
-   * Fetch filter options (projects and salespeople)
-   */
-  const fetchFilterOptions = useCallback(async () => {
-    try {
-      const [projectsResponse, usersResponse] = await Promise.allSettled([
-        projectAPI.getProjects(),
-        userAPI.getUsers({ role: 'Sales Executive' }),
-      ]);
-
-      if (projectsResponse.status === 'fulfilled') {
-        const projectsData = projectsResponse.value.data?.data || [];
-        setProjects(Array.isArray(projectsData) ? projectsData : []);
-      }
-
-      if (usersResponse.status === 'fulfilled') {
-        const usersData = usersResponse.value.data?.data || [];
-        setSalespeople(Array.isArray(usersData) ? usersData : []);
-      }
-    } catch (error) {
-      console.error('Error fetching filter options:', error);
-    }
-  }, []);
-
-  /**
-   * Fetch KPI metrics using existing API service with filters
-   */
-  const fetchKPIMetrics = useCallback(async () => {
-    try {
-      setLoadingStates(prev => ({ ...prev, kpis: true }));
-      
-      const params = getApiParams();
-      console.log('🔄 Calling analyticsAPI.getDashboardSummary with params:', params);
-      const dashboardResponse = await analyticsAPI.getDashboardSummary(params);
-      
-      console.log('Real Dashboard API Response:', dashboardResponse);
-
-      const overview = dashboardResponse.data?.overview || {};
-      const monthlySalesTrend = dashboardResponse.data?.charts?.monthlySalesTrend || [];
-
-      const kpis = {
-        totalRevenue: Number(overview.totalRevenue) || 0,
-        previousRevenue: Number(monthlySalesTrend[0]?.revenue) || 0,
-        totalSales: Number(overview.totalSales) || 0,
-        previousSales: Number(monthlySalesTrend[0]?.salesCount) || 0,
-        totalLeads: Number(overview.totalLeads) || 0,
-        previousLeads: Number(monthlySalesTrend[0]?.salesCount) * 10 || 0,
-        conversionRate: Number(overview.conversionRate) || 0,
-        previousConversionRate: Number(overview.conversionRate) * 0.9 || 0,
-        averageDealSize: Number(overview.averageSalePrice) || 0,
-        previousDealSize: Number(overview.averageSalePrice) * 0.95 || 0,
-        activePipeline: Number(overview.totalLeads || 0) * Number(overview.averageSalePrice || 0) * 0.1,
-        previousPipeline: 0,
-      };
-
-      setDashboardData(prev => ({ ...prev, kpis }));
-    } catch (error) {
-      console.error('Error fetching KPI metrics:', error);
-      setError(`Failed to load KPI metrics: ${error.message}`);
-    } finally {
-      setLoadingStates(prev => ({ ...prev, kpis: false }));
-    }
-  }, [getApiParams]);
-
-  /**
-   * Fetch sales trend data using existing API service with filters
-   */
-  const fetchSalesTrend = useCallback(async () => {
-    try {
-      setLoadingStates(prev => ({ ...prev, salesTrend: true }));
-      
-      const params = getApiParams();
-      const response = await analyticsAPI.getDashboardSummary(params);
-      
-      const monthlySalesTrend = response.data?.charts?.monthlySalesTrend || [];
-      const salesTrend = monthlySalesTrend.map(item => ({
-        date: `${item._id?.year || 2025}-${String(item._id?.month || 1).padStart(2, '0')}`,
-        sales: Number(item.revenue) || 0,
-        count: Number(item.salesCount) || 0,
-      }));
-
-      setDashboardData(prev => ({ ...prev, salesTrend }));
-    } catch (error) {
-      console.error('Error fetching sales trend:', error);
-      setError(`Failed to load sales trend: ${error.message}`);
-    } finally {
-      setLoadingStates(prev => ({ ...prev, salesTrend: false }));
-    }
-  }, [getApiParams]);
-
-  /**
-   * Fetch lead funnel data using existing API service with filters
-   */
-  const fetchLeadFunnel = useCallback(async () => {
-    try {
-      setLoadingStates(prev => ({ ...prev, leadFunnel: true }));
-      
-      const params = getApiParams();
-      const response = await analyticsAPI.getDashboardSummary(params);
-      
-      const conversionFunnel = response.data?.charts?.conversionFunnel || [];
-      const leadFunnel = conversionFunnel.map(item => ({
-        stage: item._id || 'Unknown',
-        count: Number(item.count) || 0,
-      }));
-      
-      setDashboardData(prev => ({ ...prev, leadFunnel }));
-    } catch (error) {
-      console.error('Error fetching lead funnel:', error);
-      setError(`Failed to load lead funnel: ${error.message}`);
-    } finally {
-      setLoadingStates(prev => ({ ...prev, leadFunnel: false }));
-    }
-  }, [getApiParams]);
-
-  /**
-   * Fetch revenue breakdown data using existing API service with filters
-   */
-  const fetchRevenueBreakdown = useCallback(async () => {
-    try {
-      setLoadingStates(prev => ({ ...prev, revenue: true }));
-      
-      const params = getApiParams();
-      const response = await analyticsAPI.getDashboardSummary(params);
-      
-      const salesByProject = response.data?.charts?.salesByProject || [];
-      const revenueBreakdown = salesByProject.map(item => ({
-        name: item.projectName || 'Unknown Project',
-        value: Number(item.totalRevenue) || 0,
-        sales: Number(item.totalSales) || 0,
-      }));
-
-      setDashboardData(prev => ({ ...prev, revenueBreakdown }));
-    } catch (error) {
-      console.error('Error fetching revenue breakdown:', error);
-      setError(`Failed to load revenue breakdown: ${error.message}`);
-    } finally {
-      setLoadingStates(prev => ({ ...prev, revenue: false }));
-    }
-  }, [getApiParams]);
-
-  /**
-   * Fetch top performing projects using existing API service with filters
-   */
-  const fetchTopProjects = useCallback(async () => {
-    try {
-      setLoadingStates(prev => ({ ...prev, projects: true }));
-      
-      const params = getApiParams();
-      const response = await analyticsAPI.getDashboardSummary(params);
-      
-      const salesByProject = response.data?.charts?.salesByProject || [];
-      const topProjects = salesByProject.map((project, index) => ({
-        id: project._id || `project-${index}`,
-        name: project.projectName || 'Unknown Project',
-        revenue: Number(project.totalRevenue) || 0,
-        sales: Number(project.totalSales) || 0,
-        averagePrice: Number(project.averagePrice) || 0,
-      }));
-
-      setDashboardData(prev => ({ ...prev, topProjects }));
-    } catch (error) {
-      console.error('Error fetching top projects:', error);
-      setError(`Failed to load top projects: ${error.message}`);
-    } finally {
-      setLoadingStates(prev => ({ ...prev, projects: false }));
-    }
-  }, [getApiParams]);
-
-  /**
-   * Fetch team performance data with filters
-   */
-  const fetchTeamPerformance = useCallback(async () => {
-    try {
-      setLoadingStates(prev => ({ ...prev, team: true }));
-      
-      const params = getApiParams();
-      const response = await analyticsAPI.getDashboardSummary(params);
-      
-      const teamPerformance = response.data?.charts?.teamPerformance || [];
-      const teamData = teamPerformance.map((member, index) => ({
-        id: member._id || `member-${index}`,
-        name: member.salesPersonName || 'Unknown',
-        revenue: Number(member.totalRevenue) || 0,
-        sales: Number(member.totalSales) || 0,
-        averagePrice: Number(member.averagePrice) || 0,
-      }));
-
-      setDashboardData(prev => ({ ...prev, teamPerformance: teamData }));
-    } catch (error) {
-      console.error('Error fetching team performance:', error);
-    } finally {
-      setLoadingStates(prev => ({ ...prev, team: false }));
-    }
-  }, [getApiParams]);
-
-  /**
-   * Fetch recent activities with filters
-   */
-  const fetchRecentActivities = useCallback(async () => {
-    try {
-      setLoadingStates(prev => ({ ...prev, activities: true }));
-      
-      const params = { ...getApiParams(), limit: 5 };
-      const response = await analyticsAPI.getSalesReport(params);
-      
-      const recentSales = response.data?.sales || [];
-      const recentActivities = recentSales.slice(0, 5).map((sale) => ({
-        id: sale._id || Math.random().toString(),
-        description: `Sale: ${sale.unitNumber || 'Unknown'} to ${sale.customerName || 'Unknown'}`,
-        user: sale.salesPersonName || 'Unknown',
-        timestamp: sale.bookingDate ? new Date(sale.bookingDate).toLocaleDateString() : 'Unknown',
-        amount: Number(sale.salePrice) || 0,
-      }));
-
-      setDashboardData(prev => ({ ...prev, recentActivities }));
-    } catch (error) {
-      console.error('Error fetching recent activities:', error);
-      setError(`Failed to load recent activities: ${error.message}`);
-    } finally {
-      setLoadingStates(prev => ({ ...prev, activities: false }));
-    }
-  }, [getApiParams]);
-
-  /**
-   * Refresh all dashboard data
-   */
-  const refreshDashboard = useCallback(async () => {
-    console.log('🔄 Starting dashboard refresh with filters:', filters);
+  // ── Fetch ──
+  const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      await Promise.all([
-        fetchKPIMetrics(),
-        fetchSalesTrend(),
-        fetchLeadFunnel(),
-        fetchRevenueBreakdown(),
-        fetchTopProjects(),
-        fetchTeamPerformance(),
-        fetchRecentActivities(),
+      const params = { period };
+      if (projectFilter !== 'all') params.projectId = projectFilter;
+
+      // Single API call for dashboard summary + optional sales report
+      const [summaryRes, salesRes, projRes] = await Promise.allSettled([
+        analyticsAPI.getDashboardSummary(params),
+        analyticsAPI.getSalesReport({ ...params, limit: 5 }),
+        projectAPI.getProjects(),
       ]);
-      
-      console.log('✅ Dashboard refresh completed successfully');
-      setLastUpdated(new Date());
-    } catch (error) {
-      console.error('❌ Error refreshing dashboard:', error);
-      setError('Failed to refresh dashboard data');
+
+      // Process dashboard summary
+      if (summaryRes.status === 'fulfilled') {
+        const d = summaryRes.value.data || {};
+        const overview = d.overview || {};
+        const charts = d.charts || {};
+
+        const salesTrend = (charts.monthlySalesTrend || []).map((item) => ({
+          date: `${item._id?.year || ''}-${String(item._id?.month || 1).padStart(2, '0')}`,
+          revenue: Number(item.revenue) || 0,
+          count: Number(item.salesCount) || 0,
+        }));
+
+        const funnel = (charts.conversionFunnel || []).map((item) => ({
+          stage: item._id || 'Unknown',
+          count: Number(item.count) || 0,
+        }));
+
+        const revenueByProject = (charts.salesByProject || []).map((item) => ({
+          name: item.projectName || 'Unknown',
+          revenue: Number(item.totalRevenue) || 0,
+          sales: Number(item.totalSales) || 0,
+          avgPrice: Number(item.averagePrice) || 0,
+        }));
+
+        const teamPerformance = (charts.teamPerformance || []).map((m) => ({
+          name: m.salesPersonName || 'Unknown',
+          revenue: Number(m.totalRevenue) || 0,
+          sales: Number(m.totalSales) || 0,
+        }));
+
+        setData({ overview, salesTrend, funnel, revenueByProject, teamPerformance });
+      }
+
+      // Recent sales
+      if (salesRes.status === 'fulfilled') {
+        const sales = salesRes.value.data?.sales || [];
+        setRecentSales(
+          sales.slice(0, 5).map((s) => ({
+            id: s._id,
+            unit: s.unitNumber || 'N/A',
+            customer: s.customerName || 'N/A',
+            salesperson: s.salesPersonName || 'N/A',
+            date: s.bookingDate ? new Date(s.bookingDate).toLocaleDateString('en-IN') : 'N/A',
+            amount: Number(s.salePrice) || 0,
+          }))
+        );
+      }
+
+      // Projects for filter
+      if (projRes.status === 'fulfilled') {
+        const p = projRes.value.data?.data || projRes.value.data || [];
+        setProjects(Array.isArray(p) ? p : []);
+      }
+    } catch (err) {
+      console.error('Analytics dashboard error:', err);
+      setError('Failed to load analytics data.');
     } finally {
       setLoading(false);
     }
-  }, [
-    fetchKPIMetrics,
-    fetchSalesTrend, 
-    fetchLeadFunnel,
-    fetchRevenueBreakdown,
-    fetchTopProjects,
-    fetchTeamPerformance,
-    fetchRecentActivities,
-  ]);
+  }, [period, projectFilter]);
 
-  // =============================================================================
-  // EFFECTS
-  // =============================================================================
-
-  // Initial data load
   useEffect(() => {
-    console.log('🚀 Analytics Dashboard initializing...');
-    fetchFilterOptions();
-    refreshDashboard();
-  }, []);
+    fetchData();
+  }, [fetchData]);
 
-  // Refresh data when filters change (debounced)
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      refreshDashboard();
-    }, 500); // 500ms debounce
+  // ── Derived KPIs ──
+  const kpis = useMemo(() => {
+    const o = data.overview;
+    const trend0 = data.salesTrend[0];
+    return {
+      totalRevenue: Number(o.totalRevenue) || 0,
+      prevRevenue: Number(trend0?.revenue) || 0,
+      totalSales: Number(o.totalSales) || 0,
+      prevSales: Number(trend0?.count) || 0,
+      totalLeads: Number(o.totalLeads) || 0,
+      conversionRate: Number(o.conversionRate) || 0,
+      avgDealSize: Number(o.averageSalePrice) || 0,
+      pipeline: (Number(o.totalLeads) || 0) * (Number(o.averageSalePrice) || 0) * 0.1,
+    };
+  }, [data]);
 
-    return () => clearTimeout(timeoutId);
-  }, [filters]);
-
-  // =============================================================================
-  // RENDER FUNCTIONS
-  // =============================================================================
-
-  /**
-   * Render KPI metrics section with actual data
-   */
-  const renderKPIMetrics = () => (
-    <Grid container spacing={3}>
-      <Grid item xs={12} sm={6} md={4} lg={2}>
-        <MetricCard
-          title="Total Revenue"
-          value={dashboardData.kpis.totalRevenue}
-          previousValue={dashboardData.kpis.previousRevenue}
-          unit="currency"
-          icon={MonetizationOn}
-          color="success"
-          loading={loadingStates.kpis}
-        />
-      </Grid>
-      
-      <Grid item xs={12} sm={6} md={4} lg={2}>
-        <MetricCard
-          title="Total Sales"
-          value={dashboardData.kpis.totalSales}
-          previousValue={dashboardData.kpis.previousSales}
-          unit="number"
-          icon={Assignment}
-          color="primary"
-          loading={loadingStates.kpis}
-        />
-      </Grid>
-      
-      <Grid item xs={12} sm={6} md={4} lg={2}>
-        <MetricCard
-          title="Total Leads"
-          value={dashboardData.kpis.totalLeads}
-          previousValue={dashboardData.kpis.previousLeads}
-          unit="number"
-          icon={People}
-          color="info"
-          loading={loadingStates.kpis}
-        />
-      </Grid>
-      
-      <Grid item xs={12} sm={6} md={4} lg={2}>
-        <MetricCard
-          title="Conversion Rate"
-          value={dashboardData.kpis.conversionRate}
-          previousValue={dashboardData.kpis.previousConversionRate}
-          unit="percentage"
-          icon={TrendingUp}
-          color="warning"
-          loading={loadingStates.kpis}
-        />
-      </Grid>
-      
-      <Grid item xs={12} sm={6} md={4} lg={2}>
-        <MetricCard
-          title="Avg Deal Size"
-          value={dashboardData.kpis.averageDealSize}
-          previousValue={dashboardData.kpis.previousDealSize}
-          unit="currency"
-          icon={AttachMoney}
-          color="secondary"
-          loading={loadingStates.kpis}
-        />
-      </Grid>
-      
-      <Grid item xs={12} sm={6} md={4} lg={2}>
-        <MetricCard
-          title="Active Pipeline"
-          value={dashboardData.kpis.activePipeline}
-          previousValue={dashboardData.kpis.previousPipeline}
-          unit="currency"
-          icon={Timeline}
-          color="info"
-          loading={loadingStates.kpis}
-        />
-      </Grid>
-    </Grid>
-  );
-
-  /**
-   * Render sales trend chart with actual data
-   */
-  const renderSalesTrend = () => (
-    <ChartContainer
-      title="Sales Trend"
-      loading={loadingStates.salesTrend}
-      actions={[
-        <Tooltip title="Export Chart" key="export">
-          <IconButton size="small">
-            <GetApp />
-          </IconButton>
-        </Tooltip>
-      ]}
-    >
-      <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={dashboardData.salesTrend}>
-          <defs>
-            <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor={COLORS.primary} stopOpacity={0.8}/>
-              <stop offset="95%" stopColor={COLORS.primary} stopOpacity={0}/>
-            </linearGradient>
-          </defs>
-          <XAxis dataKey="date" />
-          <YAxis />
-          <CartesianGrid strokeDasharray="3 3" />
-          <RechartsTooltip 
-            formatter={(value) => [`₹${((value || 0) / 10000000).toFixed(1)}Cr`, 'Sales']}
-            labelFormatter={(label) => `Period: ${label}`}
-          />
-          <Area 
-            type="monotone" 
-            dataKey="sales" 
-            stroke={COLORS.primary}
-            fillOpacity={1} 
-            fill="url(#colorSales)" 
-          />
-        </AreaChart>
-      </ResponsiveContainer>
-    </ChartContainer>
-  );
-
-  /**
-   * Render lead funnel chart with actual data
-   */
-  const renderLeadFunnel = () => (
-    <ChartContainer
-      title="Lead Conversion Funnel"
-      loading={loadingStates.leadFunnel}
-    >
-      <ResponsiveContainer width="100%" height="100%">
-        <RechartsBarChart data={dashboardData.leadFunnel}>
-          <XAxis dataKey="stage" angle={-45} textAnchor="end" height={80} />
-          <YAxis />
-          <CartesianGrid strokeDasharray="3 3" />
-          <RechartsTooltip 
-            formatter={(value) => [value, 'Leads']}
-          />
-          <Bar dataKey="count" fill={COLORS.info} />
-        </RechartsBarChart>
-      </ResponsiveContainer>
-    </ChartContainer>
-  );
-
-  /**
-   * Render revenue breakdown chart with actual data
-   */
-  const renderRevenueBreakdown = () => (
-    <ChartContainer
-      title="Revenue by Project"
-      loading={loadingStates.revenue}
-    >
-      <ResponsiveContainer width="100%" height="100%">
-        <RechartsPieChart>
-          <RechartsTooltip 
-            formatter={(value) => [`₹${((value || 0) / 10000000).toFixed(1)}Cr`, 'Revenue']}
-          />
-          <Legend />
-          <Pie
-            data={dashboardData.revenueBreakdown}
-            cx="50%"
-            cy="50%"
-            labelLine={false}
-            label={({ name, percent }) => `${name || 'Unknown'} ${((percent || 0) * 100).toFixed(0)}%`}
-            outerRadius={80}
-            fill="#8884d8"
-            dataKey="value"
-          >
-            {dashboardData.revenueBreakdown.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={COLORS.chart[index % COLORS.chart.length]} />
-            ))}
-          </Pie>
-        </RechartsPieChart>
-      </ResponsiveContainer>
-    </ChartContainer>
-  );
-
-  /**
-   * Render top projects list with actual project data
-   */
-  const renderTopProjects = () => (
-    <Card>
-      <CardContent>
-        <Typography variant="h6" gutterBottom>
-          Top Performing Projects
-        </Typography>
-        {loadingStates.projects ? (
-          <Box>
-            {[1, 2, 3, 4, 5].map((i) => (
-              <Skeleton key={i} height={60} sx={{ mb: 1 }} />
-            ))}
-          </Box>
-        ) : dashboardData.topProjects.length === 0 ? (
-          <Typography variant="body2" color="text.secondary">
-            No project data available for the selected filters.
-          </Typography>
-        ) : (
-          <List>
-            {dashboardData.topProjects.map((project, index) => (
-              <ListItem key={project.id} divider={index < dashboardData.topProjects.length - 1}>
-                <ListItemAvatar>
-                  <Avatar sx={{ bgcolor: 'primary.main' }}>
-                    {index + 1}
-                  </Avatar>
-                </ListItemAvatar>
-                <ListItemText
-                  primary={project.name}
-                  secondary={
-                    <Box>
-                      <Typography variant="body2" color="text.secondary">
-                        Revenue: ₹{((project.revenue || 0) / 10000000).toFixed(1)}Cr
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Sales: {project.sales || 0} units | Avg: ₹{((project.averagePrice || 0) / 100000).toFixed(1)}L
-                      </Typography>
-                    </Box>
-                  }
-                />
-              </ListItem>
-            ))}
-          </List>
-        )}
-      </CardContent>
-    </Card>
-  );
-
-  /**
-   * Render recent activities with actual sales data
-   */
-  const renderRecentActivities = () => (
-    <Card>
-      <CardContent>
-        <Typography variant="h6" gutterBottom>
-          Recent Sales
-        </Typography>
-        {loadingStates.activities ? (
-          <Box>
-            {[1, 2, 3, 4, 5].map((i) => (
-              <Skeleton key={i} height={40} sx={{ mb: 1 }} />
-            ))}
-          </Box>
-        ) : (
-          <List>
-            {dashboardData.recentActivities.map((activity, index) => (
-              <ListItem key={activity.id} divider={index < dashboardData.recentActivities.length - 1}>
-                <ListItemAvatar>
-                  <Avatar sx={{ bgcolor: 'secondary.main', width: 32, height: 32 }}>
-                    <Assignment fontSize="small" />
-                  </Avatar>
-                </ListItemAvatar>
-                <ListItemText
-                  primary={activity.description}
-                  secondary={
-                    <Box component="span">
-                      {activity.user} • {activity.timestamp}
-                      <br />
-                      <Typography component="span" variant="caption" sx={{ fontWeight: 600, color: 'success.main' }}>
-                        ₹{((activity.amount || 0) / 100000).toFixed(1)}L
-                      </Typography>
-                    </Box>
-                  }
-                />
-              </ListItem>
-            ))}
-          </List>
-        )}
-      </CardContent>
-    </Card>
-  );
-
-  // =============================================================================
-  // MAIN RENDER
-  // =============================================================================
-
+  // ── Render ──
   return (
-    <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Box sx={{ flexGrow: 1 }}>
-        {/* Header Section */}
-        <Box sx={{ mb: 4 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-            <Box>
-              <Typography variant="h4" component="h1" gutterBottom>
-                Enhanced Analytics Dashboard
-              </Typography>
-              <Typography variant="body1" color="text.secondary">
-                Comprehensive analytics with advanced filtering and insights
-              </Typography>
-            </Box>
-            
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-              {/* Refresh Button */}
-              <Tooltip title="Refresh Dashboard">
-                <IconButton 
-                  onClick={refreshDashboard} 
-                  disabled={loading}
-                  color="primary"
-                >
-                  <Refresh />
-                </IconButton>
-              </Tooltip>
-            </Box>
-          </Box>
-
-          {/* Last Updated Info */}
-          <Typography variant="caption" color="text.secondary">
-            Last updated: {lastUpdated.toLocaleString()}
-            <br />
-            Active Filters: {Object.entries(filters).filter(([key, value]) => 
-              value && value !== 'all' && value !== ''
-            ).length} filters applied
+    <Box sx={{ maxWidth: '100%', overflow: 'hidden' }}>
+      {/* ── Header ─────────────────────────────────────────────────────── */}
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: { xs: 'column', sm: 'row' },
+          justifyContent: 'space-between',
+          alignItems: { xs: 'flex-start', sm: 'center' },
+          gap: 1.5,
+          mb: { xs: 2, sm: 3 },
+        }}
+      >
+        <Box>
+          <Typography variant={isMobile ? 'h5' : 'h4'} fontWeight={700}>
+            Analytics
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Real-time insights across projects, sales, and leads
           </Typography>
         </Box>
-
-        {/* Enhanced Filters */}
-        <DashboardFilters
-          filters={filters}
-          onFilterChange={handleFilterChange}
-          projects={projects}
-          salespeople={salespeople}
-          onApplyFilters={applyFilters}
-          onClearFilters={clearFilters}
-          loading={loading}
-        />
-
-        {/* Error Alert */}
-        {error && (
-          <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
-            <strong>Error:</strong> {error}
-          </Alert>
-        )}
-
-        {/* Main Dashboard Content */}
-        <Grid container spacing={3}>
-          {/* KPI Metrics Row */}
-          <Grid item xs={12}>
-            {renderKPIMetrics()}
-          </Grid>
-
-          {/* Charts Row */}
-          <Grid item xs={12} lg={8}>
-            {renderSalesTrend()}
-          </Grid>
-          
-          <Grid item xs={12} lg={4}>
-            {renderLeadFunnel()}
-          </Grid>
-
-          <Grid item xs={12} lg={6}>
-            {renderRevenueBreakdown()}
-          </Grid>
-
-          {/* Lists Row */}
-          <Grid item xs={12} lg={3}>
-            {renderTopProjects()}
-          </Grid>
-          
-          <Grid item xs={12} lg={3}>
-            {renderRecentActivities()}
-          </Grid>
-        </Grid>
+        <Tooltip title="Refresh">
+          <IconButton onClick={fetchData} disabled={loading} size={isMobile ? 'small' : 'medium'}>
+            <Refresh
+              sx={{
+                animation: loading ? 'spin 1s linear infinite' : 'none',
+                '@keyframes spin': { '0%': { transform: 'rotate(0deg)' }, '100%': { transform: 'rotate(360deg)' } },
+              }}
+            />
+          </IconButton>
+        </Tooltip>
       </Box>
-    </LocalizationProvider>
+
+      {/* ── Filters — compact inline row ───────────────────────────────── */}
+      <Box
+        sx={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: 1.5,
+          mb: { xs: 2, sm: 3 },
+          alignItems: 'center',
+        }}
+      >
+        <FilterList sx={{ color: 'text.secondary', fontSize: 20 }} />
+        <FormControl size="small" sx={{ minWidth: 130 }}>
+          <InputLabel>Period</InputLabel>
+          <Select value={period} onChange={(e) => setPeriod(e.target.value)} label="Period">
+            {TIME_PERIODS.map((p) => (
+              <MenuItem key={p.value} value={p.value}>
+                {p.label}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        <FormControl size="small" sx={{ minWidth: 160 }}>
+          <InputLabel>Project</InputLabel>
+          <Select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)} label="Project">
+            <MenuItem value="all">All Projects</MenuItem>
+            {projects.map((p) => (
+              <MenuItem key={p._id} value={p._id}>
+                {p.name}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Box>
+
+      {/* ── Error ──────────────────────────────────────────────────────── */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
+
+      {/* ── KPI Row ────────────────────────────────────────────────────── */}
+      <Grid container spacing={{ xs: 1.5, sm: 2 }} sx={{ mb: { xs: 2, sm: 3 } }}>
+        {[
+          { title: 'Total Revenue', value: kpis.totalRevenue, prev: kpis.prevRevenue, unit: 'currency', icon: MonetizationOn, color: 'success' },
+          { title: 'Total Sales', value: kpis.totalSales, prev: kpis.prevSales, unit: 'number', icon: Assignment, color: 'primary' },
+          { title: 'Total Leads', value: kpis.totalLeads, prev: null, unit: 'number', icon: People, color: 'info' },
+          { title: 'Conversion Rate', value: kpis.conversionRate, prev: null, unit: '%', icon: TrendingUp, color: 'warning' },
+          { title: 'Avg Deal Size', value: kpis.avgDealSize, prev: null, unit: 'currency', icon: AttachMoney, color: 'secondary' },
+          { title: 'Pipeline Value', value: kpis.pipeline, prev: null, unit: 'currency', icon: Timeline, color: 'info' },
+        ].map((kpi) => (
+          <Grid item xs={6} sm={4} md={2} key={kpi.title}>
+            <KPICard {...kpi} prevValue={kpi.prev} loading={loading} />
+          </Grid>
+        ))}
+      </Grid>
+
+      {/* ── Sales Trend + Lead Funnel ──────────────────────────────────── */}
+      <Grid container spacing={{ xs: 1.5, sm: 2 }} sx={{ mb: { xs: 2, sm: 3 } }}>
+        <Grid item xs={12} md={8}>
+          <ChartCard title="Sales Trend" loading={loading} minHeight={280}>
+            <ResponsiveContainer width="100%" height={isMobile ? 220 : 280}>
+              <AreaChart data={data.salesTrend} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+                <defs>
+                  <linearGradient id="gradRevenue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={theme.palette.primary.main} stopOpacity={0.3} />
+                    <stop offset="95%" stopColor={theme.palette.primary.main} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="date" tick={{ fontSize: isMobile ? 10 : 12 }} />
+                <YAxis tickFormatter={(v) => fmtCurrency(v)} tick={{ fontSize: isMobile ? 10 : 12 }} width={55} />
+                <RechartsTooltip formatter={(v) => [fmtCurrency(v), 'Revenue']} />
+                <Area
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke={theme.palette.primary.main}
+                  strokeWidth={2}
+                  fill="url(#gradRevenue)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </ChartCard>
+        </Grid>
+
+        <Grid item xs={12} md={4}>
+          <ChartCard title="Lead Funnel" loading={loading} minHeight={280}>
+            <ResponsiveContainer width="100%" height={isMobile ? 220 : 280}>
+              <BarChart
+                data={data.funnel}
+                layout="vertical"
+                margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: isMobile ? 10 : 12 }} />
+                <YAxis
+                  type="category"
+                  dataKey="stage"
+                  width={isMobile ? 70 : 90}
+                  tick={{ fontSize: isMobile ? 10 : 12 }}
+                />
+                <RechartsTooltip formatter={(v) => [v, 'Leads']} />
+                <Bar dataKey="count" fill={theme.palette.info.main} radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartCard>
+        </Grid>
+      </Grid>
+
+      {/* ── Revenue by Project (pie) + Top Projects + Recent Sales ──── */}
+      <Grid container spacing={{ xs: 1.5, sm: 2 }} sx={{ mb: { xs: 2, sm: 3 } }}>
+        {/* Revenue Pie */}
+        <Grid item xs={12} md={4}>
+          <ChartCard title="Revenue by Project" loading={loading} minHeight={280}>
+            {data.revenueByProject.length === 0 ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
+                <Typography variant="body2" color="text.secondary">
+                  No data for selected filters
+                </Typography>
+              </Box>
+            ) : (
+              <>
+                <ResponsiveContainer width="100%" height={isMobile ? 180 : 220}>
+                  <PieChart>
+                    <Pie
+                      data={data.revenueByProject}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={isMobile ? 35 : 45}
+                      outerRadius={isMobile ? 65 : 80}
+                      paddingAngle={2}
+                      dataKey="revenue"
+                    >
+                      {data.revenueByProject.map((_, i) => (
+                        <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <RechartsTooltip formatter={(v) => [fmtCurrency(v), 'Revenue']} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1, justifyContent: 'center' }}>
+                  {data.revenueByProject.map((p, i) => (
+                    <Chip
+                      key={p.name}
+                      size="small"
+                      label={p.name}
+                      sx={{ bgcolor: CHART_COLORS[i % CHART_COLORS.length], color: 'white', fontWeight: 600, fontSize: '0.65rem' }}
+                    />
+                  ))}
+                </Box>
+              </>
+            )}
+          </ChartCard>
+        </Grid>
+
+        {/* Top Projects */}
+        <Grid item xs={12} md={4}>
+          <Card sx={{ height: '100%' }}>
+            <CardContent sx={{ p: { xs: 2, sm: 3 }, '&:last-child': { pb: { xs: 2, sm: 3 } } }}>
+              <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
+                Top Projects
+              </Typography>
+              {loading ? (
+                <Stack spacing={1}>
+                  {[...Array(4)].map((_, i) => (
+                    <Skeleton key={i} height={52} />
+                  ))}
+                </Stack>
+              ) : data.revenueByProject.length === 0 ? (
+                <Typography variant="body2" color="text.secondary">
+                  No project data available.
+                </Typography>
+              ) : (
+                <Stack spacing={1}>
+                  {data.revenueByProject.slice(0, 5).map((project, idx) => (
+                    <Box
+                      key={project.name}
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1.5,
+                        p: 1,
+                        borderRadius: 1,
+                        bgcolor: idx === 0 ? 'primary.50' : 'transparent',
+                      }}
+                    >
+                      <Avatar
+                        sx={{
+                          width: 32,
+                          height: 32,
+                          fontSize: '0.8rem',
+                          fontWeight: 700,
+                          bgcolor: idx === 0 ? 'primary.main' : 'grey.300',
+                          color: idx === 0 ? 'white' : 'text.primary',
+                        }}
+                      >
+                        {idx + 1}
+                      </Avatar>
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography variant="body2" fontWeight={600} noWrap>
+                          {project.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {project.sales} sales
+                        </Typography>
+                      </Box>
+                      <Typography variant="body2" fontWeight={600} color="success.main" noWrap>
+                        {fmtCurrency(project.revenue)}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Stack>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Recent Sales */}
+        <Grid item xs={12} md={4}>
+          <Card sx={{ height: '100%' }}>
+            <CardContent sx={{ p: { xs: 2, sm: 3 }, '&:last-child': { pb: { xs: 2, sm: 3 } } }}>
+              <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
+                Recent Sales
+              </Typography>
+              {loading ? (
+                <Stack spacing={1}>
+                  {[...Array(4)].map((_, i) => (
+                    <Skeleton key={i} height={52} />
+                  ))}
+                </Stack>
+              ) : recentSales.length === 0 ? (
+                <Typography variant="body2" color="text.secondary">
+                  No recent sales.
+                </Typography>
+              ) : (
+                <Stack spacing={1}>
+                  {recentSales.map((sale) => (
+                    <Box
+                      key={sale.id}
+                      sx={{ p: 1, borderRadius: 1, border: '1px solid', borderColor: 'divider' }}
+                    >
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <Box sx={{ minWidth: 0, flex: 1 }}>
+                          <Typography variant="body2" fontWeight={600} noWrap>
+                            {sale.unit}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" noWrap>
+                            {sale.customer} &middot; {sale.salesperson}
+                          </Typography>
+                        </Box>
+                        <Box sx={{ textAlign: 'right', flexShrink: 0, ml: 1 }}>
+                          <Typography variant="body2" fontWeight={600} color="success.main">
+                            {fmtCurrency(sale.amount)}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {sale.date}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Box>
+                  ))}
+                </Stack>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      {/* ── Team Performance ───────────────────────────────────────────── */}
+      {data.teamPerformance.length > 0 && (
+        <ChartCard title="Team Performance" loading={loading} minHeight={260}>
+          <ResponsiveContainer width="100%" height={isMobile ? 220 : 260}>
+            <BarChart
+              data={data.teamPerformance}
+              margin={{ top: 5, right: 5, left: 0, bottom: isMobile ? 60 : 50 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis
+                dataKey="name"
+                angle={-30}
+                textAnchor="end"
+                interval={0}
+                tick={{ fontSize: isMobile ? 9 : 12 }}
+              />
+              <YAxis tickFormatter={(v) => fmtCurrency(v)} tick={{ fontSize: isMobile ? 10 : 12 }} width={55} />
+              <RechartsTooltip formatter={(v) => [fmtCurrency(v), 'Revenue']} />
+              <Bar dataKey="revenue" fill={theme.palette.primary.main} radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartCard>
+      )}
+    </Box>
   );
 };
 

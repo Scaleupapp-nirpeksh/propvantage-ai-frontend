@@ -1,1592 +1,667 @@
-// File: src/pages/analytics/SalesAnalytics.js
-// Description: Comprehensive Sales Analytics Dashboard with advanced filtering and visualization
-// Version: 1.0 - Production Grade Implementation for Phase 1
-// Location: src/pages/analytics/SalesAnalytics.js
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  Box,
-  Grid,
-  Card,
-  CardContent,
-  Typography,
-  Button,
-  IconButton,
-  Chip,
-  Tooltip,
-  CircularProgress,
-  Alert,
-  Skeleton,
-  Paper,
-  Divider,
-  LinearProgress,
-  Avatar,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemAvatar,
-  ListItemIcon,
-  useTheme,
-  useMediaQuery,
-  Tab,
-  Tabs,
-  Switch,
-  FormControlLabel,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Badge,
-  TextField,
-  InputAdornment,
-  Collapse,
-  CardHeader,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TablePagination,
-  Menu,
+  Box, Grid, Card, CardContent, CardHeader, Typography, Button,
+  IconButton, Avatar, Alert, Stack, Tabs, Tab, Tooltip,
+  LinearProgress, Skeleton, ToggleButton, ToggleButtonGroup,
+  useTheme, useMediaQuery, alpha,
 } from '@mui/material';
 import {
-  Refresh,
-  TrendingUp,
-  TrendingDown,
-  TrendingFlat,
-  Warning,
-  CheckCircle,
-  Info,
-  Error,
-  FilterList,
-  GetApp,
-  Insights,
-  AccountBalance,
-  MonetizationOn,
-  CompareArrows,
-  Timeline,
-  Assessment,
-  PieChart,
-  BarChart,
-  ShowChart,
-  NotificationsActive,
-  Business,
-  AttachMoney,
-  Schedule,
-  Flag,
-  CalendarToday,
-  Search,
-  Clear,
-  ExpandMore,
-  ExpandLess,
-  People,
-  PersonPin,
-  Group,
-  Star,
-  StarBorder,
-  ThumbUp,
-  ThumbDown,
-  Assignment,
-  Visibility,
-  FileDownload,
-  Print,
-  Share,
+  TrendingUp, Refresh, MonetizationOn, CheckCircle, Assessment,
+  ShowChart, BarChart, Timeline as TimelineIcon, Person, Business,
+  Analytics, EmojiEvents, Speed,
 } from '@mui/icons-material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { 
-  ResponsiveContainer, 
-  LineChart, 
-  Line, 
-  AreaChart, 
-  Area, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip as RechartsTooltip, 
-  Legend,
-  PieChart as RechartsPieChart,
-  Pie,
-  Cell,
-  BarChart as RechartsBarChart,
-  Bar,
-  ComposedChart,
-  ReferenceLine,
-  FunnelChart,
-  Funnel,
+import {
+  AreaChart, Area, BarChart as RechartsBarChart, Bar,
+  XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
+  Legend, ResponsiveContainer, PieChart as RechartsPieChart,
+  Pie, Cell, ComposedChart, LineChart, Line,
 } from 'recharts';
+
 import { useAuth } from '../../context/AuthContext';
-import { budgetVsActualAPI, projectAPI, userAPI } from '../../services/api';
+import { salesAPI, projectAPI, userAPI } from '../../services/api';
+import { formatCurrency } from '../../utils/formatters';
+import { PageHeader, KPICard, FilterBar } from '../../components/common';
+import { CHART_COLORS } from '../../constants/statusConfig';
 
-// =============================================================================
-// SALES ANALYTICS CONFIGURATION
-// =============================================================================
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
 
-/**
- * Analysis periods for sales data
- */
-const SALES_PERIODS = [
-  { value: 'today', label: 'Today' },
-  { value: 'yesterday', label: 'Yesterday' },
-  { value: 'current_week', label: 'This Week' },
-  { value: 'current_month', label: 'This Month' },
-  { value: 'current_quarter', label: 'This Quarter' },
-  { value: 'current_year', label: 'This Year' },
-  { value: 'last_30_days', label: 'Last 30 Days' },
-  { value: 'last_90_days', label: 'Last 90 Days' },
-  { value: 'custom', label: 'Custom Range' },
+const TIME_PERIODS = [
+  { value: 'all', label: 'All time' },
+  { value: '7',   label: 'Last 7 days' },
+  { value: '30',  label: 'Last 30 days' },
+  { value: '90',  label: 'Last 3 months' },
+  { value: '180', label: 'Last 6 months' },
+  { value: '365', label: 'Last year' },
 ];
 
-/**
- * Sales performance thresholds
- */
-const PERFORMANCE_THRESHOLDS = {
-  excellent: 90,   // 90%+ achievement = excellent
-  good: 75,        // 75-90% achievement = good
-  average: 50,     // 50-75% achievement = average
-  poor: 50,        // <50% achievement = poor
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+const generateDateRange = (period) => {
+  if (!period || period === 'all') return { startDate: null, endDate: null };
+  const days = parseInt(period, 10);
+  if (isNaN(days)) return { startDate: null, endDate: null };
+  const endDate = new Date();
+  const startDate = new Date();
+  startDate.setDate(endDate.getDate() - days);
+  return { startDate, endDate };
 };
 
-/**
- * Color system for sales metrics
- */
-const SALES_COLORS = {
-  primary: '#1976d2',
-  success: '#2e7d32',
-  warning: '#ed6c02',
-  error: '#d32f2f',
-  info: '#0288d1',
-  chart: ['#1976d2', '#dc004e', '#2e7d32', '#ed6c02', '#9c27b0', '#f57c00', '#00acc1', '#8bc34a'],
-  funnel: ['#4caf50', '#8bc34a', '#ffc107', '#ff9800', '#f44336'],
+const getMonthLabel = (dateStr) => {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('en-IN', { month: 'short', year: '2-digit' });
 };
 
-/**
- * Sales funnel stages
- */
-const SALES_FUNNEL_STAGES = [
-  { key: 'leads', label: 'Leads Generated', color: SALES_COLORS.chart[0] },
-  { key: 'qualified', label: 'Qualified Leads', color: SALES_COLORS.chart[1] },
-  { key: 'proposals', label: 'Proposals Sent', color: SALES_COLORS.chart[2] },
-  { key: 'negotiations', label: 'In Negotiation', color: SALES_COLORS.chart[3] },
-  { key: 'closed', label: 'Closed Won', color: SALES_COLORS.success },
-];
-
-/**
- * Utility functions for formatting
- */
-const formatCurrency = (value) => {
-  if (value >= 10000000) {
-    return `₹${(value / 10000000).toFixed(1)}Cr`;
-  } else if (value >= 100000) {
-    return `₹${(value / 100000).toFixed(1)}L`;
-  } else if (value >= 1000) {
-    return `₹${(value / 1000).toFixed(1)}K`;
-  }
-  return `₹${value?.toFixed(0) || 0}`;
+const getWeekLabel = (dateStr) => {
+  const d = new Date(dateStr);
+  const ws = new Date(d);
+  ws.setDate(d.getDate() - d.getDay());
+  return ws.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
 };
 
-const formatPercentage = (value, decimals = 1) => {
-  return `${(value || 0).toFixed(decimals)}%`;
+const getDayLabel = (dateStr) => {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
 };
 
-const formatNumber = (value) => {
-  return (value || 0).toLocaleString();
+const getSalespersonName = (sale) => {
+  const sp = sale?.salesPerson;
+  if (!sp) return 'Unassigned';
+  return `${sp.firstName || ''} ${sp.lastName || ''}`.trim() || 'Unassigned';
 };
 
-const calculateGrowth = (current, previous) => {
-  if (!previous || previous === 0) return 0;
-  return ((current - previous) / previous) * 100;
-};
+// ---------------------------------------------------------------------------
+// Chart tooltip
+// ---------------------------------------------------------------------------
 
-// =============================================================================
-// UTILITY COMPONENTS
-// =============================================================================
-
-/**
- * Advanced Sales Filters Component
- */
-const SalesFilters = ({ 
-  filters, 
-  onFilterChange, 
-  projects = [], 
-  salesTeam = [],
-  onApplyFilters,
-  onClearFilters,
-  loading = false 
-}) => {
-  const [expanded, setExpanded] = useState(false);
-
-  const handleFilterChange = (field, value) => {
-    onFilterChange(field, value);
-  };
-
+const ChartTooltipContent = ({ active, payload, label }) => {
+  if (!active || !payload?.length) return null;
   return (
-    <Card sx={{ mb: 3 }}>
-      <CardHeader
-        title={
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <FilterList />
-            <Typography variant="h6">Sales Analytics Filters</Typography>
-          </Box>
-        }
-        action={
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button
-              variant="outlined"
-              size="small"
-              startIcon={<Clear />}
-              onClick={onClearFilters}
-            >
-              Clear
-            </Button>
-            <Button
-              variant="contained"
-              size="small"
-              startIcon={<Assessment />}
-              onClick={onApplyFilters}
-              disabled={loading}
-            >
-              Apply Filters
-            </Button>
-            <IconButton onClick={() => setExpanded(!expanded)}>
-              {expanded ? <ExpandLess /> : <ExpandMore />}
-            </IconButton>
-          </Box>
-        }
-      />
-      
-      <Collapse in={expanded}>
-        <CardContent>
-          <Grid container spacing={3}>
-            {/* Time Period */}
-            <Grid item xs={12} md={3}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Time Period</InputLabel>
-                <Select
-                  value={filters.period}
-                  onChange={(e) => handleFilterChange('period', e.target.value)}
-                  label="Time Period"
-                >
-                  {SALES_PERIODS.map((period) => (
-                    <MenuItem key={period.value} value={period.value}>
-                      {period.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-
-            {/* Custom Date Range */}
-            {filters.period === 'custom' && (
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <Grid item xs={12} md={2}>
-                  <DatePicker
-                    label="Start Date"
-                    value={filters.startDate}
-                    onChange={(date) => handleFilterChange('startDate', date)}
-                    renderInput={(params) => (
-                      <TextField {...params} fullWidth size="small" />
-                    )}
-                  />
-                </Grid>
-                <Grid item xs={12} md={2}>
-                  <DatePicker
-                    label="End Date"
-                    value={filters.endDate}
-                    onChange={(date) => handleFilterChange('endDate', date)}
-                    renderInput={(params) => (
-                      <TextField {...params} fullWidth size="small" />
-                    )}
-                  />
-                </Grid>
-              </LocalizationProvider>
-            )}
-
-            {/* Project Filter */}
-            <Grid item xs={12} md={3}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Project</InputLabel>
-                <Select
-                  value={filters.project}
-                  onChange={(e) => handleFilterChange('project', e.target.value)}
-                  label="Project"
-                >
-                  <MenuItem value="all">All Projects</MenuItem>
-                  {projects.map((project) => (
-                    <MenuItem key={project._id} value={project._id}>
-                      {project.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-
-            {/* Sales Person Filter */}
-            <Grid item xs={12} md={3}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Sales Person</InputLabel>
-                <Select
-                  value={filters.salesPerson}
-                  onChange={(e) => handleFilterChange('salesPerson', e.target.value)}
-                  label="Sales Person"
-                >
-                  <MenuItem value="all">All Sales Team</MenuItem>
-                  {salesTeam.map((person) => (
-                    <MenuItem key={person._id} value={person._id}>
-                      {person.firstName} {person.lastName}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-
-            {/* Status Filter */}
-            <Grid item xs={12} md={3}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Sales Status</InputLabel>
-                <Select
-                  value={filters.status}
-                  onChange={(e) => handleFilterChange('status', e.target.value)}
-                  label="Sales Status"
-                >
-                  <MenuItem value="all">All Statuses</MenuItem>
-                  <MenuItem value="Booked">Booked</MenuItem>
-                  <MenuItem value="Agreement Signed">Agreement Signed</MenuItem>
-                  <MenuItem value="Payment Pending">Payment Pending</MenuItem>
-                  <MenuItem value="Completed">Completed</MenuItem>
-                  <MenuItem value="Cancelled">Cancelled</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-
-            {/* Metrics Focus */}
-            <Grid item xs={12} md={3}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Focus Area</InputLabel>
-                <Select
-                  value={filters.focus}
-                  onChange={(e) => handleFilterChange('focus', e.target.value)}
-                  label="Focus Area"
-                >
-                  <MenuItem value="all">All Metrics</MenuItem>
-                  <MenuItem value="revenue">Revenue Focus</MenuItem>
-                  <MenuItem value="conversion">Conversion Rates</MenuItem>
-                  <MenuItem value="performance">Team Performance</MenuItem>
-                  <MenuItem value="pipeline">Pipeline Analysis</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-          </Grid>
-        </CardContent>
-      </Collapse>
-    </Card>
-  );
-};
-
-/**
- * Sales KPI Card Component
- */
-const SalesKPICard = ({ 
-  title, 
-  value, 
-  previousValue,
-  target,
-  unit = 'number', 
-  icon: Icon, 
-  color = 'primary',
-  loading = false,
-  showTrend = true,
-  subtitle = null,
-}) => {
-  const theme = useTheme();
-  
-  // Calculate trend
-  const trend = useMemo(() => {
-    if (!showTrend || !previousValue || !value) return null;
-    const change = calculateGrowth(value, previousValue);
-    return {
-      direction: change > 0 ? 'up' : change < 0 ? 'down' : 'flat',
-      percentage: Math.abs(change),
-      value: value - previousValue,
-    };
-  }, [value, previousValue, showTrend]);
-
-  const targetAchievement = useMemo(() => {
-    if (!target || !value) return null;
-    return (value / target) * 100;
-  }, [value, target]);
-
-  const getTrendIcon = () => {
-    if (!trend) return null;
-    switch (trend.direction) {
-      case 'up': return <TrendingUp fontSize="small" color="success" />;
-      case 'down': return <TrendingDown fontSize="small" color="error" />;
-      default: return <TrendingFlat fontSize="small" color="info" />;
-    }
-  };
-
-  const formatValue = () => {
-    if (loading) return <CircularProgress size={20} />;
-    if (unit === 'currency') return formatCurrency(value);
-    if (unit === 'percentage') return formatPercentage(value);
-    return formatNumber(value);
-  };
-
-  const getPerformanceColor = () => {
-    if (!targetAchievement) return color;
-    if (targetAchievement >= PERFORMANCE_THRESHOLDS.excellent) return 'success';
-    if (targetAchievement >= PERFORMANCE_THRESHOLDS.good) return 'info';
-    if (targetAchievement >= PERFORMANCE_THRESHOLDS.average) return 'warning';
-    return 'error';
-  };
-
-  return (
-    <Card sx={{ height: '100%' }}>
-      <CardContent>
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 2 }}>
-          <Box sx={{ flex: 1 }}>
-            <Typography variant="body2" color="text.secondary" gutterBottom>
-              {title}
-            </Typography>
-            <Typography variant="h4" component="div" sx={{ fontWeight: 600, mb: 1 }}>
-              {formatValue()}
-            </Typography>
-            {subtitle && (
-              <Typography variant="caption" color="text.secondary">
-                {subtitle}
-              </Typography>
-            )}
-          </Box>
-          
-          <Avatar 
-            sx={{ 
-              bgcolor: `${getPerformanceColor()}.main`, 
-              width: 48, 
-              height: 48,
-              ml: 2,
-            }}
-          >
-            <Icon />
-          </Avatar>
+    <Card sx={{ p: 1.5, minWidth: 160 }} elevation={3}>
+      <Typography variant="caption" color="text.secondary" gutterBottom display="block">{label}</Typography>
+      {payload.map((p, i) => (
+        <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
+          <Typography variant="caption" sx={{ color: p.color }}>{p.name}</Typography>
+          <Typography variant="caption" sx={{ fontWeight: 600 }}>
+            {p.name.toLowerCase().includes('revenue') || p.name.toLowerCase().includes('avg')
+              ? formatCurrency(p.value)
+              : p.value}
+          </Typography>
         </Box>
-
-        {/* Trend Display */}
-        {trend && !loading && (
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              {getTrendIcon()}
-              <Typography 
-                variant="body2" 
-                sx={{ 
-                  ml: 0.5,
-                  color: trend.direction === 'up' ? 'success.main' : 
-                         trend.direction === 'down' ? 'error.main' : 'text.secondary'
-                }}
-              >
-                {formatPercentage(trend.percentage, 1)}
-              </Typography>
-            </Box>
-            <Typography variant="caption" color="text.secondary">
-              vs previous period
-            </Typography>
-          </Box>
-        )}
-
-        {/* Target Achievement */}
-        {targetAchievement !== null && !loading && (
-          <Box sx={{ mt: 1 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-              <Typography variant="caption" color="text.secondary">
-                Target Progress
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {formatPercentage(targetAchievement)}
-              </Typography>
-            </Box>
-            <LinearProgress
-              variant="determinate"
-              value={Math.min(targetAchievement, 100)}
-              color={getPerformanceColor()}
-              sx={{ height: 6, borderRadius: 3 }}
-            />
-          </Box>
-        )}
-      </CardContent>
+      ))}
     </Card>
   );
 };
 
-/**
- * Sales Funnel Visualization Component
- */
-const SalesFunnelChart = ({ funnelData, loading = false }) => {
-  if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', height: 300, alignItems: 'center' }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
+// ---------------------------------------------------------------------------
+// Overview Tab — trend chart + status pie
+// ---------------------------------------------------------------------------
 
-  if (!funnelData || funnelData.length === 0) {
-    return (
-      <Alert severity="info">
-        No funnel data available for the selected period.
-      </Alert>
-    );
-  }
-
-  return (
-    <ResponsiveContainer width="100%" height={300}>
-      <FunnelChart data={funnelData}>
-        <RechartsTooltip 
-          formatter={(value, name) => [formatNumber(value), name]}
-        />
-        <Funnel
-          dataKey="value"
-          data={funnelData}
-          isAnimationActive
-        >
-          {funnelData.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={SALES_FUNNEL_STAGES[index]?.color || SALES_COLORS.chart[index]} />
-          ))}
-        </Funnel>
-      </FunnelChart>
-    </ResponsiveContainer>
-  );
-};
-
-/**
- * Sales Team Performance Table
- */
-const SalesTeamTable = ({ teamData, loading = false }) => {
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-
-  if (loading) {
-    return (
-      <Box>
-        {[1, 2, 3, 4, 5].map((i) => (
-          <Skeleton key={i} height={60} sx={{ mb: 1 }} />
-        ))}
-      </Box>
-    );
-  }
-
-  const getPerformanceIcon = (achievement) => {
-    if (achievement >= PERFORMANCE_THRESHOLDS.excellent) return <Star color="success" />;
-    if (achievement >= PERFORMANCE_THRESHOLDS.good) return <ThumbUp color="info" />;
-    if (achievement >= PERFORMANCE_THRESHOLDS.average) return <StarBorder color="warning" />;
-    return <ThumbDown color="error" />;
-  };
-
-  const sortedTeamData = teamData.sort((a, b) => (b.revenue || 0) - (a.revenue || 0));
-
-  return (
-    <TableContainer component={Paper}>
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>Rank</TableCell>
-            <TableCell>Sales Person</TableCell>
-            <TableCell align="right">Sales Count</TableCell>
-            <TableCell align="right">Revenue</TableCell>
-            <TableCell align="right">Avg. Deal Size</TableCell>
-            <TableCell align="right">Conversion Rate</TableCell>
-            <TableCell align="center">Performance</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {sortedTeamData
-            .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-            .map((person, index) => {
-              const actualIndex = page * rowsPerPage + index;
-              const avgDealSize = person.salesCount > 0 ? person.revenue / person.salesCount : 0;
-              const achievement = person.target > 0 ? (person.revenue / person.target) * 100 : 0;
-              
-              return (
-                <TableRow key={person._id || actualIndex}>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Typography variant="h6" color="primary">
-                        #{actualIndex + 1}
-                      </Typography>
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Avatar sx={{ width: 32, height: 32 }}>
-                        {person.firstName?.[0]}{person.lastName?.[0]}
-                      </Avatar>
-                      <Box>
-                        <Typography variant="body2" fontWeight={600}>
-                          {person.firstName} {person.lastName}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {person.email}
-                        </Typography>
-                      </Box>
-                    </Box>
-                  </TableCell>
-                  <TableCell align="right">
-                    <Typography variant="body2" fontWeight={600}>
-                      {formatNumber(person.salesCount || 0)}
-                    </Typography>
-                  </TableCell>
-                  <TableCell align="right">
-                    <Typography variant="body2" fontWeight={600}>
-                      {formatCurrency(person.revenue || 0)}
-                    </Typography>
-                  </TableCell>
-                  <TableCell align="right">
-                    <Typography variant="body2">
-                      {formatCurrency(avgDealSize)}
-                    </Typography>
-                  </TableCell>
-                  <TableCell align="right">
-                    <Typography variant="body2">
-                      {formatPercentage(person.conversionRate || 0)}
-                    </Typography>
-                  </TableCell>
-                  <TableCell align="center">
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-                      {getPerformanceIcon(achievement)}
-                      <Typography variant="caption" color="text.secondary">
-                        {formatPercentage(achievement)}
-                      </Typography>
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-        </TableBody>
-      </Table>
-      <TablePagination
-        component="div"
-        count={teamData.length}
-        page={page}
-        onPageChange={(e, newPage) => setPage(newPage)}
-        rowsPerPage={rowsPerPage}
-        onRowsPerPageChange={(e) => {
-          setRowsPerPage(parseInt(e.target.value, 10));
-          setPage(0);
-        }}
-        rowsPerPageOptions={[5, 10, 25]}
-      />
-    </TableContainer>
-  );
-};
-
-// =============================================================================
-// MAIN SALES ANALYTICS COMPONENT
-// =============================================================================
-
-const SalesAnalytics = () => {
+const OverviewTab = ({ salesData, period, loading }) => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const { user, canAccess } = useAuth();
+  const [chartType, setChartType] = useState('area');
 
-  // =============================================================================
-  // STATE MANAGEMENT
-  // =============================================================================
-  
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState(0);
-  const [autoRefresh, setAutoRefresh] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState(new Date());
-  const [exportMenuAnchor, setExportMenuAnchor] = useState(null);
-  
-  // Enhanced filters state
-  const [filters, setFilters] = useState({
-    period: 'current_month',
-    startDate: null,
-    endDate: null,
-    project: 'all',
-    salesPerson: 'all',
-    status: 'all',
-    focus: 'all',
-  });
-
-  // Filter options
-  const [projects, setProjects] = useState([]);
-  const [salesTeam, setSalesTeam] = useState([]);
-  
-  // Sales analytics data state
-  const [salesData, setSalesData] = useState({
-    kpis: {
-      totalSales: 0,
-      totalRevenue: 0,
-      averageDealSize: 0,
-      conversionRate: 0,
-      salesGrowth: 0,
-      revenueGrowth: 0,
-    },
-    trends: [],
-    funnel: [],
-    teamPerformance: [],
-    projectBreakdown: [],
-    conversionMetrics: {},
-    alerts: [],
-  });
-
-  // Loading states for individual sections
-  const [loadingStates, setLoadingStates] = useState({
-    kpis: true,
-    trends: true,
-    funnel: true,
-    team: true,
-    projects: true,
-  });
-
-  // =============================================================================
-  // FILTER FUNCTIONS
-  // =============================================================================
-
-  /**
-   * Generate API query parameters from current filters
-   */
-  const getApiParams = useCallback(() => {
-    const params = {
-      period: filters.period,
-    };
-
-    // Add custom date range
-    if (filters.period === 'custom' && filters.startDate && filters.endDate) {
-      params.startDate = filters.startDate.toISOString();
-      params.endDate = filters.endDate.toISOString();
-    }
-
-    // Add project filter
-    if (filters.project !== 'all') {
-      params.projectId = filters.project;
-    }
-
-    // Add sales person filter
-    if (filters.salesPerson !== 'all') {
-      params.salesPersonId = filters.salesPerson;
-    }
-
-    // Add status filter
-    if (filters.status !== 'all') {
-      params.status = filters.status;
-    }
-
-    return params;
-  }, [filters]);
-
-  /**
-   * Handle filter changes
-   */
-  const handleFilterChange = (field, value) => {
-    setFilters(prev => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  /**
-   * Apply filters and refresh data
-   */
-  const applyFilters = () => {
-    refreshSalesData();
-  };
-
-  /**
-   * Clear all filters
-   */
-  const clearFilters = () => {
-    setFilters({
-      period: 'current_month',
-      startDate: null,
-      endDate: null,
-      project: 'all',
-      salesPerson: 'all',
-      status: 'all',
-      focus: 'all',
+  const trendData = useMemo(() => {
+    const grouped = {};
+    const periodDays = parseInt(period) || 999;
+    salesData.forEach(item => {
+      const dateStr = item.bookingDate || item.createdAt;
+      let key;
+      if (periodDays <= 30) key = getDayLabel(dateStr);
+      else if (periodDays <= 180) key = getWeekLabel(dateStr);
+      else key = getMonthLabel(dateStr);
+      if (!grouped[key]) grouped[key] = { period: key, sales: 0, revenue: 0 };
+      grouped[key].sales += 1;
+      grouped[key].revenue += item.salePrice || 0;
     });
-  };
+    return Object.values(grouped);
+  }, [salesData, period]);
 
-  // =============================================================================
-  // DATA FETCHING FUNCTIONS
-  // =============================================================================
+  const statusBreakdown = useMemo(() => {
+    const counts = {};
+    salesData.forEach(s => { counts[s.status || 'Unknown'] = (counts[s.status || 'Unknown'] || 0) + 1; });
+    return Object.entries(counts).map(([name, value], i) => ({
+      name, value, fill: CHART_COLORS[i % CHART_COLORS.length],
+    }));
+  }, [salesData]);
 
-  /**
-   * Fetch filter options
-   */
-  const fetchFilterOptions = useCallback(async () => {
-    try {
-      const [projectsResponse, usersResponse] = await Promise.all([
-        projectAPI.getProjects(),
-        userAPI.getUsers() // Get all users, we'll filter on frontend for sales roles
-      ]);
+  if (loading) {
+    return (
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={8}><Skeleton variant="rounded" height={380} /></Grid>
+        <Grid item xs={12} md={4}><Skeleton variant="rounded" height={380} /></Grid>
+      </Grid>
+    );
+  }
 
-      const projectsData = projectsResponse.data?.data || [];
-      const usersData = usersResponse.data?.data || [];
-      
-      setProjects(Array.isArray(projectsData) ? projectsData : []);
-      // Filter users to only sales-related roles
-      const salesUsers = usersData.filter(user => 
-        user.role && (
-          user.role.includes('Sales') || 
-          user.role === 'Business Head' ||
-          user.role === 'Project Director'
-        )
+  const renderChart = () => {
+    const gridLine = <CartesianGrid key="g" strokeDasharray="3 3" stroke={alpha(theme.palette.divider, 0.5)} />;
+    const xAxis = <XAxis key="x" dataKey="period" stroke={theme.palette.text.secondary} tick={{ fontSize: 11 }} />;
+    const yAxis = <YAxis key="y" stroke={theme.palette.text.secondary} tick={{ fontSize: 11 }} />;
+    const tip = <RechartsTooltip key="t" content={<ChartTooltipContent />} />;
+    const leg = <Legend key="l" />;
+    const common = [gridLine, xAxis, yAxis, tip, leg];
+
+    if (chartType === 'area') {
+      return (
+        <ComposedChart data={trendData}>
+          {common}
+          <Area type="monotone" dataKey="sales" name="Sales" fill={theme.palette.primary.main} fillOpacity={0.15} stroke={theme.palette.primary.main} strokeWidth={2} />
+          <Bar dataKey="revenue" name="Revenue" fill={alpha(theme.palette.success.main, 0.7)} radius={[3, 3, 0, 0]} />
+        </ComposedChart>
       );
-      setSalesTeam(Array.isArray(salesUsers) ? salesUsers : []);
-    } catch (error) {
-      console.error('Error fetching filter options:', error);
     }
-  }, []);
-
-  /**
-   * Fetch sales KPIs
-   */
-  const fetchSalesKPIs = useCallback(async () => {
-    try {
-      setLoadingStates(prev => ({ ...prev, kpis: true }));
-      
-      const params = getApiParams();
-      console.log('🔄 Calling budgetVsActualAPI.getSalesKPIs for KPIs with params:', params);
-      
-      const response = await budgetVsActualAPI.getSalesKPIs(params);
-      console.log('✅ Sales KPIs API Response:', response.data);
-
-      const data = response.data?.data || {};
-      
-      setSalesData(prev => ({
-        ...prev,
-        kpis: {
-          totalSales: data.sales?.count || 0,
-          totalRevenue: data.sales?.totalValue || 0,
-          averageDealSize: data.sales?.averageDealSize || 0,
-          conversionRate: data.conversion?.overallRate || 0,
-          salesGrowth: data.growth?.salesGrowth || 0,
-          revenueGrowth: data.growth?.revenueGrowth || 0,
-        },
-      }));
-
-    } catch (error) {
-      console.error('Error fetching sales KPIs:', error);
-      // Fallback: Set default values to prevent UI breaking
-      setSalesData(prev => ({
-        ...prev,
-        kpis: {
-          totalSales: 0,
-          totalRevenue: 0,
-          averageDealSize: 0,
-          conversionRate: 0,
-          salesGrowth: 0,
-          revenueGrowth: 0,
-        },
-      }));
-      if (!error.message.includes('404')) {
-        setError(`Failed to load sales KPIs: ${error.message}`);
-      }
-    } finally {
-      setLoadingStates(prev => ({ ...prev, kpis: false }));
+    if (chartType === 'bar') {
+      return (
+        <RechartsBarChart data={trendData}>
+          {common}
+          <Bar dataKey="sales" name="Sales" fill={theme.palette.primary.main} radius={[3, 3, 0, 0]} />
+          <Bar dataKey="revenue" name="Revenue" fill={theme.palette.success.main} radius={[3, 3, 0, 0]} />
+        </RechartsBarChart>
+      );
     }
-  }, [getApiParams]);
-
-  /**
-   * Fetch sales trends
-   */
-  const fetchSalesTrends = useCallback(async () => {
-    try {
-      setLoadingStates(prev => ({ ...prev, trends: true }));
-      
-      const params = { ...getApiParams(), include: 'trends,monthly' };
-      console.log('🔄 Calling budgetVsActualAPI.getSalesAnalysis for trends with params:', params);
-      
-      const response = await budgetVsActualAPI.getSalesAnalysis(params);
-      console.log('✅ Sales Trends API Response:', response.data);
-
-      const data = response.data?.data || {};
-      
-      // Transform trend data for charts
-      const trends = [];
-      if (data.trends?.monthly) {
-        trends.push(...data.trends.monthly.map(item => ({
-          period: `${item._id?.year}-${String(item._id?.month).padStart(2, '0')}`,
-          sales: item.salesCount || 0,
-          revenue: item.revenue || 0,
-          conversions: item.conversions || 0,
-        })));
-      }
-
-      setSalesData(prev => ({
-        ...prev,
-        trends,
-      }));
-
-    } catch (error) {
-      console.error('Error fetching sales trends:', error);
-      // Fallback: Set empty trends data
-      setSalesData(prev => ({
-        ...prev,
-        trends: [],
-      }));
-      if (!error.message.includes('404')) {
-        console.warn('Sales trends API not available, using fallback');
-      }
-    } finally {
-      setLoadingStates(prev => ({ ...prev, trends: false }));
-    }
-  }, [getApiParams]);
-
-  /**
-   * Fetch sales funnel data
-   */
-  const fetchSalesFunnel = useCallback(async () => {
-    try {
-      setLoadingStates(prev => ({ ...prev, funnel: true }));
-      
-      const params = { ...getApiParams(), include: 'funnel,conversion' };
-      console.log('🔄 Calling budgetVsActualAPI.getLeadAnalysis for funnel with params:', params);
-      
-      const response = await budgetVsActualAPI.getLeadAnalysis(params);
-      console.log('✅ Sales Funnel API Response:', response.data);
-
-      const data = response.data?.data || {};
-      
-      // Transform funnel data
-      const funnelData = SALES_FUNNEL_STAGES.map(stage => ({
-        name: stage.label,
-        value: data.funnel?.[stage.key] || 0,
-        fill: stage.color,
-      }));
-
-      setSalesData(prev => ({
-        ...prev,
-        funnel: funnelData,
-        conversionMetrics: data.conversion || {},
-      }));
-
-    } catch (error) {
-      console.error('Error fetching sales funnel:', error);
-      // Fallback: Set empty funnel data
-      setSalesData(prev => ({
-        ...prev,
-        funnel: [],
-        conversionMetrics: {},
-      }));
-      if (!error.message.includes('404')) {
-        console.warn('Sales funnel API not available, using fallback');
-      }
-    } finally {
-      setLoadingStates(prev => ({ ...prev, funnel: false }));
-    }
-  }, [getApiParams]);
-
-  /**
-   * Fetch team performance
-   */
-  const fetchTeamPerformance = useCallback(async () => {
-    try {
-      setLoadingStates(prev => ({ ...prev, team: true }));
-      
-      const params = { ...getApiParams(), include: 'team,individual' };
-      console.log('🔄 Calling budgetVsActualAPI.getSalesAnalysis for team performance with params:', params);
-      
-      const response = await budgetVsActualAPI.getSalesAnalysis(params);
-      console.log('✅ Team Performance API Response:', response.data);
-
-      const data = response.data?.data || {};
-      
-      setSalesData(prev => ({
-        ...prev,
-        teamPerformance: data.team || [],
-      }));
-
-    } catch (error) {
-      console.error('Error fetching team performance:', error);
-      // Fallback: Set empty team data
-      setSalesData(prev => ({
-        ...prev,
-        teamPerformance: [],
-      }));
-      if (!error.message.includes('404')) {
-        console.warn('Team performance API not available, using fallback');
-      }
-    } finally {
-      setLoadingStates(prev => ({ ...prev, team: false }));
-    }
-  }, [getApiParams]);
-
-  /**
-   * Fetch project breakdown
-   */
-  const fetchProjectBreakdown = useCallback(async () => {
-    try {
-      setLoadingStates(prev => ({ ...prev, projects: true }));
-      
-      const params = { ...getApiParams(), include: 'projects,breakdown' };
-      console.log('🔄 Calling budgetVsActualAPI.getProjectComparison with params:', params);
-      
-      const response = await budgetVsActualAPI.getProjectComparison(params);
-      console.log('✅ Project Breakdown API Response:', response.data);
-
-      const data = response.data?.data || {};
-      
-      setSalesData(prev => ({
-        ...prev,
-        projectBreakdown: data.projects || [],
-      }));
-
-    } catch (error) {
-      console.error('Error fetching project breakdown:', error);
-      // Fallback: Set empty project data
-      setSalesData(prev => ({
-        ...prev,
-        projectBreakdown: [],
-      }));
-      if (!error.message.includes('404')) {
-        console.warn('Project breakdown API not available, using fallback');
-      }
-    } finally {
-      setLoadingStates(prev => ({ ...prev, projects: false }));
-    }
-  }, [getApiParams]);
-
-  /**
-   * Refresh all sales data
-   */
-  const refreshSalesData = useCallback(async () => {
-    console.log('🔄 Starting sales analytics refresh with filters:', filters);
-    setLoading(true);
-    setError(null);
-
-    try {
-      await Promise.all([
-        fetchSalesKPIs(),
-        fetchSalesTrends(),
-        fetchSalesFunnel(),
-        fetchTeamPerformance(),
-        fetchProjectBreakdown(),
-      ]);
-      
-      console.log('✅ Sales analytics refresh completed successfully');
-      setLastUpdated(new Date());
-    } catch (error) {
-      console.error('❌ Error refreshing sales analytics:', error);
-      setError('Failed to refresh sales data');
-    } finally {
-      setLoading(false);
-    }
-  }, [
-    fetchSalesKPIs,
-    fetchSalesTrends,
-    fetchSalesFunnel,
-    fetchTeamPerformance,
-    fetchProjectBreakdown,
-  ]);
-
-  // =============================================================================
-  // EFFECTS
-  // =============================================================================
-
-  // Initial data load
-  useEffect(() => {
-    console.log('🚀 Sales Analytics initializing...');
-    fetchFilterOptions();
-    refreshSalesData();
-  }, []);
-
-  // Refresh data when filters change (debounced)
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      refreshSalesData();
-    }, 500); // 500ms debounce
-
-    return () => clearTimeout(timeoutId);
-  }, [filters]);
-
-  // Auto-refresh functionality
-  useEffect(() => {
-    if (!autoRefresh) return;
-
-    const interval = setInterval(refreshSalesData, 5 * 60 * 1000); // 5 minutes
-    return () => clearInterval(interval);
-  }, [autoRefresh, refreshSalesData]);
-
-  // =============================================================================
-  // EVENT HANDLERS
-  // =============================================================================
-
-  const handleTabChange = (event, newValue) => {
-    setActiveTab(newValue);
+    return (
+      <LineChart data={trendData}>
+        {common}
+        <Line type="monotone" dataKey="sales" name="Sales" stroke={theme.palette.primary.main} strokeWidth={2} dot={{ r: 3 }} />
+        <Line type="monotone" dataKey="revenue" name="Revenue" stroke={theme.palette.success.main} strokeWidth={2} dot={{ r: 3 }} />
+      </LineChart>
+    );
   };
 
-  const handleAutoRefreshToggle = (event) => {
-    setAutoRefresh(event.target.checked);
-  };
-
-  const handleExportClick = (event) => {
-    setExportMenuAnchor(event.currentTarget);
-  };
-
-  const handleExportClose = () => {
-    setExportMenuAnchor(null);
-  };
-
-  const handleExport = (format) => {
-    // Implementation for export functionality
-    console.log(`Exporting sales data in ${format} format`);
-    handleExportClose();
-  };
-
-  // =============================================================================
-  // RENDER FUNCTIONS
-  // =============================================================================
-
-  /**
-   * Render Sales KPIs Overview
-   */
-  const renderSalesKPIs = () => (
+  return (
     <Grid container spacing={3}>
-      <Grid item xs={12} sm={6} md={2}>
-        <SalesKPICard
-          title="Total Sales"
-          value={salesData.kpis.totalSales}
-          unit="number"
-          icon={Assignment}
-          color="primary"
-          loading={loadingStates.kpis}
-          subtitle="Bookings completed"
-        />
+      <Grid item xs={12} md={8}>
+        <Card variant="outlined" sx={{ height: '100%' }}>
+          <CardHeader
+            title={<Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Sales Trend</Typography>}
+            action={
+              <ToggleButtonGroup value={chartType} exclusive onChange={(e, v) => v && setChartType(v)} size="small">
+                <ToggleButton value="area"><Tooltip title="Area"><ShowChart sx={{ fontSize: 18 }} /></Tooltip></ToggleButton>
+                <ToggleButton value="bar"><Tooltip title="Bar"><BarChart sx={{ fontSize: 18 }} /></Tooltip></ToggleButton>
+                <ToggleButton value="line"><Tooltip title="Line"><TimelineIcon sx={{ fontSize: 18 }} /></Tooltip></ToggleButton>
+              </ToggleButtonGroup>
+            }
+          />
+          <CardContent sx={{ height: 340 }}>
+            {trendData.length === 0 ? (
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                <Typography color="text.secondary">No trend data for this period</Typography>
+              </Box>
+            ) : (
+              <ResponsiveContainer>{renderChart()}</ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
       </Grid>
-      
-      <Grid item xs={12} sm={6} md={2}>
-        <SalesKPICard
-          title="Total Revenue"
-          value={salesData.kpis.totalRevenue}
-          unit="currency"
-          icon={MonetizationOn}
-          color="success"
-          loading={loadingStates.kpis}
-          subtitle="Revenue generated"
-        />
-      </Grid>
-      
-      <Grid item xs={12} sm={6} md={2}>
-        <SalesKPICard
-          title="Avg Deal Size"
-          value={salesData.kpis.averageDealSize}
-          unit="currency"
-          icon={TrendingUp}
-          color="info"
-          loading={loadingStates.kpis}
-          subtitle="Per sale average"
-        />
-      </Grid>
-      
-      <Grid item xs={12} sm={6} md={2}>
-        <SalesKPICard
-          title="Conversion Rate"
-          value={salesData.kpis.conversionRate}
-          unit="percentage"
-          icon={ShowChart}
-          color="warning"
-          loading={loadingStates.kpis}
-          subtitle="Lead to sale conversion"
-        />
-      </Grid>
-      
-      <Grid item xs={12} sm={6} md={2}>
-        <SalesKPICard
-          title="Sales Growth"
-          value={salesData.kpis.salesGrowth}
-          unit="percentage"
-          icon={TrendingUp}
-          color="success"
-          loading={loadingStates.kpis}
-          subtitle="Period over period"
-        />
-      </Grid>
-      
-      <Grid item xs={12} sm={6} md={2}>
-        <SalesKPICard
-          title="Revenue Growth"
-          value={salesData.kpis.revenueGrowth}
-          unit="percentage"
-          icon={AttachMoney}
-          color="success"
-          loading={loadingStates.kpis}
-          subtitle="Period over period"
-        />
+
+      <Grid item xs={12} md={4}>
+        <Card variant="outlined" sx={{ height: '100%' }}>
+          <CardHeader title={<Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Status Breakdown</Typography>} />
+          <CardContent>
+            {statusBreakdown.length === 0 ? (
+              <Box sx={{ textAlign: 'center', py: 4 }}>
+                <Typography color="text.secondary">No data</Typography>
+              </Box>
+            ) : (
+              <>
+                <Box sx={{ height: 220 }}>
+                  <ResponsiveContainer>
+                    <RechartsPieChart>
+                      <Pie data={statusBreakdown} cx="50%" cy="50%" outerRadius={80} dataKey="value"
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
+                        {statusBreakdown.map((e, i) => <Cell key={i} fill={e.fill} />)}
+                      </Pie>
+                      <RechartsTooltip />
+                    </RechartsPieChart>
+                  </ResponsiveContainer>
+                </Box>
+                <Stack spacing={0.75} sx={{ mt: 1 }}>
+                  {statusBreakdown.map(s => (
+                    <Box key={s.name} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box sx={{ width: 10, height: 10, borderRadius: 0.5, bgcolor: s.fill }} />
+                        <Typography variant="caption">{s.name}</Typography>
+                      </Box>
+                      <Typography variant="caption" sx={{ fontWeight: 600 }}>{s.value}</Typography>
+                    </Box>
+                  ))}
+                </Stack>
+              </>
+            )}
+          </CardContent>
+        </Card>
       </Grid>
     </Grid>
   );
+};
 
-  /**
-   * Render Sales Trends Chart
-   */
-  const renderSalesTrends = () => (
-    <Card>
-      <CardContent>
-        <Typography variant="h6" gutterBottom>
-          Sales Performance Trends
-        </Typography>
-        
-        {loadingStates.trends ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', height: 400 }}>
-            <CircularProgress />
-          </Box>
-        ) : salesData.trends.length === 0 ? (
-          <Alert severity="info">
-            No sales trend data available for the selected period.
-          </Alert>
-        ) : (
-          <ResponsiveContainer width="100%" height={400}>
-            <ComposedChart data={salesData.trends}>
-              <XAxis dataKey="period" />
-              <YAxis yAxisId="left" />
-              <YAxis yAxisId="right" orientation="right" />
-              <CartesianGrid strokeDasharray="3 3" />
-              <RechartsTooltip 
-                formatter={(value, name) => [
-                  name === 'revenue' ? formatCurrency(value) : formatNumber(value),
-                  name === 'revenue' ? 'Revenue' : name === 'sales' ? 'Sales Count' : 'Conversions'
-                ]}
-              />
-              <Legend />
-              <Bar 
-                yAxisId="left"
-                dataKey="sales" 
-                fill={SALES_COLORS.primary}
-                name="Sales Count"
-              />
-              <Area 
-                yAxisId="right"
-                type="monotone" 
-                dataKey="revenue" 
-                stackId="1"
-                stroke={SALES_COLORS.success}
-                fill={SALES_COLORS.success}
-                fillOpacity={0.6}
-                name="Revenue"
-              />
-              <Line 
-                yAxisId="left"
-                type="monotone" 
-                dataKey="conversions" 
-                stroke={SALES_COLORS.warning}
-                strokeWidth={3}
-                name="Conversions"
-              />
-            </ComposedChart>
-          </ResponsiveContainer>
-        )}
-      </CardContent>
-    </Card>
-  );
+// ---------------------------------------------------------------------------
+// Team Performance Tab
+// ---------------------------------------------------------------------------
 
-  /**
-   * Render Sales Funnel
-   */
-  const renderSalesFunnel = () => (
-    <Card>
-      <CardContent>
-        <Typography variant="h6" gutterBottom>
-          Sales Conversion Funnel
-        </Typography>
-        
-        <SalesFunnelChart 
-          funnelData={salesData.funnel} 
-          loading={loadingStates.funnel} 
-        />
-        
-        {/* Conversion Metrics */}
-        {Object.keys(salesData.conversionMetrics).length > 0 && (
-          <Box sx={{ mt: 3 }}>
-            <Divider sx={{ mb: 2 }} />
-            <Typography variant="subtitle2" gutterBottom>
-              Conversion Metrics
-            </Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={6} md={3}>
-                <Typography variant="caption" color="text.secondary">
-                  Lead to Qualified
-                </Typography>
-                <Typography variant="h6" color="primary">
-                  {formatPercentage(salesData.conversionMetrics.leadToQualified || 0)}
-                </Typography>
-              </Grid>
-              <Grid item xs={6} md={3}>
-                <Typography variant="caption" color="text.secondary">
-                  Qualified to Proposal
-                </Typography>
-                <Typography variant="h6" color="info.main">
-                  {formatPercentage(salesData.conversionMetrics.qualifiedToProposal || 0)}
-                </Typography>
-              </Grid>
-              <Grid item xs={6} md={3}>
-                <Typography variant="caption" color="text.secondary">
-                  Proposal to Close
-                </Typography>
-                <Typography variant="h6" color="warning.main">
-                  {formatPercentage(salesData.conversionMetrics.proposalToClose || 0)}
-                </Typography>
-              </Grid>
-              <Grid item xs={6} md={3}>
-                <Typography variant="caption" color="text.secondary">
-                  Overall Conversion
-                </Typography>
-                <Typography variant="h6" color="success.main">
-                  {formatPercentage(salesData.conversionMetrics.overallRate || 0)}
-                </Typography>
-              </Grid>
-            </Grid>
-          </Box>
-        )}
-      </CardContent>
-    </Card>
-  );
+const TeamPerformanceTab = ({ salesData, loading }) => {
+  const theme = useTheme();
 
-  /**
-   * Render Team Performance
-   */
-  const renderTeamPerformance = () => (
-    <Card>
-      <CardContent>
-        <Typography variant="h6" gutterBottom>
-          Sales Team Performance
-        </Typography>
-        
-        <SalesTeamTable 
-          teamData={salesData.teamPerformance} 
-          loading={loadingStates.team} 
-        />
-      </CardContent>
-    </Card>
-  );
+  const performers = useMemo(() => {
+    const map = {};
+    salesData.forEach(sale => {
+      const id = sale.salesPerson?._id || 'unassigned';
+      const name = getSalespersonName(sale);
+      if (!map[id]) map[id] = { id, name, sales: 0, revenue: 0, completed: 0 };
+      map[id].sales += 1;
+      map[id].revenue += sale.salePrice || 0;
+      if (sale.status === 'Completed') map[id].completed += 1;
+    });
+    return Object.values(map)
+      .map(p => ({ ...p, avg: p.sales > 0 ? p.revenue / p.sales : 0, rate: p.sales > 0 ? ((p.completed / p.sales) * 100) : 0 }))
+      .sort((a, b) => b.revenue - a.revenue);
+  }, [salesData]);
 
-  /**
-   * Render Project Breakdown
-   */
-  const renderProjectBreakdown = () => (
-    <Card>
-      <CardContent>
-        <Typography variant="h6" gutterBottom>
-          Sales by Project
-        </Typography>
-        
-        {loadingStates.projects ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', height: 300 }}>
-            <CircularProgress />
-          </Box>
-        ) : salesData.projectBreakdown.length === 0 ? (
-          <Alert severity="info">
-            No project sales data available for the selected period.
-          </Alert>
-        ) : (
-          <ResponsiveContainer width="100%" height={300}>
-            <RechartsPieChart>
-              <Pie
-                data={salesData.projectBreakdown}
-                dataKey="revenue"
-                nameKey="name"
-                cx="50%"
-                cy="50%"
-                outerRadius={100}
-                fill="#8884d8"
-                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-              >
-                {salesData.projectBreakdown.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={SALES_COLORS.chart[index % SALES_COLORS.chart.length]} />
-                ))}
-              </Pie>
-              <RechartsTooltip 
-                formatter={(value) => [formatCurrency(value), 'Revenue']}
-              />
-              <Legend />
-            </RechartsPieChart>
-          </ResponsiveContainer>
-        )}
-      </CardContent>
-    </Card>
-  );
-
-  // =============================================================================
-  // MAIN RENDER
-  // =============================================================================
+  if (loading) return <Skeleton variant="rounded" height={400} />;
 
   return (
-    <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Box sx={{ flexGrow: 1 }}>
-        {/* Header Section */}
-        <Box sx={{ mb: 4 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-            <Box>
-              <Typography variant="h4" component="h1" gutterBottom>
-                Sales Analytics Dashboard
-              </Typography>
-              <Typography variant="body1" color="text.secondary">
-                Comprehensive sales performance analysis with advanced filtering and team insights
-              </Typography>
-            </Box>
-            
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-              {/* Auto Refresh Toggle */}
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={autoRefresh}
-                    onChange={handleAutoRefreshToggle}
-                    color="primary"
-                  />
-                }
-                label="Auto Refresh"
-              />
-              
-              {/* Export Menu */}
-              <Button
-                variant="outlined"
-                startIcon={<FileDownload />}
-                onClick={handleExportClick}
-              >
-                Export
-              </Button>
-              <Menu
-                anchorEl={exportMenuAnchor}
-                open={Boolean(exportMenuAnchor)}
-                onClose={handleExportClose}
-              >
-                <MenuItem onClick={() => handleExport('excel')}>
-                  <FileDownload sx={{ mr: 1 }} />
-                  Export to Excel
-                </MenuItem>
-                <MenuItem onClick={() => handleExport('pdf')}>
-                  <Print sx={{ mr: 1 }} />
-                  Export to PDF
-                </MenuItem>
-                <MenuItem onClick={() => handleExport('csv')}>
-                  <GetApp sx={{ mr: 1 }} />
-                  Export to CSV
-                </MenuItem>
-              </Menu>
-              
-              {/* Manual Refresh Button */}
-              <Tooltip title="Refresh Data">
-                <IconButton 
-                  onClick={refreshSalesData} 
-                  disabled={loading}
-                  color="primary"
-                >
-                  <Refresh />
-                </IconButton>
-              </Tooltip>
-            </Box>
-          </Box>
+    <Grid container spacing={3}>
+      {/* Bar chart */}
+      <Grid item xs={12} md={8}>
+        <Card variant="outlined">
+          <CardHeader title={<Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Revenue by Salesperson</Typography>} />
+          <CardContent sx={{ height: 380 }}>
+            {performers.length === 0 ? (
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                <Typography color="text.secondary">No performance data</Typography>
+              </Box>
+            ) : (
+              <ResponsiveContainer>
+                <RechartsBarChart data={performers.slice(0, 10)} layout="horizontal">
+                  <CartesianGrid strokeDasharray="3 3" stroke={alpha(theme.palette.divider, 0.5)} />
+                  <XAxis type="number" stroke={theme.palette.text.secondary} tick={{ fontSize: 11 }} />
+                  <YAxis type="category" dataKey="name" width={120} stroke={theme.palette.text.secondary} tick={{ fontSize: 11 }} />
+                  <RechartsTooltip content={<ChartTooltipContent />} />
+                  <Bar dataKey="revenue" name="Revenue" fill={theme.palette.primary.main} radius={[0, 4, 4, 0]} />
+                </RechartsBarChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+      </Grid>
 
-          {/* Last Updated Info */}
-          <Typography variant="caption" color="text.secondary">
-            Last updated: {lastUpdated.toLocaleString()}
-            {autoRefresh && ' • Auto-refresh: ON (every 5 minutes)'}
-          </Typography>
-        </Box>
+      {/* Rankings */}
+      <Grid item xs={12} md={4}>
+        <Card variant="outlined" sx={{ height: '100%' }}>
+          <CardHeader title={<Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Leaderboard</Typography>} />
+          <CardContent sx={{ p: 0, maxHeight: 420, overflow: 'auto' }}>
+            {performers.slice(0, 10).map((p, i) => (
+              <Box key={p.id} sx={{ px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider', '&:hover': { bgcolor: 'action.hover' } }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
+                  <Avatar sx={{ width: 28, height: 28, fontSize: '0.75rem', bgcolor: i < 3 ? 'primary.main' : 'grey.400' }}>
+                    {i < 3 ? <EmojiEvents sx={{ fontSize: 16 }} /> : i + 1}
+                  </Avatar>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>{p.name}</Typography>
+                    <Typography variant="caption" color="text.secondary">{p.sales} sale{p.sales !== 1 ? 's' : ''} &middot; {p.rate.toFixed(0)}% completion</Typography>
+                  </Box>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', pl: 5.5 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: 'primary.main' }}>{formatCurrency(p.revenue)}</Typography>
+                  <Typography variant="caption" color="text.secondary">Avg: {formatCurrency(p.avg)}</Typography>
+                </Box>
+              </Box>
+            ))}
+          </CardContent>
+        </Card>
+      </Grid>
+    </Grid>
+  );
+};
 
-        {/* Advanced Filters */}
-        <SalesFilters
-          filters={filters}
-          onFilterChange={handleFilterChange}
-          projects={projects}
-          salesTeam={salesTeam}
-          onApplyFilters={applyFilters}
-          onClearFilters={clearFilters}
-          loading={loading}
-        />
+// ---------------------------------------------------------------------------
+// Project Breakdown Tab
+// ---------------------------------------------------------------------------
 
-        {/* Error Alert */}
-        {error && (
-          <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
-            <strong>Error:</strong> {error}
-          </Alert>
-        )}
+const ProjectBreakdownTab = ({ salesData, loading }) => {
+  const theme = useTheme();
 
-        {/* Tab Navigation */}
-        <Paper sx={{ mb: 3 }}>
-          <Tabs value={activeTab} onChange={handleTabChange} aria-label="sales analytics tabs">
-            <Tab label="Overview" />
-            <Tab label="Trends Analysis" />
-            <Tab label="Conversion Funnel" />
-            <Tab label="Team Performance" />
-            <Tab label="Project Breakdown" />
-          </Tabs>
-        </Paper>
+  const projectData = useMemo(() => {
+    const map = {};
+    salesData.forEach(sale => {
+      const id = sale.project?._id || 'unknown';
+      const name = sale.project?.name || 'Unknown Project';
+      if (!map[id]) map[id] = { id, name, sales: 0, revenue: 0, completed: 0 };
+      map[id].sales += 1;
+      map[id].revenue += sale.salePrice || 0;
+      if (sale.status === 'Completed') map[id].completed += 1;
+    });
+    return Object.values(map)
+      .map(p => ({ ...p, avg: p.sales > 0 ? p.revenue / p.sales : 0, fill: CHART_COLORS[Object.keys(map).indexOf(p.id) % CHART_COLORS.length] }))
+      .sort((a, b) => b.revenue - a.revenue);
+  }, [salesData]);
 
-        {/* Tab Content */}
-        <Box>
-          {/* Overview Tab */}
-          {activeTab === 0 && (
-            <Grid container spacing={3}>
-              <Grid item xs={12}>
-                {renderSalesKPIs()}
-              </Grid>
-              <Grid item xs={12} lg={8}>
-                {renderSalesTrends()}
-              </Grid>
-              <Grid item xs={12} lg={4}>
-                {renderSalesFunnel()}
-              </Grid>
-            </Grid>
-          )}
+  if (loading) return <Skeleton variant="rounded" height={400} />;
 
-          {/* Trends Analysis Tab */}
-          {activeTab === 1 && (
-            <Grid container spacing={3}>
-              <Grid item xs={12}>
-                {renderSalesTrends()}
-              </Grid>
-              <Grid item xs={12}>
-                {renderSalesKPIs()}
-              </Grid>
-            </Grid>
-          )}
+  return (
+    <Grid container spacing={3}>
+      {/* Bar chart */}
+      <Grid item xs={12} md={7}>
+        <Card variant="outlined">
+          <CardHeader title={<Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Revenue by Project</Typography>} />
+          <CardContent sx={{ height: 380 }}>
+            {projectData.length === 0 ? (
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                <Typography color="text.secondary">No project data</Typography>
+              </Box>
+            ) : (
+              <ResponsiveContainer>
+                <RechartsBarChart data={projectData.slice(0, 10)}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={alpha(theme.palette.divider, 0.5)} />
+                  <XAxis dataKey="name" stroke={theme.palette.text.secondary} tick={{ fontSize: 11 }} />
+                  <YAxis stroke={theme.palette.text.secondary} tick={{ fontSize: 11 }} />
+                  <RechartsTooltip content={<ChartTooltipContent />} />
+                  <Bar dataKey="revenue" name="Revenue" radius={[4, 4, 0, 0]}>
+                    {projectData.slice(0, 10).map((e, i) => <Cell key={i} fill={e.fill} />)}
+                  </Bar>
+                </RechartsBarChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+      </Grid>
 
-          {/* Conversion Funnel Tab */}
-          {activeTab === 2 && (
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
-                {renderSalesFunnel()}
-              </Grid>
-              <Grid item xs={12} md={6}>
-                {renderProjectBreakdown()}
-              </Grid>
-              <Grid item xs={12}>
-                {renderSalesKPIs()}
-              </Grid>
-            </Grid>
-          )}
+      {/* Pie chart */}
+      <Grid item xs={12} md={5}>
+        <Card variant="outlined" sx={{ height: '100%' }}>
+          <CardHeader title={<Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Revenue Share</Typography>} />
+          <CardContent>
+            {projectData.length === 0 ? (
+              <Box sx={{ textAlign: 'center', py: 4 }}>
+                <Typography color="text.secondary">No data</Typography>
+              </Box>
+            ) : (
+              <>
+                <Box sx={{ height: 220 }}>
+                  <ResponsiveContainer>
+                    <RechartsPieChart>
+                      <Pie data={projectData} cx="50%" cy="50%" outerRadius={80} dataKey="revenue"
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
+                        {projectData.map((e, i) => <Cell key={i} fill={e.fill} />)}
+                      </Pie>
+                      <RechartsTooltip formatter={(v) => formatCurrency(v)} />
+                    </RechartsPieChart>
+                  </ResponsiveContainer>
+                </Box>
+                <Stack spacing={0.75} sx={{ mt: 1 }}>
+                  {projectData.map(p => (
+                    <Box key={p.id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box sx={{ width: 10, height: 10, borderRadius: 0.5, bgcolor: p.fill }} />
+                        <Typography variant="caption">{p.name}</Typography>
+                      </Box>
+                      <Typography variant="caption" sx={{ fontWeight: 600 }}>{formatCurrency(p.revenue)}</Typography>
+                    </Box>
+                  ))}
+                </Stack>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </Grid>
+    </Grid>
+  );
+};
 
-          {/* Team Performance Tab */}
-          {activeTab === 3 && (
-            <Grid container spacing={3}>
-              <Grid item xs={12}>
-                {renderTeamPerformance()}
-              </Grid>
-            </Grid>
-          )}
+// ---------------------------------------------------------------------------
+// Main Page
+// ---------------------------------------------------------------------------
 
-          {/* Project Breakdown Tab */}
-          {activeTab === 4 && (
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
-                {renderProjectBreakdown()}
-              </Grid>
-              <Grid item xs={12} md={6}>
-                {renderSalesFunnel()}
-              </Grid>
-              <Grid item xs={12}>
-                {renderSalesKPIs()}
-              </Grid>
-            </Grid>
-          )}
-        </Box>
+const SalesAnalytics = () => {
+  const navigate = useNavigate();
+  const { canAccess } = useAuth();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const [activeTab, setActiveTab] = useState(0);
+  const [salesData, setSalesData] = useState([]);
+  const [apiStats, setApiStats] = useState(null);
+  const [projects, setProjects] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
+
+  const [filters, setFilters] = useState({
+    search: '',
+    period: searchParams.get('period') || 'all',
+    project: searchParams.get('project') || '',
+    salesperson: searchParams.get('salesperson') || '',
+  });
+
+  const canView = canAccess?.salesReports ? canAccess.salesReports() : true;
+
+  // ---------------------------------------------------------------------------
+  // Fetch data
+  // ---------------------------------------------------------------------------
+
+  const fetchData = useCallback(async (showRefreshing = false) => {
+    try {
+      if (showRefreshing) setRefreshing(true);
+      setError(null);
+
+      const dateRange = generateDateRange(filters.period);
+      const queryParams = {
+        limit: 1000,
+        project: filters.project || undefined,
+        salesperson: filters.salesperson || undefined,
+        dateFrom: dateRange.startDate?.toISOString() || undefined,
+        dateTo: dateRange.endDate?.toISOString() || undefined,
+        sortBy: 'bookingDate',
+        sortOrder: 'desc',
+      };
+      Object.keys(queryParams).forEach(k => queryParams[k] === undefined && delete queryParams[k]);
+
+      const [salesResult, projectsResult, usersResult] = await Promise.allSettled([
+        salesAPI.getSales(queryParams),
+        projectAPI.getProjects(),
+        canAccess?.userManagement?.() ? userAPI.getUsers() : Promise.resolve({ data: { data: [] } }),
+      ]);
+
+      if (salesResult.status === 'fulfilled') {
+        const resp = salesResult.value.data;
+        setSalesData(resp.data || []);
+        setApiStats(resp.stats || null);
+      } else {
+        setSalesData([]);
+        setApiStats(null);
+      }
+
+      if (projectsResult.status === 'fulfilled') {
+        const d = projectsResult.value.data?.data || projectsResult.value.data || [];
+        setProjects(Array.isArray(d) ? d : []);
+      }
+
+      if (usersResult.status === 'fulfilled') {
+        const raw = usersResult.value.data?.data;
+        const d = raw?.users || raw || [];
+        setUsers(Array.isArray(d) ? d : []);
+      }
+
+      setLoading(false);
+    } catch (err) {
+      setError('Failed to load analytics data. Please try again.');
+      setLoading(false);
+    } finally {
+      if (showRefreshing) setRefreshing(false);
+    }
+  }, [filters.period, filters.project, filters.salesperson, canAccess]);
+
+  useEffect(() => { if (canView) fetchData(); }, [fetchData, canView]);
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (filters.period && filters.period !== 'all') params.set('period', filters.period);
+    if (filters.project) params.set('project', filters.project);
+    if (filters.salesperson) params.set('salesperson', filters.salesperson);
+    setSearchParams(params, { replace: true });
+  }, [filters.period, filters.project, filters.salesperson, setSearchParams]);
+
+  // ---------------------------------------------------------------------------
+  // Handlers
+  // ---------------------------------------------------------------------------
+
+  const handleFilterChange = (key, value) => setFilters(prev => ({ ...prev, [key]: value }));
+  const clearFilters = () => setFilters({ search: '', period: 'all', project: '', salesperson: '' });
+
+  // Search filter (client-side)
+  const filteredSales = useMemo(() => {
+    if (!filters.search) return salesData;
+    const q = filters.search.toLowerCase();
+    return salesData.filter(s =>
+      getSalespersonName(s).toLowerCase().includes(q) ||
+      (s.project?.name || '').toLowerCase().includes(q) ||
+      (s.unit?.unitNumber || '').toLowerCase().includes(q) ||
+      (s.lead?.firstName || '').toLowerCase().includes(q) ||
+      (s.lead?.lastName || '').toLowerCase().includes(q)
+    );
+  }, [salesData, filters.search]);
+
+  // KPIs
+  const totalSales = filteredSales.length || apiStats?.totalSales || 0;
+  const totalRevenue = filteredSales.reduce((s, sale) => s + (sale.salePrice || 0), 0) || apiStats?.totalRevenue || 0;
+  const avgValue = totalSales > 0 ? totalRevenue / totalSales : apiStats?.averageSaleValue || 0;
+  const completedCount = filteredSales.filter(s => s.status === 'Completed').length;
+  const completionRate = totalSales > 0 ? ((completedCount / totalSales) * 100).toFixed(1) : '0';
+
+  // Top project
+  const topProject = useMemo(() => {
+    const map = {};
+    filteredSales.forEach(s => {
+      const name = s.project?.name || 'Unknown';
+      map[name] = (map[name] || 0) + (s.salePrice || 0);
+    });
+    const entries = Object.entries(map).sort((a, b) => b[1] - a[1]);
+    return entries.length > 0 ? entries[0][0] : '-';
+  }, [filteredSales]);
+
+  // Top salesperson
+  const topSalesperson = useMemo(() => {
+    const map = {};
+    filteredSales.forEach(s => {
+      const name = getSalespersonName(s);
+      map[name] = (map[name] || 0) + (s.salePrice || 0);
+    });
+    const entries = Object.entries(map).sort((a, b) => b[1] - a[1]);
+    return entries.length > 0 ? entries[0][0] : '-';
+  }, [filteredSales]);
+
+  // FilterBar config
+  const salespeople = users.filter(u => u.role?.includes('Sales'));
+  const filterConfig = [
+    { key: 'search', type: 'search', label: 'Search', placeholder: 'Search sales...' },
+    { key: 'period', type: 'select', label: 'Period', options: TIME_PERIODS },
+    { key: 'project', type: 'select', label: 'Project', options: projects.map(p => ({ value: p._id, label: p.name })) },
+    ...(salespeople.length > 0 ? [{
+      key: 'salesperson', type: 'select', label: 'Salesperson',
+      options: salespeople.map(u => ({ value: u._id, label: `${u.firstName} ${u.lastName}` })),
+    }] : []),
+  ];
+
+  // ---------------------------------------------------------------------------
+  // Permission guard
+  // ---------------------------------------------------------------------------
+
+  if (!canView) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error">You don't have permission to view sales analytics.</Alert>
       </Box>
-    </LocalizationProvider>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
+
+  return (
+    <Box>
+      <PageHeader
+        title="Sales Analytics"
+        subtitle="Performance insights and trends"
+        icon={Analytics}
+        actions={
+          <Tooltip title="Refresh">
+            <IconButton onClick={() => fetchData(true)} disabled={refreshing}>
+              <Refresh />
+            </IconButton>
+          </Tooltip>
+        }
+      />
+
+      {refreshing && <LinearProgress sx={{ mb: 2, borderRadius: 1 }} />}
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>
+      )}
+
+      {/* KPI Cards */}
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        <Grid item xs={6} sm={4} md={2}>
+          <KPICard title="Total Sales" value={totalSales} icon={Assessment} color="primary" loading={loading} />
+        </Grid>
+        <Grid item xs={6} sm={4} md={2}>
+          <KPICard title="Revenue" value={formatCurrency(totalRevenue)} icon={MonetizationOn} color="success" loading={loading} />
+        </Grid>
+        <Grid item xs={6} sm={4} md={2}>
+          <KPICard title="Avg Deal" value={formatCurrency(avgValue)} icon={TrendingUp} color="info" loading={loading} />
+        </Grid>
+        <Grid item xs={6} sm={4} md={2}>
+          <KPICard title="Completion" value={`${completionRate}%`} icon={CheckCircle} color="warning" loading={loading} />
+        </Grid>
+        <Grid item xs={6} sm={4} md={2}>
+          <KPICard title="Top Project" value={topProject} icon={Business} color="secondary" loading={loading} />
+        </Grid>
+        <Grid item xs={6} sm={4} md={2}>
+          <KPICard title="Top Seller" value={topSalesperson} icon={EmojiEvents} color="primary" loading={loading} />
+        </Grid>
+      </Grid>
+
+      {/* Filters */}
+      <FilterBar
+        filters={filterConfig}
+        values={filters}
+        onChange={handleFilterChange}
+        onClear={clearFilters}
+      />
+
+      {/* Analytics Tabs */}
+      <Card variant="outlined" sx={{ mt: 1 }}>
+        <Tabs
+          value={activeTab}
+          onChange={(e, v) => setActiveTab(v)}
+          variant={isMobile ? 'fullWidth' : 'standard'}
+          sx={{ borderBottom: '1px solid', borderColor: 'divider', px: 2 }}
+        >
+          <Tab label="Overview" sx={{ textTransform: 'none', fontWeight: 600 }} />
+          <Tab label="Team Performance" sx={{ textTransform: 'none', fontWeight: 600 }} />
+          <Tab label="Projects" sx={{ textTransform: 'none', fontWeight: 600 }} />
+        </Tabs>
+
+        <Box sx={{ p: { xs: 2, md: 3 } }}>
+          {activeTab === 0 && (
+            <OverviewTab salesData={filteredSales} period={filters.period} loading={loading} />
+          )}
+          {activeTab === 1 && (
+            <TeamPerformanceTab salesData={filteredSales} loading={loading} />
+          )}
+          {activeTab === 2 && (
+            <ProjectBreakdownTab salesData={filteredSales} loading={loading} />
+          )}
+        </Box>
+      </Card>
+    </Box>
   );
 };
 
