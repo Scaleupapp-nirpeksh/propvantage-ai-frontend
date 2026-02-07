@@ -4,7 +4,7 @@
 // Location: src/pages/sales/CommissionDetailPage.js
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
   Grid,
@@ -28,12 +28,10 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Divider,
   List,
   ListItem,
   ListItemText,
   ListItemIcon,
-  ListItemSecondaryAction,
   Tabs,
   Tab,
   Dialog,
@@ -41,18 +39,11 @@ import {
   DialogContent,
   DialogActions,
   DialogContentText,
-  TextField,
   Snackbar,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   Breadcrumbs,
   Link,
-  Badge,
-  Tooltip,
   Menu,
   MenuItem,
-  ListItemButton,
 } from '@mui/material';
 
 // Timeline components from @mui/lab
@@ -78,33 +69,22 @@ import {
   Assignment,
   CalendarToday,
   AccountBalanceWallet,
-  TrendingUp,
-  Warning,
   Error as ErrorIcon,
   Info,
   Timeline as TimelineIcon,
-  Receipt,
   Download,
   Print,
-  Share,
   MoreVert,
-  Visibility,
   History,
   Calculate,
-  AccountBalance,
   Phone,
   Email,
-  LocationOn,
   Home,
   ChevronRight,
-  ExpandMore,
   MonetizationOn,
   PendingActions,
   Handshake,
-  EventNote,
-  Description,
-  Analytics,
-  Settings, // Added missing Settings icon
+  Settings,
 } from '@mui/icons-material';
 
 import { useAuth } from '../../context/AuthContext';
@@ -839,10 +819,9 @@ const CommissionActions = ({
 const CommissionDetailPage = () => {
   const { commissionId } = useParams();
   const navigate = useNavigate();
-  const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const { user, canAccess } = useAuth();
+  const { canAccess } = useAuth();
 
   // ============================================================================
   // STATE MANAGEMENT
@@ -956,6 +935,7 @@ const CommissionDetailPage = () => {
       default:
         console.log('Unknown action:', action);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [commission, navigate, commissionId]);
 
   /**

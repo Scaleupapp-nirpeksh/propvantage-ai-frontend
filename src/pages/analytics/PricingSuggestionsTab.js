@@ -42,22 +42,14 @@ import {
   Paper,
   Stack,
   Divider,
-  Badge,
   ButtonGroup,
-  Collapse,
-  LinearProgress,
-  CircularProgress,
   Skeleton,
-  useTheme,
-  useMediaQuery,
-  Fab,
   Zoom,
   List,
   ListItem,
   ListItemText,
 } from '@mui/material';
 import {
-  AttachMoney,
   TrendingUp,
   TrendingDown,
   Edit,
@@ -67,32 +59,9 @@ import {
   FilterList,
   Clear,
   Search,
-  Sort,
-  SwapVert,
   CheckCircle,
-  Warning,
-  Error,
   Info,
-  Refresh,
-  GetApp,
-  Upload,
-  ExpandMore,
-  ExpandLess,
-  Settings,
-  Analytics,
-  Assessment,
   Business,
-  Home,
-  Apartment,
-  LocationCity,
-  Speed,
-  PriceChange,
-  AutoGraph,
-  Timeline,
-  ShowChart,
-  TableChart,
-  ViewList,
-  GridView,
 } from '@mui/icons-material';
 import { budgetHelpers } from '../../services/budgetAPI';
 
@@ -296,7 +265,6 @@ const PricingTableRow = ({
   onSaveEdit,
   onCancelEdit,
 }) => {
-  const theme = useTheme();
   const statusConfig = getPriceChangeStatus(unit.priceIncrease || 0);
   const isEditing = editingUnit === (unit.unitNumber || unit.unitId);
   
@@ -714,9 +682,6 @@ const PricingSuggestionsTab = ({
   onPriceUpdate,
   onBulkPriceUpdate,
 }) => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  
   // =============================================================================
   // LOCAL STATE
   // =============================================================================
@@ -803,9 +768,11 @@ const PricingSuggestionsTab = ({
         case 'high_increase':
           filtered = filtered.filter(suggestion => (suggestion.priceIncrease || 0) > 15);
           break;
+        default:
+          break;
       }
     }
-    
+
     // Apply floor filter
     if (filters.floor !== 'All Floors') {
       switch (filters.floor) {
@@ -822,10 +789,12 @@ const PricingSuggestionsTab = ({
           filtered = filtered.filter(suggestion => suggestion.floor >= 8);
           break;
         case 'Penthouse':
-          filtered = filtered.filter(suggestion => 
-            (suggestion.unitType || '').toLowerCase().includes('penthouse') || 
+          filtered = filtered.filter(suggestion =>
+            (suggestion.unitType || '').toLowerCase().includes('penthouse') ||
             suggestion.floor === 'Penthouse'
           );
+          break;
+        default:
           break;
       }
     }

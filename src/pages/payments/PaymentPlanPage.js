@@ -5,8 +5,8 @@
  * Location: src/pages/payments/PaymentPlanPage.js
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
   Grid,
@@ -30,7 +30,6 @@ import {
   TableRow,
   Paper,
   Avatar,
-  Divider,
   Alert,
   CircularProgress,
   Stack,
@@ -44,23 +43,12 @@ import {
   Tabs,
   Tab,
   LinearProgress,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   Tooltip,
-  Badge,
   Snackbar,
   InputAdornment,
-  FormHelperText,
   Stepper,
   Step,
   StepLabel,
-  StepContent,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
-  ListItemSecondaryAction,
   Fab,
 } from '@mui/material';
 import {
@@ -68,40 +56,20 @@ import {
   Payment,
   Add,
   Edit,
-  Delete,
   Save,
   Cancel,
   CheckCircle,
   Schedule,
-  Warning,
   Receipt,
-  AttachMoney,
   AccountBalance,
-  Timeline,
   Assessment,
-  Calculate,
   Refresh,
   Print,
-  Download,
-  Email,
-  Phone,
-  ExpandMore,
-  PlayArrow,
-  Pause,
-  Stop,
-  Info,
-  History,
-  CreditCard,
-  AccountBalanceWallet,
   MonetizationOn,
   TrendingUp,
   CalendarToday,
-  PieChart,
   BarChart,
   Visibility,
-  VisibilityOff,
-  Settings,
-  Build,
   ArrowForward,
   Clear,
 } from '@mui/icons-material';
@@ -176,6 +144,7 @@ const CreatePaymentPlan = ({
     if (sale && open) {
       loadPaymentTemplates();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sale, open]);
 
   const loadPaymentTemplates = async () => {
@@ -1178,8 +1147,8 @@ const InstallmentsManagement = ({ saleId, paymentPlan, installments, onRefresh }
 
 const PaymentTransactions = ({ saleId, paymentPlan, transactions, onRefresh }) => {
   const [addPaymentDialog, setAddPaymentDialog] = useState(false);
-  const [editTransactionDialog, setEditTransactionDialog] = useState({ open: false, transaction: null });
-  const [verifyDialog, setVerifyDialog] = useState({ open: false, transaction: null });
+  const [, setEditTransactionDialog] = useState({ open: false, transaction: null });
+  const [, setVerifyDialog] = useState({ open: false, transaction: null });
   const [paymentForm, setPaymentForm] = useState({
     amount: 0,
     paymentDate: new Date(),
@@ -1488,8 +1457,7 @@ const PaymentTransactions = ({ saleId, paymentPlan, transactions, onRefresh }) =
 const PaymentPlanPage = () => {
   const { saleId } = useParams();
   const navigate = useNavigate();
-  const location = useLocation();
-  const { user, hasPermission } = useAuth();
+  const { hasPermission } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -1580,12 +1548,6 @@ const PaymentPlanPage = () => {
   // Handle refresh
   const handleRefresh = () => {
     loadData(true);
-  };
-
-  // Handle plan created
-  const handlePlanCreated = () => {
-    loadData(true);
-    setActiveTab(0); // Switch to overview tab
   };
 
   if (!canViewPayments) {

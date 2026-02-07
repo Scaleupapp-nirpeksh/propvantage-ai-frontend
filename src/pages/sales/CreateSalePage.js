@@ -5,7 +5,7 @@
  * Location: src/pages/sales/CreateSalePage.js
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Box,
@@ -35,11 +35,6 @@ import {
   Alert,
   CircularProgress,
   LinearProgress,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  DialogContentText,
   IconButton,
   Tooltip,
   Stack,
@@ -72,40 +67,26 @@ import {
   Calculate,
   Person,
   Home,
-  AttachMoney,
-  Percent,
   Check,
   Warning,
   Info,
-  AccountBalance,
   Print,
   Email,
-  WhatsApp,
   Refresh,
   ViewModule,
   ViewList,
   Phone,
-  LocationOn,
-  Business,
   CheckCircle,
   Cancel,
-  Edit,
-  Bed,
   Star,
   ExpandMore,
-  Schedule,
   Assessment,
-  TrendingUp,
   Payment,
-  CalendarToday,
-  PieChart,
-  ShowChart,
   Download,
-  Timeline,
 } from '@mui/icons-material';
 
 import { useAuth } from '../../context/AuthContext';
-import { projectAPI, unitAPI, leadAPI, pricingAPI, salesAPI, projectPaymentAPI } from '../../services/api';
+import { projectAPI, unitAPI, leadAPI, salesAPI, projectPaymentAPI } from '../../services/api';
 import { formatCurrency, formatDate, formatPhoneNumber, formatPercentage } from '../../utils/formatters';
 
 // ============================================================================
@@ -298,10 +279,6 @@ const getCustomerDisplayName = (customer) => {
   return fullName || customer.email || customer.phone || 'Unknown Customer';
 };
 
-const getUnitDisplayName = (unit) => {
-  if (!unit) return 'Unknown Unit';
-  return unit.unitNumber || unit.fullAddress || unit.name || 'Unknown Unit';
-};
 
 // FIXED: Enhanced project resolution function
 const getProjectInfo = (projectId, projects) => {
@@ -1261,9 +1238,7 @@ const EnhancedCostSheet = ({
 }) => {
   const [activeTab, setActiveTab] = useState(0);
   const [costComponents, setCostComponents] = useState({});
-  const [customizations, setCustomizations] = useState({});
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [previewMode, setPreviewMode] = useState('detailed');
 
   // FIXED: Get project using proper resolution
   const project = getUnitProject(selectedUnit, projects);
@@ -1273,6 +1248,7 @@ const EnhancedCostSheet = ({
     if (selectedUnit && project) {
       initializeCostComponents();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedUnit, project]);
 
   const initializeCostComponents = () => {
@@ -1857,7 +1833,7 @@ const PaymentPlanSelection = ({
 }) => {
   const [paymentTemplates, setPaymentTemplates] = useState([]);
   const [templatesLoading, setTemplatesLoading] = useState(false);
-  const [customPlan, setCustomPlan] = useState(null);
+  // eslint-disable-next-line no-unused-vars
   const [showCustomPlan, setShowCustomPlan] = useState(false);
 
   // FIXED: Get project using proper resolution
@@ -1869,14 +1845,15 @@ const PaymentPlanSelection = ({
       console.log('🔄 Loading payment templates for project:', project.name, 'ID:', project._id);
       loadPaymentTemplates();
     } else {
-      console.log('⚠️ Cannot load payment templates - missing unit or project:', { 
-        hasUnit: !!selectedUnit, 
+      console.log('⚠️ Cannot load payment templates - missing unit or project:', {
+        hasUnit: !!selectedUnit,
         hasProject: !!project,
         unitProject: selectedUnit?.project,
-        resolvedProject: project?.name 
+        resolvedProject: project?.name
       });
       setPaymentTemplates([]);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedUnit, project]);
 
   const loadPaymentTemplates = async () => {
@@ -2764,7 +2741,7 @@ const EnhancedReviewAndBook = ({
 
 const CreateSalePage = () => {
   const navigate = useNavigate();
-  const { user, hasPermission } = useAuth();
+  const { hasPermission } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [searchParams] = useSearchParams();

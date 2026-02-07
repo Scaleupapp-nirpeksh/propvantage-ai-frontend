@@ -28,17 +28,10 @@ import {
   Tabs,
   Breadcrumbs,
   Link,
-  LinearProgress,
   List,
   ListItem,
   ListItemAvatar,
   Divider,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -47,8 +40,6 @@ import {
   FormControl,
   InputLabel,
   Select,
-  useTheme,
-  useMediaQuery,
   Fab,
 } from '@mui/material';
 import {
@@ -61,32 +52,20 @@ import {
   Schedule,
   Assignment,
   Person,
-  Business,
   LocationOn,
-  AttachMoney,
   Star,
-  StarBorder,
   TrendingUp,
-  TrendingDown,
-  Warning,
   CheckCircle,
-  AccessTime,
   Message,
   Event,
-  Visibility,
   Psychology,
   Analytics,
   History,
-  Settings,
   Call,
   Send,
   Add,
   NavigateNext,
-  Info,
-  PriorityHigh,
-  Source,
   Home,
-  Timeline,
   ContactPhone,
   InsertComment,
   Refresh,
@@ -94,8 +73,6 @@ import {
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { useSnackbar } from 'notistack';
-
 import { useAuth } from '../../context/AuthContext';
 import { leadAPI, aiAPI } from '../../services/api';
 
@@ -642,10 +619,11 @@ const AIInsights = ({ lead }) => {
       
       // FIXED: Provide fallback insights even when AI fails
       setInsights(generateFallbackInsights(lead));
-      
+
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lead._id]);
 
   // FIXED: Generate fallback insights based on lead data
@@ -1251,8 +1229,6 @@ const FollowUpManagement = ({ lead, onRefresh }) => {
 const LeadDetailPage = () => {
   const { leadId } = useParams();
   const navigate = useNavigate();
-  const { canAccess } = useAuth();
-  const { enqueueSnackbar } = useSnackbar();
 
   // State management
   const [lead, setLead] = useState(null);

@@ -1183,7 +1183,7 @@ export const logout = () => {
 // =============================================================================
 
 // Default export with all APIs - ENHANCED
-export default {
+const apiServices = {
   // Existing APIs (ENHANCED)
   auth: authAPI,
   user: userAPI, // ENHANCED with new endpoints
@@ -1207,10 +1207,10 @@ export default {
   contractor: contractorAPI,
   system: systemAPI,
   invoice: invoiceAPI,
-  
+
   // NEW for Phase 1
   realTime: realTimeAPI,
-  
+
   // Utilities (ENHANCED with new invitation utils)
   utils: {
     analytics: analyticsUtils, // NEW
@@ -1218,3 +1218,5 @@ export default {
     error: handleAPIError, // EXISTING
   },
 };
+
+export default apiServices;

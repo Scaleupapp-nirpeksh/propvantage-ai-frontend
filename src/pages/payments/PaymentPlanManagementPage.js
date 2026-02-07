@@ -6,7 +6,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import {
   Box,
   Grid,
@@ -39,20 +39,13 @@ import {
   Alert,
   CircularProgress,
   LinearProgress,
-  Tooltip,
   Stack,
   Avatar,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   Menu,
   ListItemIcon,
   ListItemText,
   Divider,
-  useTheme,
-  useMediaQuery,
   Snackbar,
-  Badge,
   FormHelperText,
 } from '@mui/material';
 import {
@@ -69,30 +62,19 @@ import {
   Search,
   Clear,
   Save,
-  Cancel,
   CheckCircle,
-  Warning,
-  Info,
   TrendingUp,
-  TrendingDown,
-  AttachMoney,
-  Schedule,
   Assessment,
-  ExpandMore,
   ArrowBack,
-  ContentCopy,
-  Print,
-  Email,
   ArrowForward,
   BusinessCenter,
   LocationOn,
   Error as ErrorIcon,
 } from '@mui/icons-material';
 
-import { useAuth } from '../../context/AuthContext';
 // CORRECTED: Import the actual APIs from our corrected api.js
-import api, { projectPaymentAPI, paymentAPI, projectAPI } from '../../services/api';
-import { formatCurrency, formatDate, formatDateTime } from '../../utils/formatters';
+import { projectPaymentAPI, paymentAPI, projectAPI } from '../../services/api';
+import { formatCurrency, formatDate } from '../../utils/formatters';
 
 // ============================================================================
 // UTILITY FUNCTIONS
@@ -354,8 +336,10 @@ const TemplateWizard = ({ open, onClose, template = null, preSelectedProject, on
           newErrors.lateFeeRate = 'Late fee rate cannot be negative';
         }
         break;
+      default:
+        break;
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -386,8 +370,8 @@ const TemplateWizard = ({ open, onClose, template = null, preSelectedProject, on
         }
       };
 
-      const response = await projectAPI.updateProject(selectedProject._id, updatePayload);
-      
+      await projectAPI.updateProject(selectedProject._id, updatePayload);
+
       // Update local project data
       const updatedProject = { ...selectedProject, ...updatePayload };
       setSelectedProject(updatedProject);
@@ -1155,6 +1139,8 @@ const TemplateCard = ({ template, onEdit, onDelete, onPreview }) => {
       case 'delete':
         onDelete(template._id);
         break;
+      default:
+        break;
     }
   };
 
@@ -1288,10 +1274,6 @@ const TemplateCard = ({ template, onEdit, onDelete, onPreview }) => {
 // ============================================================================
 
 const PaymentPlanManagementPage = () => {
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [searchParams, setSearchParams] = useSearchParams();
 
   // State management
@@ -1300,7 +1282,7 @@ const PaymentPlanManagementPage = () => {
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [templatesLoading, setTemplatesLoading] = useState(false);
-  const [paymentStats, setPaymentStats] = useState({});
+  const [, setPaymentStats] = useState({});
   const [error, setError] = useState(null);
 
   // Filter and search states

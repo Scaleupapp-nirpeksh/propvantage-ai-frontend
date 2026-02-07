@@ -20,17 +20,10 @@ import {
   Paper,
   Alert,
   CircularProgress,
-  Divider,
-  Chip,
-  Stack,
   Breadcrumbs,
   Link,
   InputAdornment,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   FormControlLabel,
-  Switch,
   Stepper,
   Step,
   StepLabel,
@@ -40,14 +33,9 @@ import {
 import {
   ArrowBack,
   Business,
-  Domain,
   Home,
   NavigateNext,
   Save,
-  ExpandMore,
-  Villa,
-  Apartment,
-  Info,
   CheckCircle,
 } from '@mui/icons-material';
 
@@ -128,7 +116,7 @@ const CreateUnitBreadcrumbs = ({ project, tower, isVillaProject }) => {
 const CreateUnitPage = () => {
   const { projectId, towerId } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  useAuth();
 
   // Determine if this is a villa project (no towerId)
   const isVillaProject = !towerId;
@@ -207,6 +195,7 @@ const CreateUnitPage = () => {
     if (projectId) {
       fetchProjectData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, towerId]);
 
   const fetchProjectData = async () => {
@@ -340,6 +329,7 @@ const CreateUnitPage = () => {
         }
       }));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.parking.covered, formData.parking.open]);
 
   // Auto-update corner unit based on unit number

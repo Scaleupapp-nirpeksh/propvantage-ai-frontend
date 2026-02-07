@@ -16,7 +16,7 @@
  * - Responsive design for all screen sizes
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -27,36 +27,21 @@ import {
   Typography,
   Button,
   IconButton,
-  Avatar,
   Chip,
   Stack,
   Alert,
   CircularProgress,
   useTheme,
-  useMediaQuery,
   Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   LinearProgress,
   Tooltip,
   Badge,
-  Divider,
   List,
   ListItem,
   ListItemText,
   ListItemIcon,
   ListItemSecondaryAction,
-  Fab,
-  Menu,
   MenuItem,
-  ListItemButton,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   FormControl,
   InputLabel,
   Select,
@@ -64,15 +49,10 @@ import {
 } from '@mui/material';
 
 import {
-  Dashboard,
   AccountBalance,
   TrendingUp,
-  TrendingDown,
-  AttachMoney,
-  Schedule,
   Warning,
   CheckCircle,
-  Error as ErrorIcon,
   Refresh,
   Add,
   Visibility,
@@ -85,23 +65,12 @@ import {
   CreditCard,
   PieChart,
   BarChart,
-  ShowChart,
   CalendarToday,
   Phone,
-  Email,
-  Print,
-  Download,
-  FilterList,
-  MoreVert,
-  NotificationsActive,
-  PendingActions,
   Today,
-  DateRange,
   ArrowUpward,
   ArrowDownward,
-  ExpandMore,
   Assignment,
-  Info,
   Speed,
 } from '@mui/icons-material';
 
@@ -112,40 +81,6 @@ import { formatCurrency, formatDate, formatDateTime, formatPercentage } from '..
 // ============================================================================
 // CONSTANTS AND CONFIGURATIONS
 // ============================================================================
-
-/**
- * Payment status configurations with colors, icons, and descriptions
- */
-const PAYMENT_STATUS_CONFIG = {
-  pending: { 
-    label: 'Pending', 
-    color: 'warning', 
-    icon: Schedule,
-    bgColor: '#fff3cd',
-    description: 'Payment scheduled but not yet received'
-  },
-  completed: { 
-    label: 'Completed', 
-    color: 'success', 
-    icon: CheckCircle,
-    bgColor: '#d4edda',
-    description: 'Payment successfully received and cleared'
-  },
-  overdue: { 
-    label: 'Overdue', 
-    color: 'error', 
-    icon: Warning,
-    bgColor: '#f8d7da',
-    description: 'Payment past due date'
-  },
-  cleared: { 
-    label: 'Cleared', 
-    color: 'info', 
-    icon: AccountBalanceWallet,
-    bgColor: '#d1ecf1',
-    description: 'Payment cleared and verified'
-  },
-};
 
 /**
  * Payment method configurations for display
@@ -211,15 +146,6 @@ const TIME_PERIODS = [
 // ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================
-
-/**
- * Gets payment status configuration
- * @param {string} status - Payment status
- * @returns {Object} Status configuration
- */
-const getPaymentStatusConfig = (status) => {
-  return PAYMENT_STATUS_CONFIG[status] || PAYMENT_STATUS_CONFIG.pending;
-};
 
 /**
  * Gets payment method configuration
@@ -726,7 +652,6 @@ const PaymentAnalyticsSection = ({ statistics, loading }) => {
  */
 const QuickActionsSection = () => {
   const navigate = useNavigate();
-  const { canAccess } = useAuth();
 
   const handleActionClick = (action) => {
     navigate(action.path);
@@ -780,10 +705,7 @@ const QuickActionsSection = () => {
  * Provides comprehensive overview of payment system with real-time data
  */
 const PaymentDashboardPage = () => {
-  const navigate = useNavigate();
-  const { user, canAccess } = useAuth();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const { canAccess } = useAuth();
 
   // ============================================================================
   // STATE MANAGEMENT

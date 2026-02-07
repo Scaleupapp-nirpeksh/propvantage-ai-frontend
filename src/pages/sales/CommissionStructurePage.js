@@ -4,7 +4,6 @@
 // Location: src/pages/sales/CommissionStructurePage.js
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Box,
   Grid,
@@ -27,13 +26,6 @@ import {
   useTheme,
   useMediaQuery,
   Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TablePagination,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -43,26 +35,13 @@ import {
   InputAdornment,
   Switch,
   FormControlLabel,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   Tabs,
   Tab,
   Divider,
-  List,
-  ListItem,
   ListItemText,
   ListItemIcon,
-  ListItemSecondaryAction,
-  Tooltip,
-  Badge,
-  Stepper,
-  Step,
-  StepLabel,
-  StepContent,
   Fab,
   Menu,
-  ListItemButton,
 } from '@mui/material';
 import {
   Add,
@@ -74,34 +53,11 @@ import {
   CheckCircle,
   Cancel,
   Warning,
-  Info,
-  Calculate,
-  TrendingUp,
-  AttachMoney,
-  Percent,
-  Timeline,
-  Business,
-  Person,
-  Assessment,
   Save,
-  Clear,
-  Preview,
-  FileCopy,
-  Archive,
-  Restore,
-  ExpandMore,
   Close,
   PlayArrow,
   Stop,
   Refresh,
-  Download,
-  Upload,
-  Help,
-  AccountBalance,
-  Receipt,
-  MonetizationOn,
-  Assignment,
-  Group,
 } from '@mui/icons-material';
 
 import { useAuth } from '../../context/AuthContext';
@@ -132,14 +88,6 @@ const UNIT_TYPES = [
   { value: 'Other', label: 'Other' },
 ];
 
-// Performance tier options
-const PERFORMANCE_TIERS = [
-  { value: 'bronze', label: 'Bronze', minSales: 0, maxSales: 5 },
-  { value: 'silver', label: 'Silver', minSales: 6, maxSales: 10 },
-  { value: 'gold', label: 'Gold', minSales: 11, maxSales: 20 },
-  { value: 'platinum', label: 'Platinum', minSales: 21, maxSales: null },
-];
-
 // Deduction types
 const DEDUCTION_TYPES = [
   { value: 'tds', label: 'TDS (Tax Deducted at Source)', defaultRate: 10 },
@@ -147,13 +95,6 @@ const DEDUCTION_TYPES = [
   { value: 'processing_fee', label: 'Processing Fee', defaultRate: 1 },
   { value: 'admin_fee', label: 'Administrative Fee', defaultRate: 0.5 },
 ];
-
-// Form validation rules
-const VALIDATION_RULES = {
-  structureName: { required: true, minLength: 3, maxLength: 100 },
-  commissionRate: { required: true, min: 0, max: 100 },
-  description: { maxLength: 500 },
-};
 
 // ============================================================================
 // UTILITY FUNCTIONS
@@ -1028,10 +969,9 @@ const CommissionPreviewDialog = ({ open, onClose, structure }) => {
  * Comprehensive commission structure management with creation, editing, and preview
  */
 const CommissionStructurePage = () => {
-  const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const { user, canAccess } = useAuth();
+  const { canAccess } = useAuth();
 
   // ============================================================================
   // STATE MANAGEMENT

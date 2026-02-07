@@ -16,60 +16,38 @@ import {
   IconButton,
   Avatar,
   Chip,
-  Stack,
   Alert,
   CircularProgress,
   useTheme,
-  useMediaQuery,
-  Paper,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  LinearProgress,
   Tooltip,
-  Badge,
-  Divider,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
-  ListItemSecondaryAction,
 } from '@mui/material';
 import {
-  Dashboard,
   TrendingUp,
   TrendingDown,
-  AttachMoney,
   Assignment,
   CheckCircle,
   Schedule,
   Warning,
   Error as ErrorIcon,
-  Handshake,
   AccountBalanceWallet,
   Assessment,
-  People,
   MonetizationOn,
   PendingActions,
   Visibility,
-  Edit,
-  Payment,
-  Analytics,
   Refresh,
-  Add,
   Settings,
-  Timeline,
-  FilterList,
   ArrowForward,
-  AccountBalance,
 } from '@mui/icons-material';
 
 import { useAuth } from '../../context/AuthContext';
 import { commissionAPI } from '../../services/api';
-import { formatCurrency, formatDate, formatDateTime } from '../../utils/formatters';
+import { formatCurrency, formatDate } from '../../utils/formatters';
 
 // ============================================================================
 // CONSTANTS AND CONFIGURATIONS
@@ -195,7 +173,6 @@ const MetricCard = ({
   color = 'primary',
   isLoading = false 
 }) => {
-  const theme = useTheme();
   const TrendIcon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : null;
 
   return (
@@ -417,9 +394,7 @@ const RecentCommissionsTable = ({ commissions, onNavigate, isLoading }) => {
  */
 const CommissionDashboardPage = () => {
   const navigate = useNavigate();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const { user, canAccess } = useAuth();
+  const { canAccess } = useAuth();
 
   // ============================================================================
   // STATE MANAGEMENT

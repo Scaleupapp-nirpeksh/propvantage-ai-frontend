@@ -33,8 +33,6 @@ import {
   Alert,
   CircularProgress,
   useTheme,
-  useMediaQuery,
-  Paper,
   Table,
   TableBody,
   TableCell,
@@ -45,81 +43,42 @@ import {
   Tooltip,
   Badge,
   Divider,
-  List,
-  ListItem,
   ListItemText,
   ListItemIcon,
-  ListItemSecondaryAction,
   Menu,
   MenuItem,
-  ListItemButton,
   Checkbox,
   TextField,
   InputAdornment,
   FormControl,
   InputLabel,
   Select,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  DialogContentText,
   Snackbar,
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  Fab,
-  SpeedDial,
-  SpeedDialAction,
-  SpeedDialIcon,
 } from '@mui/material';
 
 import {
   Today,
-  Schedule,
   Phone,
   Email,
   WhatsApp,
   Payment,
   Visibility,
-  Edit,
   MoreVert,
   Search,
   FilterList,
   Clear,
   Refresh,
-  Download,
-  Print,
   CheckCircle,
-  Warning,
-  CalendarToday,
-  Person,
-  Business,
-  AttachMoney,
   TrendingUp,
-  AccessTime,
   ContactPhone,
   Send,
   GetApp,
-  Assignment,
-  DateRange,
-  PieChart,
-  Timeline,
-  Sort,
   ArrowUpward,
   ArrowDownward,
   ExpandMore,
-  Close,
-  Check,
-  AccountBalance,
-  LocationOn,
-  Info,
-  Speed,
-  Notifications,
-  Campaign,
-  MonetizationOn,
-  Receipt,
-  CreditCard,
   Star,
   PriorityHigh,
   Flag,
@@ -127,7 +86,7 @@ import {
 
 import { useAuth } from '../../context/AuthContext';
 import { paymentAPI } from '../../services/api';
-import { formatCurrency, formatDate, formatDateTime, formatPhoneNumber } from '../../utils/formatters';
+import { formatCurrency, formatPhoneNumber } from '../../utils/formatters';
 
 // ============================================================================
 // CONSTANTS AND CONFIGURATIONS
@@ -417,12 +376,8 @@ const DueTodayTable = ({
   onSelectionChange, 
   onActionClick,
   sorting,
-  onSortChange 
+  onSortChange
 }) => {
-  const navigate = useNavigate();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [actionMenuAnchor, setActionMenuAnchor] = useState(null);
@@ -950,9 +905,7 @@ const DueTodayFilters = ({ filters, onFilterChange, onClear }) => {
  */
 const DueTodayPage = () => {
   const navigate = useNavigate();
-  const { user, canAccess } = useAuth();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const { canAccess } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // ============================================================================

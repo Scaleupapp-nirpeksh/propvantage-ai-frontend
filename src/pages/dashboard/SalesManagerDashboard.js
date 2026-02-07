@@ -22,8 +22,6 @@ import {
   Alert,
   CircularProgress,
   Tooltip,
-  useTheme,
-  useMediaQuery,
   Fade,
   Badge,
   List,
@@ -42,10 +40,8 @@ import {
 } from '@mui/material';
 import {
   TrendingUp,
-  TrendingDown,
   People,
   Timeline,
-  Assignment,
   Star,
   StarBorder,
   ThumbUp,
@@ -53,24 +49,16 @@ import {
   Warning,
   CheckCircle,
   Refresh,
-  Visibility,
   AttachMoney,
   PersonAdd,
   Assessment,
   NotificationsActive,
   ArrowUpward,
   ArrowDownward,
-  AutoGraph,
-  PieChart,
-  BarChart,
   Leaderboard,
   EmojiEvents,
-  Group,
-  Campaign,
-  Phone,
-  Email,
 } from '@mui/icons-material';
-import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, BarChart as RechartsBarChart, Bar, Legend } from 'recharts';
+import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
 
 import { useAuth } from '../../context/AuthContext';
 import { analyticsAPI, leadAPI, userAPI } from '../../services/api';
@@ -89,11 +77,6 @@ const formatCurrency = (amount) => {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
-};
-
-const formatNumber = (num) => {
-  if (typeof num !== 'number' || isNaN(num)) return '0';
-  return new Intl.NumberFormat('en-IN').format(num);
 };
 
 const formatPercentage = (value) => {
@@ -123,8 +106,6 @@ const getPerformanceColor = (achievement) => {
 
 // Sales KPI Card Component
 const SalesKPICard = ({ title, value, subtitle, change, icon: Icon, color = 'primary', isLoading, onClick, target, progress }) => {
-  const theme = useTheme();
-  
   if (isLoading) {
     return (
       <Card sx={{ cursor: onClick ? 'pointer' : 'default' }}>
@@ -562,8 +543,6 @@ const TeamAlertsCard = ({ alerts, isLoading }) => (
 const SalesManagerDashboard = () => {
   const { user, getOrganizationDisplayName } = useAuth();
   const navigate = useNavigate();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   // State management
   const [dashboardData, setDashboardData] = useState({

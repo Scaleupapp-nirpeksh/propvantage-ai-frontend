@@ -15,7 +15,7 @@ import {
   AreaChart, Area, BarChart as RechartsBarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
   Legend, ResponsiveContainer, PieChart as RechartsPieChart,
-  Pie, Cell, ComposedChart, LineChart, Line,
+  Pie, Cell, LineChart, Line,
 } from 'recharts';
 
 import { useAuth } from '../../context/AuthContext';
@@ -64,13 +64,6 @@ const getAssigneeName = (lead) => {
   const a = lead?.assignedTo;
   if (!a) return 'Unassigned';
   return `${a.firstName || ''} ${a.lastName || ''}`.trim() || 'Unassigned';
-};
-
-const getScoreLabel = (score) => {
-  if (score >= 80) return 'Hot';
-  if (score >= 60) return 'Warm';
-  if (score >= 40) return 'Cold';
-  return 'Low';
 };
 
 // ---------------------------------------------------------------------------
@@ -459,7 +452,7 @@ const LeadAnalytics = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [leads, setLeads] = useState([]);
   const [projects, setProjects] = useState([]);
-  const [users, setUsers] = useState([]);
+  const [, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
@@ -565,7 +558,6 @@ const LeadAnalytics = () => {
   const totalLeads = filteredLeads.length;
   const qualifiedCount = filteredLeads.filter(l => ['Qualified', 'Site Visit Scheduled', 'Site Visit Completed', 'Negotiating', 'Booked'].includes(l.status)).length;
   const bookedCount = filteredLeads.filter(l => l.status === 'Booked').length;
-  const lostCount = filteredLeads.filter(l => l.status === 'Lost').length;
   const qualRate = totalLeads > 0 ? ((qualifiedCount / totalLeads) * 100).toFixed(1) : '0';
   const convRate = totalLeads > 0 ? ((bookedCount / totalLeads) * 100).toFixed(1) : '0';
   const avgScore = totalLeads > 0 ? Math.round(filteredLeads.reduce((s, l) => s + (l.score || 0), 0) / totalLeads) : 0;

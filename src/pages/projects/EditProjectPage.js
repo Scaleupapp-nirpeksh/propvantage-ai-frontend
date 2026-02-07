@@ -17,7 +17,6 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Paper,
   Alert,
   CircularProgress,
   Divider,
@@ -31,11 +30,6 @@ import {
   InputAdornment,
   Chip,
   Avatar,
-  IconButton,
-  Tooltip,
-  Stepper,
-  Step,
-  StepLabel,
   Accordion,
   AccordionSummary,
   AccordionDetails,
@@ -47,7 +41,6 @@ import {
   Delete,
   Business,
   LocationOn,
-  Description,
   AttachMoney,
   Warning,
   Info,
@@ -199,7 +192,7 @@ const DeleteConfirmationDialog = ({ open, onClose, onConfirm, project, loading }
 const EditProjectPage = () => {
   const { projectId } = useParams();
   const navigate = useNavigate();
-  const { user, canAccess } = useAuth();
+  const { canAccess } = useAuth();
 
   // Validate project ID
   const validProjectId = extractId(projectId);
@@ -256,6 +249,7 @@ const EditProjectPage = () => {
     if (validProjectId) {
       fetchProject();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [validProjectId]);
 
   const fetchProject = async () => {

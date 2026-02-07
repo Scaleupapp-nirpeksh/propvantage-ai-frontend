@@ -4,7 +4,6 @@
 // Location: src/pages/sales/CommissionReportsPage.js
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Box,
   Grid,
@@ -18,95 +17,53 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Chip,
-  IconButton,
   Avatar,
   Alert,
   CircularProgress,
   Stack,
   useTheme,
-  useMediaQuery,
-  Paper,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  TablePagination,
-  Tabs,
-  Tab,
-  Divider,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
-  ListItemSecondaryAction,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   Snackbar,
-  InputAdornment,
   FormControlLabel,
   Switch,
-  RadioGroup,
-  Radio,
-  Tooltip,
-  Badge,
   LinearProgress,
 } from '@mui/material';
 import {
   Assessment,
   TrendingUp,
   TrendingDown,
-  AttachMoney,
   Download,
   Print,
-  Share,
   Refresh,
   FilterList,
-  Clear,
-  ExpandMore,
-  CalendarToday,
   Person,
   Business,
-  Analytics,
   BarChart,
   PieChart,
   ShowChart,
   TableChart,
-  DateRange,
-  GetApp,
   PictureAsPdf,
   Description,
-  CloudDownload,
-  Schedule,
   CheckCircle,
   Warning,
-  Error as ErrorIcon,
   MonetizationOn,
-  Handshake,
-  Timeline,
-  CompareArrows,
-  Visibility,
-  Settings,
-  Info,
-  Help,
   AccountBalance,
-  Receipt,
   Assignment,
-  Group,
   Dashboard,
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import {
-  LineChart,
   Line,
   BarChart as RechartsBarChart,
   Bar,
@@ -124,7 +81,7 @@ import {
 
 import { useAuth } from '../../context/AuthContext';
 import { commissionAPI, projectAPI, userAPI } from '../../services/api';
-import { formatCurrency, formatDate, formatPercentage } from '../../utils/formatters';
+import { formatCurrency, formatPercentage } from '../../utils/formatters';
 
 // ============================================================================
 // CONSTANTS AND CONFIGURATIONS
@@ -371,10 +328,8 @@ const ReportFilters = ({
   onGenerateReport, 
   projects, 
   partners,
-  isLoading 
+  isLoading
 }) => {
-  const [expanded, setExpanded] = useState(true);
-
   return (
     <Card sx={{ mb: 3 }}>
       <CardHeader
@@ -840,10 +795,7 @@ const ExportDialog = ({ open, onClose, onExport, reportData }) => {
  * Comprehensive commission reporting with analytics, visualizations, and export capabilities
  */
 const CommissionReportsPage = () => {
-  const navigate = useNavigate();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const { user, canAccess } = useAuth();
+  const { canAccess } = useAuth();
 
   // ============================================================================
   // STATE MANAGEMENT
@@ -977,6 +929,7 @@ const CommissionReportsPage = () => {
   // Generate initial report
   useEffect(() => {
     generateReport();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only on mount
 
   // ============================================================================
@@ -1020,6 +973,7 @@ const CommissionReportsPage = () => {
         severity: 'error',
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters]);
 
   // ============================================================================

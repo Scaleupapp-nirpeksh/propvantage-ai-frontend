@@ -22,15 +22,12 @@ import {
   MenuItem,
   Chip,
   IconButton,
-  Divider,
   Alert,
   CircularProgress,
   Stack,
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  useTheme,
-  useMediaQuery,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -44,48 +41,32 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
   Tabs,
   Tab,
   FormHelperText,
-  Switch,
-  FormControlLabel,
-  Tooltip,
-  Badge,
-  LinearProgress,
 } from '@mui/material';
 import {
   ArrowBack,
   Save,
   Refresh,
-  Edit,
-  Delete,
   ExpandMore,
   Calculate,
   Receipt,
-  AttachMoney,
   Person,
   Business,
   Home,
   CheckCircle,
-  Warning,
-  Error as ErrorIcon,
   Info,
-  Schedule,
   AccountBalance,
-  Print,
-  Download,
-  Share,
   Assignment,
   Timeline,
   TrendingUp,
   Cancel,
-  RestoreFromTrash,
 } from '@mui/icons-material';
 
 import { useAuth } from '../../context/AuthContext';
-import { salesAPI, projectAPI, unitAPI, leadAPI, pricingAPI } from '../../services/api';
-import { formatCurrency, formatDate, formatDateTime } from '../../utils/formatters';
+import { salesAPI, pricingAPI } from '../../services/api';
+import { formatCurrency, formatDateTime } from '../../utils/formatters';
 
 // Sale Status Options
 const SALE_STATUSES = [
@@ -111,8 +92,6 @@ const EditSalePage = () => {
   const { saleId } = useParams(); // ✅ FIXED: Changed from 'id' to 'saleId' to match route definition
   const navigate = useNavigate();
   const location = useLocation();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { user, canAccess } = useAuth();
 
   // ALL HOOKS MUST BE AT THE TOP - BEFORE ANY CONDITIONAL RETURNS
@@ -278,7 +257,6 @@ const EditSalePage = () => {
   // Check permissions
   const canEdit = canAccess && canAccess.salesPipeline ? canAccess.salesPipeline() : false;
   const canCancel = user && (user.role === 'Business Head' || user.role === 'Sales Head' || user.role === 'Project Director');
-  const canViewFinancials = canAccess && canAccess.viewFinancials ? canAccess.viewFinancials() : false;
 
   // Debug logging  
   const allParams = useParams();
@@ -504,7 +482,7 @@ const EditSalePage = () => {
     return (
       <Grid container spacing={3}>
         {COST_COMPONENT_CATEGORIES.map(category => {
-          const categoryComponents = Object.entries(components).filter(([key, component]) => {
+          const categoryComponents = Object.entries(components).filter(() => {
             // You might want to categorize based on component names or types
             return true; // For now, show all components
           });

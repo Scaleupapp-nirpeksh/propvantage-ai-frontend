@@ -22,8 +22,6 @@ import {
   Alert,
   CircularProgress,
   Tooltip,
-  useTheme,
-  useMediaQuery,
   Fade,
   Badge,
   List,
@@ -47,35 +45,19 @@ import {
   Assessment,
   Warning,
   CheckCircle,
-  Schedule,
   Refresh,
   Visibility,
-  TrendingUp,
-  TrendingDown,
   Domain,
   Apartment,
-  Home,
-  AccountBalance,
-  Speed,
-  People,
-  Assignment,
   NotificationsActive,
   ArrowUpward,
   ArrowDownward,
-  AutoGraph,
-  PieChart,
-  BarChart,
-  Today,
-  CalendarToday,
   LocationOn,
-  Engineering,
-  Architecture,
-  Handyman,
 } from '@mui/icons-material';
-import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, BarChart as RechartsBarChart, Bar, Legend } from 'recharts';
+import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
 
 import { useAuth } from '../../context/AuthContext';
-import { projectAPI, towerAPI, unitAPI, budgetVsActualAPI, alertsAPI } from '../../services/api';
+import { projectAPI } from '../../services/api';
 
 // =============================================================================
 // CONSTANTS & HELPERS
@@ -124,8 +106,6 @@ const getStatusColor = (status) => {
 
 // Project KPI Card Component
 const ProjectKPICard = ({ title, value, subtitle, change, icon: Icon, color = 'primary', isLoading, onClick, progress }) => {
-  const theme = useTheme();
-  
   if (isLoading) {
     return (
       <Card sx={{ cursor: onClick ? 'pointer' : 'default' }}>
@@ -528,8 +508,6 @@ const ConstructionAlertsCard = ({ alerts, isLoading }) => (
 const ProjectDirectorDashboard = () => {
   const { user, getOrganizationDisplayName } = useAuth();
   const navigate = useNavigate();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   // State management
   const [dashboardData, setDashboardData] = useState({
@@ -690,12 +668,13 @@ const ProjectDirectorDashboard = () => {
   // Calculate derived metrics
   const derivedMetrics = useMemo(() => {
     const { projects, milestones } = dashboardData;
-    
+
     return {
       onTimeProjects: projects.filter(p => (p.constructionProgress || 0) >= 80).length,
       delayedProjects: projects.filter(p => p.status === 'active' && (p.constructionProgress || 0) < 50).length,
       upcomingMilestones: milestones.length,
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dashboardData.projects, dashboardData.milestones]);
 
   return (

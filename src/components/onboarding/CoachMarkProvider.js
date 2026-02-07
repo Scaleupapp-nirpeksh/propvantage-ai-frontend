@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 import CoachMark from './CoachMark';
 
 const STORAGE_KEY = 'propvantage_coach_marks';

@@ -16,10 +16,8 @@ import {
   Avatar,
   Chip,
   Paper,
-  Stack,
   Alert,
   CircularProgress,
-  Tooltip,
   Menu,
   MenuItem,
   ListItemIcon,
@@ -31,27 +29,19 @@ import {
   Select,
   Divider,
   Badge,
-  Fade,
   Zoom,
   useTheme,
   useMediaQuery,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   LinearProgress,
 } from '@mui/material';
 import {
   Add,
   Search,
-  FilterList,
   MoreVert,
   Phone,
   Email,
   Person,
   Business,
-  TrendingUp,
-  TrendingDown,
   Warning,
   CheckCircle,
   Schedule,
@@ -60,14 +50,10 @@ import {
   AttachMoney,
   Visibility,
   Edit,
-  Assignment,
   Refresh,
   Analytics,
   DragIndicator,
   SwapHoriz,
-  Timeline,
-  PriorityHigh,
-  AccessTime,
   WhatsApp,
   Clear,
 } from '@mui/icons-material';
@@ -223,11 +209,9 @@ const LeadCard = ({ lead, onCardClick, onStatusChange, onQuickAction }) => {
           '&:hover': {
             boxShadow: theme.shadows[6],
             transform: 'translateY(-2px)',
-          },
-          border: `2px solid transparent`,
-          '&:hover': {
             borderColor: theme.palette.primary.main,
           },
+          border: `2px solid transparent`,
         }}
       >
         <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
@@ -377,7 +361,6 @@ const LeadCard = ({ lead, onCardClick, onStatusChange, onQuickAction }) => {
 
 // Pipeline Column Component
 const PipelineColumn = ({ stage, leads, onDrop, onCardClick, onStatusChange, onQuickAction }) => {
-  const theme = useTheme();
   const [isDragOver, setIsDragOver] = useState(false);
 
   const handleDragOver = (e) => {
@@ -541,7 +524,7 @@ const PipelineColumn = ({ stage, leads, onDrop, onCardClick, onStatusChange, onQ
 // Main Pipeline Page Component
 const LeadsPipelinePage = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  useAuth();
   const { enqueueSnackbar } = useSnackbar();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('lg'));

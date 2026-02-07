@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  Box, Typography, Button, IconButton, Paper, Fade, Backdrop,
+  Box, Typography, Button, IconButton, Paper, Fade,
   useTheme, alpha, Chip,
 } from '@mui/material';
 import { Close, ArrowForward, ArrowBack, Check } from '@mui/icons-material';
@@ -77,7 +77,6 @@ const CoachMark = ({
   // Calculate tooltip position
   const padding = 12;
   const tooltipStyle = {};
-  const arrowStyle = {};
 
   switch (placement) {
     case 'bottom':

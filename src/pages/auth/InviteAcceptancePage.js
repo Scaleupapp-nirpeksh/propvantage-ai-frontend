@@ -23,7 +23,6 @@ import {
   Step,
   StepLabel,
   LinearProgress,
-  Chip,
   useTheme,
   useMediaQuery,
   Fade,
@@ -40,15 +39,12 @@ import {
   CheckCircle,
   Error as ErrorIcon,
   BusinessCenter,
-  Person,
-  Email,
   Security,
   Login,
   VpnKey,
   Check,
   Close,
   Timer,
-  Warning,
   Refresh,
 } from '@mui/icons-material';
 import { useSnackbar } from 'notistack';

@@ -144,7 +144,7 @@ const LeadMobileCard = ({ lead, onAction }) => {
 // Main page component
 const LeadsListPage = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [searchParams, setSearchParams] = useSearchParams();

@@ -10,7 +10,6 @@ import {
   Card,
   CardContent,
   Typography,
-  Button,
   IconButton,
   Chip,
   Tooltip,
@@ -18,8 +17,6 @@ import {
   Alert,
   Skeleton,
   Paper,
-  Divider,
-  useTheme,
   Tab,
   Tabs,
   Select,
@@ -147,8 +144,7 @@ const PricingSuggestionCard = ({ suggestion }) => {
 
 // Main Dynamic Pricing Page
 const DynamicPricingPage = () => {
-  const theme = useTheme();
-  const { canAccess } = useAuth();
+  useAuth();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -194,12 +190,14 @@ const DynamicPricingPage = () => {
 
   useEffect(() => {
     fetchProjects();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (selectedProject) {
       fetchDynamicPricing();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedProject]);
 
   // Extract data from actual backend response structure

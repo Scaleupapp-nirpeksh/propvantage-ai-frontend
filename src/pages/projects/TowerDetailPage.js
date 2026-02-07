@@ -3,7 +3,7 @@
 // Version: 2.1 - Fixed API response structure handling
 // Location: src/pages/projects/TowerDetailPage.js
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -20,35 +20,23 @@ import {
   Alert,
   CircularProgress,
   Tooltip,
-  useTheme,
   Menu,
   MenuItem,
   ListItemIcon,
   ListItemText,
   Tab,
   Tabs,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Breadcrumbs,
   Link,
   LinearProgress,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   List,
   ListItem,
   ListItemText as MuiListItemText,
-  Divider,
   FormControl,
   InputLabel,
   Select,
 } from '@mui/material';
 import {
-  ArrowBack,
   Edit,
   MoreVert,
   Domain,
@@ -57,18 +45,14 @@ import {
   Warning,
   Block,
   Add,
-  Visibility,
   AttachMoney,
   Analytics,
   Settings,
   Download,
   Refresh,
   Timeline,
-  People,
   NavigateNext,
-  AspectRatio,
   Layers,
-  Apartment,
   Business,
   Construction,
   Security,
@@ -81,15 +65,12 @@ import {
   Engineering,
   LocationOn,
   Schedule,
-  TrendingUp,
-  ExpandMore,
   Phone,
   Videocam,
   ElectricalServices,
   SolarPower,
   MailOutline,
   NaturePeople,
-  Speed,
   MonetizationOn,
   LocalFireDepartment,
   VerifiedUser,
@@ -99,7 +80,6 @@ import {
   Info,
   Bed,
   Bathtub,
-  Kitchen,
   Balcony,
   Park,
 } from '@mui/icons-material';
@@ -1676,7 +1656,6 @@ const UnitsGrid = ({ units, viewMode, onAddUnit, projectId, towerId }) => {
 const TowerDetailPage = () => {
   const { projectId, towerId } = useParams();
   const navigate = useNavigate();
-  const { canAccess } = useAuth();
 
   // State management
   const [project, setProject] = useState(null);
@@ -1692,6 +1671,7 @@ const TowerDetailPage = () => {
     if (projectId && towerId) {
       fetchTowerData();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, towerId]);
 
   const fetchTowerData = async () => {

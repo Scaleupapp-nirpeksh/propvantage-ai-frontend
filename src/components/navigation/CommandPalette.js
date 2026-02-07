@@ -9,7 +9,6 @@ import {
   MonetizationOn, Settings, Add, TrendingUp, Receipt, Payment,
   Assessment, PersonAdd, NoteAdd, Handshake,
 } from '@mui/icons-material';
-import { useAuth } from '../../context/AuthContext';
 
 // Static page list
 const PAGES = [

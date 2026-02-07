@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
-  Box, Grid, Card, CardContent, CardHeader, Typography, Button,
+  Box, Grid, Card, CardContent, CardHeader, Typography,
   IconButton, Alert, Stack, Tabs, Tab, Tooltip, LinearProgress,
   Skeleton, ToggleButton, ToggleButtonGroup, Table, TableBody,
   TableCell, TableContainer, TableHead, TableRow, Chip,
@@ -10,13 +10,13 @@ import {
 import {
   TrendingUp, Refresh, MonetizationOn, CheckCircle, Assessment,
   ShowChart, BarChart, Timeline as TimelineIcon, Business,
-  Analytics, AccountBalance, Speed, Inventory2,
+  AccountBalance, Speed,
 } from '@mui/icons-material';
 import {
   AreaChart, Area, BarChart as RechartsBarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
   Legend, ResponsiveContainer, PieChart as RechartsPieChart,
-  Pie, Cell, ComposedChart, LineChart, Line,
+  Pie, Cell, LineChart, Line,
 } from 'recharts';
 
 import { useAuth } from '../../context/AuthContext';

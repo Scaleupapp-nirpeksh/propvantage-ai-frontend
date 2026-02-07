@@ -44,11 +44,9 @@ import {
   TrendingUp,
   TrendingDown,
   TrendingFlat,
-  Warning,
   CheckCircle,
   FilterList,
   ShowChart,
-  Assessment,
   MonetizationOn,
   AttachMoney,
   Schedule,
@@ -62,7 +60,6 @@ import {
   AutoGraph,
   Psychology,
   CompareArrows,
-  FileDownload,
   Lightbulb,
 } from '@mui/icons-material';
 import {
@@ -77,12 +74,10 @@ import {
   PieChart as RechartsPieChart,
   Pie,
   Cell,
-  BarChart as RechartsBarChart,
   Bar,
   ComposedChart,
   Line,
 } from 'recharts';
-import { useAuth } from '../../context/AuthContext';
 import { predictiveAPI, projectAPI } from '../../services/api';
 
 // =============================================================================
@@ -116,16 +111,6 @@ const formatCurrency = (value) => {
   if (value >= 100000) return `₹${(value / 100000).toFixed(1)}L`;
   if (value >= 1000) return `₹${(value / 1000).toFixed(1)}K`;
   return `₹${value?.toFixed(0) || 0}`;
-};
-
-const formatFullCurrency = (amount) => {
-  if (!amount && amount !== 0) return '₹0';
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
 };
 
 const formatPercentage = (value, decimals = 1) => `${(value || 0).toFixed(decimals)}%`;
@@ -992,7 +977,6 @@ const InventoryTurnoverTab = ({ data, loading }) => {
 const PredictiveAnalyticsPage = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const { canAccess } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -1101,11 +1085,13 @@ const PredictiveAnalyticsPage = () => {
   useEffect(() => {
     fetchProjects();
     refreshAllData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     const timeoutId = setTimeout(() => refreshAllData(), 500);
     return () => clearTimeout(timeoutId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters]);
 
   useEffect(() => {

@@ -35,44 +35,23 @@ import {
   AlertTitle,
   Tooltip,
   Paper,
-  Stack,
-  Divider,
-  Badge,
-  Menu,
   ListItemIcon,
   ListItemText,
-  Switch,
-  FormControlLabel,
-  Skeleton,
   useTheme,
   useMediaQuery,
-  Fade,
-  Zoom,
   Tabs,
   Tab,
   LinearProgress,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   List,
   ListItem,
-  ListItemAvatar,
-  Stepper,
-  Step,
-  StepLabel,
-  StepContent,
 } from '@mui/material';
 import {
   PersonAdd,
   Search,
-  FilterList,
-  MoreVert,
-  Edit,
   Delete,
   Block,
   CheckCircle,
   Email,
-  Phone,
   BusinessCenter,
   AdminPanelSettings,
   Assignment,
@@ -80,44 +59,25 @@ import {
   AttachMoney,
   Construction,
   People,
-  Visibility,
-  VisibilityOff,
   ContentCopy,
   Send,
   Refresh,
-  Download,
-  Upload,
   Settings,
   PersonOff,
   PersonOutline,
   Link as LinkIcon,
-  Share,
-  QrCode,
   Timer,
-  Warning,
-  Info,
-  Schedule,
-  History,
   Cancel,
-  Undo,
-  ExpandMore,
-  Close,
-  Launch,
-  Backup,
   RestoreFromTrash,
   Assessment,
   Group,
-  Security,
   Archive,
-  PieChart,
-  BarChart,
-  ShowChart,
   DateRange,
 } from '@mui/icons-material';
 import { CircularProgress } from '@mui/material';
 
 import { useSnackbar } from 'notistack';
-import { format, formatDistanceToNow, isAfter, isBefore } from 'date-fns';
+import { format, formatDistanceToNow, isAfter } from 'date-fns';
 
 // Import services and context
 import { useAuth } from '../../context/AuthContext';
@@ -1284,7 +1244,6 @@ const UserManagementPage = () => {
   
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState([]);
-  const [filteredUsers, setFilteredUsers] = useState([]);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState(0);
   
@@ -1522,7 +1481,6 @@ const UserManagementPage = () => {
           'response.data.data?.invitation?.invitationToken': response.data.data?.invitation?.invitationToken,
           'response.data.data?.invitation?.invitation_token': response.data.data?.invitation?.invitation_token,
           'response.data.data?.user?.token': response.data.data?.user?.token,
-          'response.data.data?.user?.invitationToken': response.data.data?.user?.invitationToken,
           'response.data.data?.user?.invitation_token': response.data.data?.user?.invitation_token,
         };
         

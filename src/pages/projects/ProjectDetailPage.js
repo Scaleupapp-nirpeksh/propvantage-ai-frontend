@@ -17,25 +17,19 @@ import {
   Chip,
   LinearProgress,
   Paper,
-  Stack,
-  Divider,
   Alert,
   CircularProgress,
   Tooltip,
   Badge,
-  useTheme,
   Menu,
   MenuItem,
   ListItemIcon,
   ListItemText,
   Tab,
   Tabs,
-  ToggleButton,
-  ToggleButtonGroup,
   Breadcrumbs,
   Link,
   Fade,
-  Slide,
 } from '@mui/material';
 import {
   ArrowBack,
@@ -50,26 +44,14 @@ import {
   CheckCircle,
   Schedule,
   Warning,
-  TrendingUp,
-  TrendingDown,
-  Visibility,
   Add,
   Domain,
-  People,
-  CalendarToday,
-  Analytics,
-  Settings,
   Download,
   Share,
   Refresh,
   Villa,
-  ViewModule,
-  ViewList,
   QueryStats,
-  CompareArrows,
-  Assessment,
   NavigateNext,
-  Speed,
   AutoGraph,
   PriceChange,
   NotificationsActive,
@@ -78,10 +60,9 @@ import {
 
 import { useAuth } from '../../context/AuthContext';
 import { projectAPI, towerAPI, unitAPI } from '../../services/api';
-import { budgetVarianceAPI, budgetHelpers } from '../../services/budgetAPI';
+import { budgetVarianceAPI } from '../../services/budgetAPI';
 
 // Import Budget Variance Dashboard Components
-import BudgetVarianceFilters from '../analytics/BudgetVarianceFilters';
 import BudgetVarianceSummaryCards from '../analytics/BudgetVarianceSummaryCards';
 import VarianceOverviewTab from '../analytics/VarianceOverviewTab';
 import AlertsActionsTab from '../analytics/AlertsActionsTab';
@@ -554,6 +535,7 @@ const TowerCard = ({ tower, projectId }) => {
 
   useEffect(() => {
     fetchTowerUnits();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tower._id]);
 
   const fetchTowerUnits = async () => {
@@ -820,9 +802,6 @@ const IntegratedBudgetVarianceDashboard = ({
   projectName,
   onNavigateBack 
 }) => {
-  const theme = useTheme();
-  const { user } = useAuth();
-  
   // Budget variance dashboard state
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -1220,6 +1199,7 @@ const ProjectDetailPage = () => {
     if (projectId) {
       fetchProjectData();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
   const fetchProjectData = async () => {
@@ -1243,7 +1223,6 @@ const ProjectDetailPage = () => {
 
       // Separate villa units (units without tower) from tower units
       const villaUnitsData = allUnitsData.filter(unit => !unit.tower);
-      const towerUnitsData = allUnitsData.filter(unit => unit.tower);
 
       // Fetch budget variance data for the project
       try {

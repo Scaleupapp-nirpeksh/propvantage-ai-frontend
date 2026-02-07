@@ -1,18 +1,18 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import {
-  Box, Grid, Card, CardContent, CardHeader, Typography, Button,
+  Box, Grid, Card, CardContent, CardHeader, Typography,
   IconButton, Avatar, Alert, Stack, Tabs, Tab, Tooltip,
   LinearProgress, Skeleton, ToggleButton, ToggleButtonGroup,
   useTheme, useMediaQuery, alpha,
 } from '@mui/material';
 import {
   TrendingUp, Refresh, MonetizationOn, CheckCircle, Assessment,
-  ShowChart, BarChart, Timeline as TimelineIcon, Person, Business,
-  Analytics, EmojiEvents, Speed,
+  ShowChart, BarChart, Timeline as TimelineIcon, Business,
+  Analytics, EmojiEvents,
 } from '@mui/icons-material';
 import {
-  AreaChart, Area, BarChart as RechartsBarChart, Bar,
+  Area, BarChart as RechartsBarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
   Legend, ResponsiveContainer, PieChart as RechartsPieChart,
   Pie, Cell, ComposedChart, LineChart, Line,
@@ -418,7 +418,6 @@ const ProjectBreakdownTab = ({ salesData, loading }) => {
 // ---------------------------------------------------------------------------
 
 const SalesAnalytics = () => {
-  const navigate = useNavigate();
   const { canAccess } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));

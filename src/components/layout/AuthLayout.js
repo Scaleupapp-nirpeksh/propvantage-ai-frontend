@@ -21,7 +21,6 @@ import {
   Psychology,
   Analytics,
   Security,
-  CloudDone,
 } from '@mui/icons-material';
 
 // PropVantage AI Logo Component (text-based since no logo provided)
@@ -168,12 +167,6 @@ const keyFeatures = [
 // Stats Component
 const PlatformStats = () => {
   const theme = useTheme();
-  
-  const stats = [
-    { label: 'Projects Managed', value: '500+', color: 'primary' },
-    { label: 'Units Sold', value: '10K+', color: 'success' },
-    { label: 'Revenue Tracked', value: '₹1000Cr+', color: 'warning' },
-  ];
   
   return (
     <Box sx={{ mt: 4, mb: 3 }}>

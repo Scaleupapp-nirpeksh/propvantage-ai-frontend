@@ -23,17 +23,12 @@ import {
   Typography,
   Collapse,
   Divider,
-  Tooltip,
   Badge,
   Alert,
   CircularProgress,
   InputAdornment,
   Switch,
   FormControlLabel,
-  Paper,
-  Skeleton,
-  useTheme,
-  useMediaQuery,
 } from '@mui/material';
 import {
   FilterList,
@@ -42,8 +37,6 @@ import {
   ExpandMore,
   ExpandLess,
   Refresh,
-  Save,
-  RestoreFromTrash,
   Tune,
   Assessment,
   Business,
@@ -58,7 +51,7 @@ import {
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { format, subDays, subMonths, startOfMonth, endOfMonth } from 'date-fns';
+import { subDays, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 
 // =============================================================================
 // CONSTANTS AND CONFIGURATION
@@ -330,9 +323,6 @@ const BudgetVarianceFilters = ({
   // HOOKS AND CONTEXT
   // =============================================================================
   
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const isTablet = useMediaQuery(theme.breakpoints.down('lg'));
   
   // =============================================================================
   // LOCAL STATE
@@ -340,7 +330,7 @@ const BudgetVarianceFilters = ({
   
   const [expanded, setExpanded] = useState(false);
   const [searchTerm, setSearchTerm] = useState(filters.searchTerm || '');
-  const [validationErrors, setValidationErrors] = useState([]);
+  const [, setValidationErrors] = useState([]);
   const [lastAppliedFilters, setLastAppliedFilters] = useState(filters);
   
   // =============================================================================

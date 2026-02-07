@@ -16,14 +16,11 @@ import {
   IconButton,
   Avatar,
   Chip,
-  LinearProgress,
   Paper,
   Stack,
   Alert,
   CircularProgress,
   Tooltip,
-  useTheme,
-  useMediaQuery,
   Fade,
   Badge,
   List,
@@ -35,8 +32,6 @@ import {
 } from '@mui/material';
 import {
   AttachMoney,
-  TrendingUp,
-  TrendingDown,
   Assessment,
   Analytics,
   Warning,
@@ -44,33 +39,23 @@ import {
   AccountBalance,
   Receipt,
   Payment,
-  Schedule,
   Refresh,
-  Visibility,
-  MonetizationOn,
-  PieChart,
-  BarChart,
   ShowChart,
-  Today,
-  AccountBalanceWallet,
   Speed,
   CompareArrows,
-  AutoGraph,
   NotificationsActive,
   ArrowUpward,
   ArrowDownward,
   Timeline,
 } from '@mui/icons-material';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart as RechartsPieChart, Cell, BarChart as RechartsBarChart, Bar } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 
 import { useAuth } from '../../context/AuthContext';
-import { analyticsAPI, leadAPI, userAPI } from '../../services/api';
+import { analyticsAPI, leadAPI } from '../../services/api';
 
 // =============================================================================
 // CONSTANTS & HELPERS
 // =============================================================================
-
-const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#8dd1e1'];
 
 const formatCurrency = (amount) => {
   if (typeof amount !== 'number' || isNaN(amount)) return '₹0';
@@ -80,11 +65,6 @@ const formatCurrency = (amount) => {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
-};
-
-const formatNumber = (num) => {
-  if (typeof num !== 'number' || isNaN(num)) return '0';
-  return new Intl.NumberFormat('en-IN').format(num);
 };
 
 const formatPercentage = (value) => {
@@ -98,8 +78,6 @@ const formatPercentage = (value) => {
 
 // Financial KPI Card Component
 const FinancialKPICard = ({ title, value, subtitle, change, icon: Icon, color = 'primary', isLoading, onClick }) => {
-  const theme = useTheme();
-  
   if (isLoading) {
     return (
       <Card sx={{ cursor: onClick ? 'pointer' : 'default' }}>
@@ -347,8 +325,6 @@ const RevenueTrendChart = ({ data, isLoading }) => {
 const FinanceHeadDashboard = () => {
   const { user, getOrganizationDisplayName } = useAuth();
   const navigate = useNavigate();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   // State management
   const [dashboardData, setDashboardData] = useState({
@@ -388,7 +364,6 @@ const FinanceHeadDashboard = () => {
 
       console.log('✅ Sales Response for Finance KPIs:', salesResponse.data);
 
-      const salesData = salesResponse.data?.sales || [];
       const summary = salesResponse.data?.summary || {};
 
       // Calculate real financial metrics from sales data
@@ -502,9 +477,8 @@ const FinanceHeadDashboard = () => {
         }).catch(() => ({ data: { data: [] } }))
       ]);
 
-      const salesData = salesResponse.data?.sales || [];
       const summary = salesResponse.data?.summary || {};
-      
+
       // Extract leads data safely
       let leadsData = [];
       if (leadsResponse.data) {

@@ -24,12 +24,8 @@ import {
   Select,
   MenuItem,
   Paper,
-  Stack,
-  Divider,
   Alert,
   CircularProgress,
-  Tooltip,
-  Badge,
   useTheme,
   Menu,
   ListItemIcon,
@@ -45,18 +41,13 @@ import {
   Business,
   LocationOn,
   AttachMoney,
-  People,
   Timeline,
   CheckCircle,
-  Schedule,
-  Construction,
   Home,
   Apartment,
   Villa,
   Domain,
   Landscape,
-  TrendingUp,
-  TrendingDown,
   Remove,
 } from '@mui/icons-material';
 
@@ -500,7 +491,6 @@ const ProjectSummary = ({ projects, isLoading }) => {
   const totalUnits = projects.reduce((sum, p) => sum + (p.totalUnits || 0), 0);
   const totalSold = projects.reduce((sum, p) => sum + (p.unitsSold || 0), 0);
   const totalRevenue = projects.reduce((sum, p) => sum + (p.currentRevenue || 0), 0);
-  const targetRevenue = projects.reduce((sum, p) => sum + (p.targetRevenue || 0), 0);
   const avgSalesRate = totalUnits > 0 ? Math.round((totalSold / totalUnits) * 100) : 0;
 
   const stats = [
@@ -594,11 +584,13 @@ const ProjectsListPage = () => {
   // Fetch projects data
   useEffect(() => {
     fetchProjects();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Apply filters when projects or filters change
   useEffect(() => {
     applyFilters();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projects, filters]);
 
   const fetchProjects = async () => {

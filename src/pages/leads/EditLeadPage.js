@@ -3,7 +3,7 @@
 // Version: 1.0 - Production-grade lead editing with pre-population and validation
 // Location: src/pages/leads/EditLeadPage.js
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -30,33 +30,24 @@ import {
   IconButton,
   CircularProgress,
   Autocomplete,
-  Avatar,
   Breadcrumbs,
   Link,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  useTheme,
-  useMediaQuery,
 } from '@mui/material';
 import {
   ArrowBack,
   Person,
   Phone,
   Email,
-  Business,
-  LocationOn,
-  AttachMoney,
   Schedule,
   Save,
-  CheckCircle,
   NavigateNext,
   Home,
   Assignment,
   ContactPhone,
-  PriorityHigh,
-  Source,
   Delete,
   Warning,
   Edit,
@@ -207,7 +198,6 @@ const EditLeadPage = () => {
   const navigate = useNavigate();
   const { user, canAccess } = useAuth();
   const { enqueueSnackbar } = useSnackbar();
-  const theme = useTheme();
 
   // Component state
   const [activeStep, setActiveStep] = useState(0);
@@ -215,7 +205,7 @@ const EditLeadPage = () => {
   const [initialLoading, setInitialLoading] = useState(true);
   const [errors, setErrors] = useState({});
   const [projects, setProjects] = useState([]);
-  const [salesTeam, setSalesTeam] = useState([]);
+  const [, setSalesTeam] = useState([]);
   const [originalLead, setOriginalLead] = useState(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
@@ -237,6 +227,7 @@ const EditLeadPage = () => {
   // Load initial data and lead details
   useEffect(() => {
     loadInitialData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leadId]);
 
   const loadInitialData = async () => {

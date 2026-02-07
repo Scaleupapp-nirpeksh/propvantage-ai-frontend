@@ -13,21 +13,17 @@ import {
   Avatar,
   Chip,
   LinearProgress,
-  CircularProgress,
   IconButton,
-  Tooltip,
   Divider,
   List,
   ListItem,
   ListItemText,
   ListItemAvatar,
   ListItemIcon,
-  Paper,
   Stack,
   Badge,
   Button,
   useTheme,
-  useMediaQuery,
   Skeleton,
   Alert,
 } from '@mui/material';
@@ -37,29 +33,17 @@ import {
   TrendingFlat,
   AccountBalance,
   MonetizationOn,
-  Assessment,
   Warning,
   Error,
   CheckCircle,
   Info,
   Business,
-  Timeline,
-  Speed,
   Flag,
   NotificationsActive,
-  Analytics,
   CompareArrows,
-  ShowChart,
-  PieChart,
-  Insights,
   AttachMoney,
-  Assignment,
-  AutoGraph,
   QueryStats,
-  CriticalComponent,
-  PriorityHigh,
   OpenInNew,
-  Refresh,
 } from '@mui/icons-material';
 import { budgetHelpers } from '../../services/budgetAPI';
 
@@ -554,9 +538,6 @@ const BudgetVarianceSummaryCards = ({
   onViewAlerts,
   onRefreshData,
 }) => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  
   // =============================================================================
   // COMPUTED VALUES
   // =============================================================================

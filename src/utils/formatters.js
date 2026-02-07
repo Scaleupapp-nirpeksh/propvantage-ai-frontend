@@ -203,7 +203,6 @@ export const formatCurrency = (amount, options = {}) => {
    */
   export const formatTime = (date, options = {}) => {
     const {
-      format = '12', // '12' or '24'
       locale = 'en-IN',
     } = options;
   
@@ -215,12 +214,6 @@ export const formatCurrency = (amount, options = {}) => {
       if (isNaN(dateObj.getTime())) {
         return '-';
       }
-  
-      const formatOptions = {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: format === '12',
-      };
   
       return new Intl.DateTimeFormat(locale, { timeStyle: 'short' }).format(dateObj);
     } catch (error) {
@@ -298,7 +291,6 @@ export const formatCurrency = (amount, options = {}) => {
     const {
       minimumFractionDigits = 0,
       maximumFractionDigits = 1,
-      showSign = true,
     } = options;
   
     if (value === null || value === undefined || isNaN(value)) {

@@ -20,16 +20,12 @@ import {
   Stepper,
   Step,
   StepLabel,
-  StepContent,
   Chip,
-  FormControlLabel,
-  Switch,
   InputAdornment,
   Alert,
   Paper,
   Divider,
   IconButton,
-  Tooltip,
   CircularProgress,
   Accordion,
   AccordionSummary,
@@ -46,9 +42,7 @@ import {
   AttachMoney,
   Settings,
   CheckCircle,
-  Info,
   Save,
-  Preview,
 } from '@mui/icons-material';
  import DatePicker from '@mui/lab/DatePicker';
  import LocalizationProvider from '@mui/lab/LocalizationProvider';
@@ -121,7 +115,7 @@ const formatCurrency = (amount) => {
 
 const CreateProjectPage = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  useAuth();
   
   // Stepper state
   const [activeStep, setActiveStep] = useState(0);

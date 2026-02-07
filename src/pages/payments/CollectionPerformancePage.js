@@ -16,7 +16,7 @@
  * - Export and reporting capabilities
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Box,
@@ -26,42 +26,27 @@ import {
   CardHeader,
   Typography,
   Button,
-  IconButton,
   Avatar,
   Chip,
   Stack,
   Alert,
   CircularProgress,
   useTheme,
-  useMediaQuery,
-  Paper,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  TablePagination,
-  Tooltip,
-  Badge,
-  Divider,
   List,
   ListItem,
   ListItemText,
   ListItemIcon,
   ListItemSecondaryAction,
-  TextField,
-  InputAdornment,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
-  Tabs,
-  Tab,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   Snackbar,
   Accordion,
   AccordionSummary,
@@ -75,60 +60,27 @@ import {
   Speed,
   TrendingUp,
   TrendingDown,
-  AttachMoney,
   Star,
   EmojiEvents,
-  Assignment,
-  Timeline,
-  DateRange,
   Refresh,
   FilterList,
-  Clear,
-  Visibility,
   ExpandMore,
   Download,
   Share,
   Analytics,
-  Compare,
   Insights,
   CheckCircle,
   Warning,
-  Error as ErrorIcon,
-  Info,
   Business,
-  Person,
   Group,
-  Target,
   Flag,
-  TrendingFlat,
-  Assessment,
-  BarChart,
-  PieChart,
-  ShowChart,
   Schedule,
-  Today,
-  CalendarToday,
-  AccountBalance,
-  MonetizationOn,
-  Receipt,
-  Payment,
   ContactPhone,
-  Send,
-  Phone,
-  Email,
-  WhatsApp,
-  LocationOn,
-  Home,
-  Apartment,
 } from '@mui/icons-material';
-
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
 import { useAuth } from '../../context/AuthContext';
 import { paymentAPI, salesAPI, userAPI } from '../../services/api';
-import { formatCurrency, formatDate, formatDateTime, formatPercentage, formatPhoneNumber } from '../../utils/formatters';
+import { formatCurrency, formatPercentage } from '../../utils/formatters';
 
 // ============================================================================
 // CONSTANTS AND CONFIGURATIONS
@@ -897,9 +849,7 @@ const CollectionFilters = ({ filters, onFilterChange }) => {
  */
 const CollectionPerformancePage = () => {
   const navigate = useNavigate();
-  const { user, canAccess } = useAuth();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const { canAccess } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // ============================================================================

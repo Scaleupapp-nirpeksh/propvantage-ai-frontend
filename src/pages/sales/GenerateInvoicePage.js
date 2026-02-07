@@ -21,14 +21,12 @@ import {
   Stepper,
   Step,
   StepLabel,
-  Paper,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Divider,
   Alert,
   CircularProgress,
   Chip,
@@ -36,47 +34,25 @@ import {
   Stack,
   useTheme,
   useMediaQuery,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   Snackbar,
   IconButton,
   Tooltip,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
   FormControlLabel,
   Switch,
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  LinearProgress,
 } from '@mui/material';
 
 import {
   ArrowBack,
   Receipt,
-  Assignment,
   Person,
   Business,
-  Home,
   AttachMoney,
   CalendarToday,
-  Description,
   CheckCircle,
-  Warning,
-  Edit,
-  Save,
-  Preview,
-  Send,
-  Download,
   ExpandMore,
-  AccountBalance,
-  Calculate,
-  Info,
-  ContentCopy,
   Refresh,
 } from '@mui/icons-material';
 
@@ -86,7 +62,7 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
 import { useAuth } from '../../context/AuthContext';
 import { invoiceAPI, salesAPI } from '../../services/api';
-import { formatCurrency, formatDate, formatDateTime } from '../../utils/formatters';
+import { formatCurrency, formatDate } from '../../utils/formatters';
 
 // ============================================================================
 // CONSTANTS AND CONFIGURATIONS
@@ -187,7 +163,7 @@ const GenerateInvoicePage = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const { user } = useAuth();
+  useAuth();
 
   // ============================================================================
   // STATE MANAGEMENT
@@ -221,7 +197,6 @@ const GenerateInvoicePage = () => {
   // UI state
   const [expandedSection, setExpandedSection] = useState('sale-details');
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
-  const [confirmDialog, setConfirmDialog] = useState({ open: false });
 
   // ============================================================================
   // DATA FETCHING

@@ -20,7 +20,6 @@ import {
   Paper,
   Alert,
   CircularProgress,
-  Divider,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -36,28 +35,19 @@ import {
   Stepper,
   Step,
   StepLabel,
-  Stack,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
 } from '@mui/material';
 import {
   ArrowBack,
   Save,
   Delete,
   Business,
-  Domain,
   Home,
   Warning,
-  Info,
-  ExpandMore,
   NavigateNext,
-  Cancel,
   Edit,
   Villa,
   Apartment,
   AttachMoney,
-  AspectRatio,
   Bed,
   Bathtub,
   Kitchen,
@@ -65,7 +55,6 @@ import {
   LocalParking,
   Star,
   CheckCircle,
-  Schedule,
   ArrowForward,
   ArrowBackIos,
 } from '@mui/icons-material';
@@ -276,7 +265,7 @@ const DeleteConfirmationDialog = ({ open, onClose, onConfirm, unit, isVillaProje
 const EditUnitPage = () => {
   const { projectId, towerId, unitId } = useParams();
   const navigate = useNavigate();
-  const { user, canAccess } = useAuth();
+  const { canAccess } = useAuth();
 
   // Determine if this is a villa project (no towerId)
   const isVillaProject = !towerId;
@@ -359,6 +348,7 @@ const EditUnitPage = () => {
     if (validProjectId && validUnitId) {
       fetchUnitData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [validProjectId, validTowerId, validUnitId]);
 
   const fetchUnitData = async () => {

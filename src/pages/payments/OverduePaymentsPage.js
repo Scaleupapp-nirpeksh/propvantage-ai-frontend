@@ -34,8 +34,6 @@ import {
   Alert,
   CircularProgress,
   useTheme,
-  useMediaQuery,
-  Paper,
   Table,
   TableBody,
   TableCell,
@@ -46,35 +44,20 @@ import {
   Tooltip,
   Badge,
   Divider,
-  List,
-  ListItem,
   ListItemText,
   ListItemIcon,
-  ListItemSecondaryAction,
   Menu,
   MenuItem,
-  ListItemButton,
   Checkbox,
   TextField,
   InputAdornment,
   FormControl,
   InputLabel,
   Select,
-  Tabs,
-  Tab,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  DialogContentText,
   Snackbar,
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  Fab,
-  SpeedDial,
-  SpeedDialAction,
-  SpeedDialIcon,
 } from '@mui/material';
 
 import {
@@ -85,48 +68,25 @@ import {
   WhatsApp,
   Payment,
   Visibility,
-  Edit,
   MoreVert,
   Search,
   FilterList,
   Clear,
   Refresh,
-  Download,
-  Print,
   CheckCircle,
   ErrorOutline,
-  CalendarToday,
-  Person,
-  Business,
-  AttachMoney,
-  TrendingDown,
-  AccessTime,
   ContactPhone,
   Send,
   GetApp,
-  Assignment,
-  Today,
-  DateRange,
-  PieChart,
-  BarChart,
-  Timeline,
-  Sort,
   ArrowUpward,
   ArrowDownward,
   ExpandMore,
-  Close,
-  Check,
-  AccountBalance,
-  LocationOn,
-  Info,
-  Speed,
-  Notifications,
   Campaign,
 } from '@mui/icons-material';
 
 import { useAuth } from '../../context/AuthContext';
 import { paymentAPI } from '../../services/api';
-import { formatCurrency, formatDate, formatDateTime, formatPhoneNumber } from '../../utils/formatters';
+import { formatCurrency, formatDate, formatPhoneNumber } from '../../utils/formatters';
 
 // ============================================================================
 // CONSTANTS AND CONFIGURATIONS
@@ -191,16 +151,6 @@ const TABLE_COLUMNS = [
   { id: 'overdueDays', label: 'Days Overdue', sortable: true, width: '120px' },
   { id: 'contact', label: 'Contact', sortable: false, width: '100px' },
   { id: 'actions', label: 'Actions', sortable: false, width: '120px' },
-];
-
-/**
- * Sort field options
- */
-const SORT_OPTIONS = [
-  { value: 'overdueDays', label: 'Days Overdue' },
-  { value: 'amount', label: 'Amount' },
-  { value: 'dueDate', label: 'Due Date' },
-  { value: 'customerName', label: 'Customer Name' },
 ];
 
 /**
@@ -423,12 +373,8 @@ const OverduePaymentsTable = ({
   onSelectionChange, 
   onActionClick,
   sorting,
-  onSortChange 
+  onSortChange
 }) => {
-  const navigate = useNavigate();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [actionMenuAnchor, setActionMenuAnchor] = useState(null);
@@ -916,9 +862,7 @@ const OverdueFiltersSection = ({ filters, onFilterChange, onClear }) => {
  */
 const OverduePaymentsPage = () => {
   const navigate = useNavigate();
-  const { user, canAccess } = useAuth();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const { canAccess } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // ============================================================================

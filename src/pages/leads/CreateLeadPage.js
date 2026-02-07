@@ -3,7 +3,7 @@
 // Version: 1.2 - FIXED Interaction enum values to match backend model
 // Location: src/pages/leads/CreateLeadPage.js
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -24,22 +24,15 @@ import {
   Chip,
   FormControlLabel,
   Switch,
-  RadioGroup,
-  Radio,
   InputAdornment,
   Alert,
   Paper,
-  Divider,
   IconButton,
-  Tooltip,
   CircularProgress,
   Autocomplete,
-  Stack,
   Avatar,
   Breadcrumbs,
   Link,
-  useTheme,
-  useMediaQuery,
 } from '@mui/material';
 import {
   ArrowBack,
@@ -48,21 +41,13 @@ import {
   Email,
   Business,
   LocationOn,
-  AttachMoney,
   Schedule,
-  Star,
   Save,
-  Send,
   CheckCircle,
-  Info,
-  Warning,
   NavigateNext,
   Home,
   Assignment,
   ContactPhone,
-  PriorityHigh,
-  Source,
-  Psychology,
 } from '@mui/icons-material';
 import { useSnackbar } from 'notistack';
 
@@ -250,7 +235,7 @@ const validateContactInfo = (data) => {
 
   if (!data.phone?.trim()) {
     errors.phone = 'Phone number is required';
-  } else if (!/^[+]?[\d\s\-\(\)]{10,}$/.test(data.phone.trim())) {
+  } else if (!/^[+]?[\d\s\-()]{10,}$/.test(data.phone.trim())) {
     errors.phone = 'Please enter a valid phone number';
   }
 
@@ -311,10 +296,8 @@ const validateLeadDetails = (data) => {
 // =============================================================================
 
 const CreateLeadPage = () => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
-  const { user, canAccess } = useAuth();
+  const { user } = useAuth();
   const { enqueueSnackbar } = useSnackbar();
 
   // Component state
@@ -379,6 +362,7 @@ const CreateLeadPage = () => {
   // Load initial data
   useEffect(() => {
     loadInitialData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadInitialData = async () => {

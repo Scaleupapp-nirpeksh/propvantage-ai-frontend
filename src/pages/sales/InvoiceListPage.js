@@ -20,7 +20,6 @@ import {
   MenuItem,
   Chip,
   IconButton,
-  Paper,
   Table,
   TableBody,
   TableCell,
@@ -29,19 +28,13 @@ import {
   TableRow,
   TablePagination,
   Avatar,
-  Stack,
-  Alert,
   CircularProgress,
-  useTheme,
-  useMediaQuery,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   DialogContentText,
   Snackbar,
-  Tooltip,
-  Badge,
   Menu,
   ListItemIcon,
   ListItemText,
@@ -51,9 +44,7 @@ import {
 
 import {
   Receipt,
-  Add,
   Search,
-  FilterList,
   Clear,
   Refresh,
   FileDownload,
@@ -67,22 +58,17 @@ import {
   MoreVert,
   PictureAsPdf,
   AttachMoney,
-  CalendarToday,
-  Business,
   Person,
   TrendingUp,
   TrendingDown,
-  AccountBalance,
-  Download,
 } from '@mui/icons-material';
 
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
-import { useAuth } from '../../context/AuthContext';
 import { invoiceAPI, projectAPI, userAPI } from '../../services/api';
-import { formatCurrency, formatDate, formatDateTime } from '../../utils/formatters';
+import { formatCurrency, formatDate } from '../../utils/formatters';
 
 // ============================================================================
 // CONSTANTS AND CONFIGURATIONS
@@ -203,10 +189,6 @@ const getDaysOverdue = (invoice) => {
 const InvoiceListPage = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const { user } = useAuth();
-
   // ============================================================================
   // STATE MANAGEMENT
   // ============================================================================
@@ -214,7 +196,8 @@ const InvoiceListPage = () => {
   // Data state
   const [invoices, setInvoices] = useState([]);
   const [projects, setProjects] = useState([]);
-  const [users, setUsers] = useState([]);
+  // eslint-disable-next-line no-unused-vars
+  const [_users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -249,7 +232,6 @@ const InvoiceListPage = () => {
   });
 
   // Dialog and menu state
-  const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [actionMenu, setActionMenu] = useState({ open: false, anchorEl: null, invoice: null });
   const [cancelDialog, setCancelDialog] = useState({ open: false, invoice: null });
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });

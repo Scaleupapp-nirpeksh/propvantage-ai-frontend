@@ -161,7 +161,7 @@ const validateOrganizationStep = (data) => {
     errors.country = 'Country is required';
   }
 
-  if (data.phone && !/^[\+]?[1-9][\d]{0,15}$/.test(data.phone.replace(/\s/g, ''))) {
+  if (data.phone && !/^[+]?[1-9][\d]{0,15}$/.test(data.phone.replace(/\s/g, ''))) {
     errors.phone = 'Please enter a valid phone number';
   }
 

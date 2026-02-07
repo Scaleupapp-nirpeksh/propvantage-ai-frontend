@@ -8,9 +8,8 @@ import {
   useTheme, useMediaQuery, alpha,
 } from '@mui/material';
 import {
-  AccountBalance, TrendingUp, People, Storefront, Assessment,
-  Refresh, Flag, Insights as InsightsIcon, Warning,
-  CheckCircle, Speed,
+  AccountBalance, People, Storefront, Assessment,
+  Refresh, Flag, Insights as InsightsIcon, Speed,
 } from '@mui/icons-material';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -109,11 +108,11 @@ const RealTimeFinancialDashboard = () => {
   // Derived data
   // ---------------------------------------------------------------------------
 
-  const revenue = report?.revenue || {};
-  const sales = report?.sales || {};
-  const leads = report?.leads || {};
-  const costs = report?.costs || {};
-  const projects = report?.projects || [];
+  const revenue = useMemo(() => report?.revenue || {}, [report]);
+  const sales = useMemo(() => report?.sales || {}, [report]);
+  const leads = useMemo(() => report?.leads || {}, [report]);
+  const costs = useMemo(() => report?.costs || {}, [report]);
+  const projects = useMemo(() => report?.projects || [], [report]);
   const alerts = dashboard?.alerts || [];
   const projections = dashboard?.projections || {};
   const insights = dashboard?.topInsights || [];

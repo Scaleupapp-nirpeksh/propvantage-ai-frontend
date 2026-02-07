@@ -17,7 +17,6 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Paper,
   Alert,
   CircularProgress,
   Divider,
@@ -31,18 +30,12 @@ import {
   InputAdornment,
   Chip,
   Avatar,
-  IconButton,
-  Tooltip,
   Accordion,
   AccordionSummary,
   AccordionDetails,
   FormControlLabel,
   Switch,
   Stack,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
 } from '@mui/material';
 import {
   ArrowBack,
@@ -58,19 +51,12 @@ import {
   Edit,
   Construction,
   Settings,
-  AttachMoney,
-  Security,
   Elevator,
   LocalParking,
   PowerSettingsNew,
   Water,
   Star,
-  Engineering,
   AccountBalance,
-  VerifiedUser,
-  Architecture,
-  CheckCircle,
-  ErrorOutline,
   Home,
 } from '@mui/icons-material';
 
@@ -98,18 +84,6 @@ const CONSTRUCTION_STATUSES = [
   { value: 'structure', label: 'Structure' },
   { value: 'finishing', label: 'Finishing' },
   { value: 'completed', label: 'Completed' },
-];
-
-const APPROVAL_STATUSES = [
-  { value: 'pending', label: 'Pending', color: 'warning' },
-  { value: 'approved', label: 'Approved', color: 'success' },
-  { value: 'rejected', label: 'Rejected', color: 'error' },
-  { value: 'expired', label: 'Expired', color: 'error' },
-];
-
-const UNIT_TYPES = [
-  '1 BHK', '1.5 BHK', '2 BHK', '2.5 BHK', '3 BHK', '3.5 BHK', '4 BHK', '5 BHK',
-  'Studio', 'Penthouse', 'Duplex', 'Shop', 'Office'
 ];
 
 const COMMON_AMENITIES = [
@@ -297,7 +271,7 @@ const DeleteConfirmationDialog = ({ open, onClose, onConfirm, tower, unitCount, 
 const EditTowerPage = () => {
   const { projectId, towerId } = useParams();
   const navigate = useNavigate();
-  const { user, canAccess } = useAuth();
+  const { canAccess } = useAuth();
 
   // Validate IDs
   const validProjectId = extractId(projectId);
@@ -422,6 +396,7 @@ const EditTowerPage = () => {
     if (validProjectId && validTowerId) {
       fetchTowerData();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [validProjectId, validTowerId]);
 
   const fetchTowerData = async () => {
@@ -729,7 +704,6 @@ const EditTowerPage = () => {
     );
   }
 
-  const selectedTowerType = TOWER_TYPES.find(type => type.value === formData.towerType);
   const selectedStatus = TOWER_STATUSES.find(status => status.value === formData.status);
 
   return (

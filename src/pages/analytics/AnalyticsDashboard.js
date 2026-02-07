@@ -10,14 +10,12 @@ import {
   Card,
   CardContent,
   Typography,
-  Button,
   IconButton,
   Chip,
   Tooltip,
   CircularProgress,
   Alert,
   Skeleton,
-  Divider,
   Avatar,
   Stack,
   useTheme,
@@ -32,16 +30,12 @@ import {
   TrendingUp,
   TrendingDown,
   TrendingFlat,
-  Analytics,
   AttachMoney,
   People,
   Assignment,
-  Insights,
   MonetizationOn,
   FilterList,
   Timeline,
-  Visibility,
-  LocationOn,
 } from '@mui/icons-material';
 import {
   ResponsiveContainer,
@@ -57,9 +51,7 @@ import {
   BarChart,
   Bar,
 } from 'recharts';
-import { useAuth } from '../../context/AuthContext';
-import { analyticsAPI, projectAPI, userAPI } from '../../services/api';
-import { useNavigate } from 'react-router-dom';
+import { analyticsAPI, projectAPI } from '../../services/api';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const TIME_PERIODS = [
@@ -166,9 +158,6 @@ const ChartCard = ({ title, loading, children, minHeight = 260, action }) => {
 const AnalyticsDashboard = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const isMd = useMediaQuery(theme.breakpoints.down('md'));
-  const navigate = useNavigate();
-  const { canAccess } = useAuth();
 
   // ── State ──
   const [loading, setLoading] = useState(true);

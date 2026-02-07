@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Box, Card, CardContent, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, TablePagination, TableSortLabel,
-  Typography, IconButton, Checkbox, Chip, Tooltip, Fade,
-  useTheme, useMediaQuery, alpha,
+  Typography, Fade,
+  useTheme, useMediaQuery,
 } from '@mui/material';
-import { MoreVert, KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material';
 import EmptyState from './EmptyState';
 import { TableSkeleton } from './LoadingSkeleton';
 

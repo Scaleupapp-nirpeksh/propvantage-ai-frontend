@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Box, Grid, Avatar, Chip, IconButton, Tooltip, Menu, MenuItem,
@@ -12,7 +12,6 @@ import {
   Phone, Email, MoreVert, AccountBalance, CalendarToday, Assessment,
   TrendingUp,
 } from '@mui/icons-material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 

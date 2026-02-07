@@ -28,11 +28,6 @@ import {
   Tabs,
   Breadcrumbs,
   Link,
-  LinearProgress,
-  List,
-  ListItem,
-  ListItemText as MuiListItemText,
-  Divider,
   Table,
   TableBody,
   TableCell,
@@ -41,7 +36,6 @@ import {
   TableRow,
 } from '@mui/material';
 import {
-  ArrowBack,
   Edit,
   MoreVert,
   Home,
@@ -54,7 +48,6 @@ import {
   Refresh,
   NavigateNext,
   Business,
-  Domain,
   Star,
   Park,
   LocalParking,
@@ -67,15 +60,12 @@ import {
   AccountBalance,
   Construction,
   VerifiedUser,
-  LocationOn,
   Person,
   Info,
   Assignment,
   Apartment,
   Villa,
   Timeline,
-  Security,
-  Explore,
 } from '@mui/icons-material';
 
 import { useAuth } from '../../context/AuthContext';
@@ -872,7 +862,6 @@ const UnitHistory = ({ unit }) => {
 const UnitDetailPage = () => {
   const { projectId, towerId, unitId } = useParams();
   const navigate = useNavigate();
-  const { canAccess } = useAuth();
 
   // State management
   const [project, setProject] = useState(null);
@@ -887,6 +876,7 @@ const UnitDetailPage = () => {
     if (projectId && unitId) {
       fetchUnitData();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, towerId, unitId]);
 
   const fetchUnitData = async () => {

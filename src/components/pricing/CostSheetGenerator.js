@@ -13,7 +13,6 @@ import {
   Button,
   CircularProgress,
   Alert,
-  Divider,
   Table,
   TableBody,
   TableCell,
@@ -21,27 +20,21 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Chip,
   TextField,
   Switch,
   FormControlLabel,
   Collapse,
   IconButton,
   Tooltip,
-  Skeleton,
 } from '@mui/material';
 import {
   Receipt,
   Calculate,
   Print,
-  FileDownload,
   Refresh,
   ExpandMore,
   ExpandLess,
   MonetizationOn,
-  AccountBalance,
-  LocalOffer,
-  CheckCircle,
 } from '@mui/icons-material';
 import { pricingAPI } from '../../services/api';
 
@@ -111,6 +104,7 @@ const CostSheetGenerator = ({ unitId, unitData, projectData, onCostSheetGenerate
     if (unitId && embedded) {
       generateCostSheet();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [unitId]);
 
   const handlePrint = () => {

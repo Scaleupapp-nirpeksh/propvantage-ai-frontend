@@ -9,12 +9,11 @@ import {
 } from '@mui/material';
 import {
   AccountBalance, TrendingUp, People, ShowChart, Assessment,
-  Refresh, Flag, Insights as InsightsIcon, Warning,
-  CheckCircle, Error as ErrorIcon,
+  Refresh, Flag, Insights as InsightsIcon,
 } from '@mui/icons-material';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip as RechartsTooltip, Legend, PieChart, Pie, Cell,
+  Tooltip as RechartsTooltip, Legend,
 } from 'recharts';
 import { PageHeader, KPICard, FilterBar } from '../../components/common';
 import { useAuth } from '../../context/AuthContext';
@@ -102,8 +101,8 @@ const BudgetVsActualDashboard = () => {
   }, [dashboard, theme]);
 
   const revenue = report?.revenue || {};
-  const sales = report?.sales || {};
-  const projects = report?.projects || [];
+  const sales = useMemo(() => report?.sales || {}, [report]);
+  const projects = useMemo(() => report?.projects || [], [report]);
   const alerts = dashboard?.alerts || [];
   const insights = dashboard?.topInsights || [];
   const actions = dashboard?.quickActions || [];

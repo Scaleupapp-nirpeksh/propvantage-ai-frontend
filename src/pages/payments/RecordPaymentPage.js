@@ -17,8 +17,8 @@
  * - Mobile-optimized responsive design
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   Box,
   Grid,
@@ -43,35 +43,15 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Divider,
   Alert,
   CircularProgress,
-  LinearProgress,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  DialogContentText,
-  IconButton,
-  Tooltip,
   Stack,
   useTheme,
   useMediaQuery,
-  Fab,
   InputAdornment,
-  Badge,
   Avatar,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
-  ListItemSecondaryAction,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   FormControlLabel,
   Switch,
-  Checkbox,
   Chip,
   Autocomplete,
   Snackbar,
@@ -81,7 +61,6 @@ import {
   Payment,
   ArrowBack,
   CheckCircle,
-  Warning,
   Receipt,
   AccountBalance,
   CreditCard,
@@ -89,33 +68,11 @@ import {
   AttachMoney,
   Calculate,
   Save,
-  Print,
-  Download,
-  Send,
-  Refresh,
   Search,
   Person,
   Business,
-  Home,
   CalendarToday,
-  Schedule,
-  Info,
-  Error as ErrorIcon,
-  ExpandMore,
-  Add,
-  Remove,
   Edit,
-  Visibility,
-  Check,
-  Close,
-  Assessment,
-  Timeline,
-  Phone,
-  Email,
-  WhatsApp,
-  Today,
-  TrendingUp,
-  Speed,
 } from '@mui/icons-material';
 
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -124,7 +81,7 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
 import { useAuth } from '../../context/AuthContext';
 import { paymentAPI, salesAPI } from '../../services/api';
-import { formatCurrency, formatDate, formatDateTime, formatPhoneNumber } from '../../utils/formatters';
+import { formatCurrency, formatDate, formatPhoneNumber } from '../../utils/formatters';
 
 // ============================================================================
 // CONSTANTS AND CONFIGURATIONS
@@ -276,7 +233,7 @@ const generatePaymentReference = () => {
  * @param {Object} saleData - Sale data if pre-selected
  */
 const SaleSelectionStep = ({ selectedSaleId, onSaleSelect, saleData }) => {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [, setSearchQuery] = useState('');
   const [sales, setSales] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedSale, setSelectedSale] = useState(saleData || null);
@@ -494,8 +451,6 @@ const SaleSelectionStep = ({ selectedSaleId, onSaleSelect, saleData }) => {
  * @param {Object} saleData - Sale data for validation
  */
 const PaymentDetailsStep = ({ paymentData, onPaymentDataChange, saleData }) => {
-  const theme = useTheme();
-
   const handleChange = (field, value) => {
     onPaymentDataChange({
       ...paymentData,
@@ -1074,8 +1029,7 @@ const PaymentConfirmationStep = ({ saleData, paymentData, allocation, installmen
 const RecordPaymentPage = () => {
   const navigate = useNavigate();
   const { saleId } = useParams();
-  const location = useLocation();
-  const { user, canAccess } = useAuth();
+  const { canAccess } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -1179,6 +1133,7 @@ const RecordPaymentPage = () => {
         paymentReference: generatePaymentReference(),
       }));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paymentData.paymentMethod]);
 
   // ============================================================================
@@ -1307,7 +1262,7 @@ const RecordPaymentPage = () => {
         allocation: allocation,
       };
 
-      const response = await paymentAPI.recordPayment(paymentPayload);
+      await paymentAPI.recordPayment(paymentPayload);
       
       console.log('✅ Payment recorded successfully');
 

@@ -4,7 +4,7 @@
 // Location: src/pages/sales/CommissionPaymentsPage.js
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import {
   Box,
   Grid,
@@ -24,8 +24,6 @@ import {
   Alert,
   CircularProgress,
   Stack,
-  useTheme,
-  useMediaQuery,
   Paper,
   Table,
   TableBody,
@@ -33,38 +31,20 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  TablePagination,
   Checkbox,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  DialogContentText,
   Snackbar,
   InputAdornment,
-  Stepper,
-  Step,
-  StepLabel,
-  StepContent,
-  Divider,
   List,
   ListItem,
   ListItemText,
-  ListItemIcon,
   ListItemSecondaryAction,
-  Tabs,
-  Tab,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Badge,
   Tooltip,
   LinearProgress,
   FormHelperText,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
-  Autocomplete,
 } from '@mui/material';
 import {
   Payment,
@@ -74,50 +54,18 @@ import {
   CheckCircle,
   Schedule,
   Warning,
-  Error as ErrorIcon,
-  Person,
-  Business,
-  CalendarToday,
-  AttachMoney,
   AccountBalance,
   CreditCard,
   LocalAtm,
   SwapHoriz,
-  Upload,
-  Download,
-  Print,
-  Share,
-  MoreVert,
-  Add,
-  Edit,
-  Delete,
-  Visibility,
   Search,
-  FilterList,
   Clear,
   Refresh,
   Save,
-  Cancel,
-  Info,
-  ExpandMore,
-  Handshake,
-  Timeline,
-  Assignment,
-  GetApp,
-  CloudUpload,
-  VerifiedUser,
-  PendingActions,
-  Done,
-  History,
-  TrendingUp,
 } from '@mui/icons-material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-
 import { useAuth } from '../../context/AuthContext';
 import { commissionAPI } from '../../services/api';
-import { formatCurrency, formatDate, formatDateTime } from '../../utils/formatters';
+import { formatCurrency, formatDate } from '../../utils/formatters';
 
 // ============================================================================
 // CONSTANTS AND CONFIGURATIONS
@@ -131,31 +79,6 @@ const PAYMENT_METHODS = [
   { value: 'cash', label: 'Cash', icon: LocalAtm },
   { value: 'credit_card', label: 'Credit Card', icon: CreditCard },
   { value: 'wallet', label: 'Digital Wallet', icon: AccountBalanceWallet },
-];
-
-// Payment status options
-const PAYMENT_STATUSES = [
-  { value: 'pending', label: 'Pending', color: 'warning' },
-  { value: 'processing', label: 'Processing', color: 'info' },
-  { value: 'completed', label: 'Completed', color: 'success' },
-  { value: 'failed', label: 'Failed', color: 'error' },
-  { value: 'cancelled', label: 'Cancelled', color: 'default' },
-];
-
-// Commission status for payment filtering
-const COMMISSION_PAYMENT_FILTERS = [
-  { value: 'all', label: 'All Commissions' },
-  { value: 'approved', label: 'Approved (Ready for Payment)' },
-  { value: 'partially_paid', label: 'Partially Paid' },
-  { value: 'overdue', label: 'Overdue Payments' },
-];
-
-// Bulk payment options
-const BULK_PAYMENT_OPTIONS = [
-  { id: 'selected', label: 'Process Selected Commissions' },
-  { id: 'all_approved', label: 'Process All Approved Commissions' },
-  { id: 'by_partner', label: 'Process by Partner' },
-  { id: 'by_amount_range', label: 'Process by Amount Range' },
 ];
 
 // ============================================================================
@@ -239,22 +162,6 @@ const validatePaymentForm = (formData) => {
 // ============================================================================
 // COMPONENT DEFINITIONS
 // ============================================================================
-
-/**
- * Payment Status Chip Component
- */
-const PaymentStatusChip = ({ status, size = 'small' }) => {
-  const statusConfig = PAYMENT_STATUSES.find(s => s.value === status) || PAYMENT_STATUSES[0];
-
-  return (
-    <Chip
-      label={statusConfig.label}
-      color={statusConfig.color}
-      size={size}
-      variant="outlined"
-    />
-  );
-};
 
 /**
  * Commission Payment Summary Card
@@ -920,12 +827,8 @@ const BulkPaymentDialog = ({ open, onClose, selectedCommissions, onSubmit }) => 
  * Comprehensive commission payment processing with single and bulk operations
  */
 const CommissionPaymentsPage = () => {
-  const navigate = useNavigate();
   const { commissionId } = useParams(); // For direct payment of specific commission
-  const [searchParams] = useSearchParams();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const { user, canAccess } = useAuth();
+  const { canAccess } = useAuth();
 
   // ============================================================================
   // STATE MANAGEMENT

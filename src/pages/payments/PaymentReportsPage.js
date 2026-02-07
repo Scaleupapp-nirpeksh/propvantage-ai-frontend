@@ -15,7 +15,6 @@ import {
   CardHeader,
   Typography,
   Button,
-  TextField,
   FormControl,
   InputLabel,
   Select,
@@ -27,10 +26,6 @@ import {
   CircularProgress,
   Stack,
   useTheme,
-  useMediaQuery,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   LinearProgress,
   Paper,
   Table,
@@ -42,19 +37,14 @@ import {
   TablePagination,
   Tabs,
   Tab,
-  Divider,
   Tooltip,
-  Badge,
   Fade,
-  Slide,
   Zoom,
   Breadcrumbs,
   Link,
   Menu,
   ListItemIcon,
   ListItemText,
-  Switch,
-  FormControlLabel,
   ToggleButton,
   ToggleButtonGroup,
   Skeleton,
@@ -68,52 +58,26 @@ import {
   AccountBalance,
   TrendingUp,
   TrendingDown,
-  AttachMoney,
-  ExpandMore,
   Refresh,
-  FileDownload,
   Print,
-  Share,
-  CalendarToday,
-  Person,
   Business,
-  PieChart,
   BarChart,
   ShowChart,
   Timeline as TimelineIcon,
   MonetizationOn,
   CheckCircle,
-  Schedule,
-  Warning,
-  TableChart,
-  InsertChart,
-  FilterList,
   Clear,
-  DateRange,
-  GetApp,
   Visibility,
-  Dashboard,
   Home,
-  Analytics,
   PictureAsPdf,
   TableView,
-  SaveAlt,
   CloudDownload,
   DataSaverOff,
-  FullscreenRounded,
-  SettingsRounded,
   AutoGraphRounded,
-  LeaderboardRounded,
-  PieChartRounded,
-  BarChartRounded,
-  TimelineRounded,
   ErrorOutline,
   AccessTime,
   CreditCard,
-  AccountBalanceWallet,
-  Receipt,
   QueryStats,
-  PendingActions,
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -121,7 +85,6 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import {
   LineChart,
   Line,
-  AreaChart,
   Area,
   BarChart as RechartsBarChart,
   Bar,
@@ -1003,8 +966,6 @@ const PerformanceAnalytics = ({ paymentData, projects, loading }) => {
 // ============================================================================
 
 const OverdueManagement = ({ paymentData, loading }) => {
-  const theme = useTheme();
-  
   const overduePayments = useMemo(() => {
     return paymentData
       .filter(payment => payment.status === 'overdue')
@@ -1326,16 +1287,14 @@ const DetailedPaymentsTable = ({ paymentData, loading }) => {
 
 const PaymentReportsPage = () => {
   const navigate = useNavigate();
-  const { user, canAccess } = useAuth();
+  const { canAccess } = useAuth();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [searchParams, setSearchParams] = useSearchParams();
 
   // State management
   const [activeTab, setActiveTab] = useState(0);
   const [paymentData, setPaymentData] = useState([]);
   const [projects, setProjects] = useState([]);
-  const [users, setUsers] = useState([]);
   const [analytics, setAnalytics] = useState({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -1379,7 +1338,7 @@ const PaymentReportsPage = () => {
       );
 
       // Use the actual payment API endpoints that exist
-      const [statsResult, overdueResult, dueTodayResult, projectsResult, usersResult, salesResult] = await Promise.allSettled([
+      const [statsResult, overdueResult, dueTodayResult, projectsResult, , salesResult] = await Promise.allSettled([
         paymentAPI.getPaymentStatistics(queryParams),
         paymentAPI.getOverduePayments(queryParams),
         paymentAPI.getPaymentsDueToday(queryParams),
@@ -1505,12 +1464,6 @@ const PaymentReportsPage = () => {
         const response = projectsResult.value.data;
         const projectsData = response.data || response || [];
         setProjects(Array.isArray(projectsData) ? projectsData : []);
-      }
-
-      if (usersResult.status === 'fulfilled') {
-        const response = usersResult.value.data;
-        const usersData = response.data || response || [];
-        setUsers(Array.isArray(usersData) ? usersData : []);
       }
 
       setLoading(false);

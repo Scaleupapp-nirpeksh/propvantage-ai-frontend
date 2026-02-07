@@ -4,7 +4,7 @@
 // Location: src/context/AuthContext.js
 
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import apiClient, { authAPI } from '../services/api';
+import { authAPI } from '../services/api';
 
 // Initial authentication state
 const initialState = {
@@ -269,6 +269,7 @@ export const AuthProvider = ({ children }) => {
   // Initialize authentication on app start
   useEffect(() => {
     initializeAuth();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Auto-refresh token before expiry
@@ -280,6 +281,7 @@ export const AuthProvider = ({ children }) => {
 
       return () => clearInterval(tokenRefreshInterval);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.isAuthenticated, state.token]);
 
   // Initialize authentication from stored tokens

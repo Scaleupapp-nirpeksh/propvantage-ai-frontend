@@ -41,21 +41,11 @@ import {
   DialogActions,
   DialogContentText,
   Snackbar,
-  Tooltip,
-  Badge,
   Divider,
-  List,
-  ListItem,
   ListItemText,
   ListItemIcon,
-  ListItemSecondaryAction,
-
   LinearProgress,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   Menu,
-  ListItemButton,
 } from '@mui/material';
 
 import {
@@ -64,31 +54,19 @@ import {
   Edit,
   Payment,
   Cancel,
-  Download,
-  Print,
-  Share,
   MoreVert,
   CheckCircle,
   Schedule,
   Warning,
-  Error as ErrorIcon,
-  AttachMoney,
   Person,
   Business,
-  CalendarToday,
-  AccountBalance,
   Assignment,
   History,
-  Note,
   Visibility,
   PictureAsPdf,
   Send,
-  MonetizationOn,
-  Assessment,
   Info,
-  ExpandMore,
   Update,
-  AccountBalanceWallet,
 } from '@mui/icons-material';
 
 // Timeline components from @mui/lab
@@ -105,8 +83,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
-import { useAuth } from '../../context/AuthContext';
-import { invoiceAPI, salesAPI } from '../../services/api';
+import { invoiceAPI } from '../../services/api';
 import { formatCurrency, formatDate, formatDateTime } from '../../utils/formatters';
 
 // ============================================================================
@@ -225,8 +202,6 @@ const InvoiceDetailPage = () => {
   const [searchParams] = useSearchParams();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const { user } = useAuth();
-
   // ============================================================================
   // STATE MANAGEMENT
   // ============================================================================

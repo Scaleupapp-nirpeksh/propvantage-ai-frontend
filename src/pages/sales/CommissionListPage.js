@@ -3,7 +3,7 @@
 // Version: 1.0 - Complete commission management with backend integration
 // Location: src/pages/sales/CommissionListPage.js
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Box,
@@ -23,9 +23,6 @@ import {
   Avatar,
   Alert,
   CircularProgress,
-  Stack,
-  useTheme,
-  useMediaQuery,
   Paper,
   Table,
   TableBody,
@@ -35,7 +32,6 @@ import {
   TableRow,
   TablePagination,
   Checkbox,
-  Toolbar,
   Tooltip,
   Menu,
   ListItemIcon,
@@ -48,44 +44,29 @@ import {
   Snackbar,
   InputAdornment,
   Collapse,
-  Divider,
   Badge,
   LinearProgress,
 } from '@mui/material';
 import {
   Search,
   FilterList,
-  Sort,
   MoreVert,
   Visibility,
   Edit,
-  Delete,
   CheckCircle,
   Cancel,
   Schedule,
   Payment,
   Download,
   Refresh,
-  Add,
   Clear,
   ExpandMore,
   ExpandLess,
   Assignment,
-  AttachMoney,
-  Person,
-  Business,
-  CalendarToday,
-  TrendingUp,
-  Warning,
   Error as ErrorIcon,
   AccountBalanceWallet,
   PendingActions,
-  Handshake,
   Analytics,
-  Print,
-  Share,
-  Archive,
-  Restore,
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -93,7 +74,7 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
 import { useAuth } from '../../context/AuthContext';
 import { commissionAPI, projectAPI, userAPI } from '../../services/api';
-import { formatCurrency, formatDate, formatDateTime } from '../../utils/formatters';
+import { formatCurrency, formatDate } from '../../utils/formatters';
 
 // ============================================================================
 // CONSTANTS AND CONFIGURATIONS
@@ -485,9 +466,7 @@ const BulkActionsToolbar = ({
 const CommissionListPage = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const { user, canAccess } = useAuth();
+  const { canAccess } = useAuth();
 
   // ============================================================================
   // STATE MANAGEMENT
@@ -526,7 +505,6 @@ const CommissionListPage = () => {
 
   // Selection state
   const [selectedCommissions, setSelectedCommissions] = useState([]);
-  const [selectAll, setSelectAll] = useState(false);
 
   // Dialog states
   const [confirmDialog, setConfirmDialog] = useState({
@@ -579,6 +557,7 @@ const CommissionListPage = () => {
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, pagination.page, pagination.limit, sortConfig, setSearchParams]);
 
   /**
@@ -676,7 +655,6 @@ const CommissionListPage = () => {
     } else {
       setSelectedCommissions([]);
     }
-    setSelectAll(isSelected);
   }, [commissions]);
 
   /**
@@ -757,6 +735,7 @@ const CommissionListPage = () => {
       default:
         console.log('Unknown bulk action:', action);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCommissions]);
 
   /**

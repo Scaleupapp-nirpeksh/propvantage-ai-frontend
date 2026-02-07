@@ -25,8 +25,6 @@ import {
   Stack,
   Breadcrumbs,
   Link,
-  FormControlLabel,
-  Switch,
   InputAdornment,
   Accordion,
   AccordionSummary,
@@ -37,13 +35,10 @@ import {
   ArrowBack,
   Business,
   Domain,
-  Home,
   NavigateNext,
   Save,
-  Add,
   Delete,
   ExpandMore,
-  Info,
 } from '@mui/icons-material';
 
 import { useAuth } from '../../context/AuthContext';
@@ -105,7 +100,7 @@ const CreateTowerBreadcrumbs = ({ project }) => {
 const CreateTowerPage = () => {
   const { projectId } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  useAuth();
 
   // State management
   const [project, setProject] = useState(null);
@@ -162,6 +157,7 @@ const CreateTowerPage = () => {
     if (projectId) {
       fetchProject();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
   const fetchProject = async () => {

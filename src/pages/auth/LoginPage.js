@@ -216,50 +216,6 @@ const LoginPage = () => {
     }
   };
 
-  // Demo login functionality
-  const handleDemoLogin = async (role) => {
-    setIsLoading(true);
-    setErrors({});
-
-    try {
-      // Demo credentials based on role
-      const demoCredentials = {
-        'Business Head': { email: 'admin@demo.com', password: 'password123' },
-        'Sales Executive': { email: 'sales@demo.com', password: 'password123' },
-        'Sales Manager': { email: 'manager@demo.com', password: 'password123' },
-        'Finance Head': { email: 'finance@demo.com', password: 'password123' },
-        'Project Director': { email: 'director@demo.com', password: 'password123' },
-      };
-
-      const credentials = demoCredentials[role];
-      if (!credentials) {
-        throw new Error('Demo account not available for this role');
-      }
-
-      const result = await login(credentials);
-
-      if (result.success) {
-        enqueueSnackbar(`Logged in as ${role} (Demo)`, {
-          variant: 'success',
-        });
-
-        // Redirect to appropriate dashboard
-        setTimeout(() => {
-          navigate(result.redirectTo || '/dashboard', { replace: true });
-        }, 100);
-      } else {
-        throw new Error(result.error || 'Demo login failed');
-      }
-    } catch (error) {
-      console.error('Demo login error:', error);
-      enqueueSnackbar('Demo login failed. Please try again.', {
-        variant: 'error',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return (
     <Box
       sx={{

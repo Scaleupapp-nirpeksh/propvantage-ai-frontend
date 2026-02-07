@@ -6,7 +6,7 @@
 import React, { Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
-import { CssBaseline, Box, CircularProgress, Typography } from '@mui/material';
+import { CssBaseline, Box, Typography } from '@mui/material';
 import { SnackbarProvider } from 'notistack';
 
 // Theme and Context Providers
