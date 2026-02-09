@@ -86,6 +86,7 @@ import {
 
 import { useAuth } from '../../context/AuthContext';
 import { projectAPI, towerAPI, unitAPI } from '../../services/api';
+import TowerVisualizer3D from '../../components/projects/TowerVisualizer3D';
 
 // Utility function to safely extract ID from object or string
 const extractId = (value, context = 'unknown') => {
@@ -1984,12 +1985,18 @@ const TowerDetailPage = () => {
           </Tabs>
           
           {activeTab === 0 && (
-            <Box sx={{ p: 2 }}>
+            <Box sx={{ p: 2, display: 'flex', gap: 1 }}>
+              <Button
+                variant={viewMode === '3d' ? 'contained' : 'outlined'}
+                size="small"
+                onClick={() => setViewMode('3d')}
+              >
+                3D View
+              </Button>
               <Button
                 variant={viewMode === 'floor' ? 'contained' : 'outlined'}
                 size="small"
                 onClick={() => setViewMode('floor')}
-                sx={{ mr: 1 }}
               >
                 Floor View
               </Button>
@@ -2021,13 +2028,23 @@ const TowerDetailPage = () => {
               </Typography>
             </Alert>
           )}
-          <UnitsGrid
-            units={units}
-            viewMode={viewMode}
-            onAddUnit={handleAddUnit}
-            projectId={projectId}
-            towerId={towerId}
-          />
+          {viewMode === '3d' ? (
+            <TowerVisualizer3D
+              tower={tower}
+              units={units}
+              projectId={projectId}
+              towerId={towerId}
+              onUnitClick={(unit) => navigate(`/projects/${projectId}/towers/${towerId}/units/${unit._id || unit.id}`)}
+            />
+          ) : (
+            <UnitsGrid
+              units={units}
+              viewMode={viewMode}
+              onAddUnit={handleAddUnit}
+              projectId={projectId}
+              towerId={towerId}
+            />
+          )}
         </Box>
       )}
 

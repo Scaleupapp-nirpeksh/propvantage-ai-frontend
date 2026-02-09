@@ -53,6 +53,7 @@ import {
 
 import { useAuth } from '../../context/AuthContext';
 import { projectAPI, towerAPI, unitAPI } from '../../services/api';
+import MiniTowerSilhouette from '../../components/projects/MiniTowerSilhouette';
 
 // Utility functions
 const formatCurrency = (amount) => {
@@ -151,16 +152,31 @@ const ProjectCard = ({ project, onCardClick, onMenuAction }) => {
           position: 'relative',
         }}
       >
-        <Avatar 
-          sx={{ 
-            width: 60, 
-            height: 60, 
-            bgcolor: 'primary.main',
-            boxShadow: 3,
-          }}
-        >
-          <ProjectTypeIcon sx={{ fontSize: 30 }} />
-        </Avatar>
+        {/* Tower skyline or project type icon */}
+        {project.towers && project.towers.length > 0 ? (
+          <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: '6px' }}>
+            {project.towers.slice(0, 5).map((t, idx) => (
+              <MiniTowerSilhouette
+                key={idx}
+                floors={t.totalFloors || 5}
+                soldPercentage={project.unitsSold && project.totalUnits ? Math.round((project.unitsSold / project.totalUnits) * 100) : 0}
+                width={20}
+                height={Math.max(28, Math.min(60, (t.totalFloors || 5) * 3))}
+              />
+            ))}
+          </Box>
+        ) : (
+          <Avatar
+            sx={{
+              width: 60,
+              height: 60,
+              bgcolor: 'primary.main',
+              boxShadow: 3,
+            }}
+          >
+            <ProjectTypeIcon sx={{ fontSize: 30 }} />
+          </Avatar>
+        )}
         
         {/* Project Status Badge */}
         <Chip 

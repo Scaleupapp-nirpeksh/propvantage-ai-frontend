@@ -70,6 +70,7 @@ import {
 
 import { useAuth } from '../../context/AuthContext';
 import { projectAPI, towerAPI, unitAPI } from '../../services/api';
+import FloorContextBar from '../../components/projects/FloorContextBar';
 import CostSheetGenerator from '../../components/pricing/CostSheetGenerator';
 
 // Utility functions
@@ -867,6 +868,7 @@ const UnitDetailPage = () => {
   const [project, setProject] = useState(null);
   const [tower, setTower] = useState(null);
   const [unit, setUnit] = useState(null);
+  const [floorUnits, setFloorUnits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState(0);
@@ -937,6 +939,22 @@ const UnitDetailPage = () => {
 
       setUnit(unitData);
 
+      // Fetch sibling units on the same floor for FloorContextBar
+      try {
+        const floorNum = unitData?.floor ?? unitData?.floorNumber;
+        if (floorNum != null && towerId) {
+          const unitsRes = await unitAPI.getUnits({ tower: towerId });
+          const allUnits = unitsRes.data?.data || unitsRes.data?.units || unitsRes.data || [];
+          const siblings = Array.isArray(allUnits)
+            ? allUnits.filter((u) => (u.floor ?? u.floorNumber) === floorNum)
+            : [];
+          setFloorUnits(siblings);
+        }
+      } catch (floorErr) {
+        // Non-critical — just skip floor context
+        console.log('Floor context fetch skipped:', floorErr.message);
+      }
+
     } catch (error) {
       console.error('❌ Error fetching unit data:', error);
       setError('Failed to load unit details. Please try again.');
@@ -992,6 +1010,17 @@ const UnitDetailPage = () => {
     <Box>
       {/* Breadcrumb Navigation */}
       <UnitBreadcrumbs project={project} tower={tower} unit={unit} />
+
+      {/* Floor Context — navigate between units on same floor */}
+      {floorUnits.length > 1 && (
+        <FloorContextBar
+          units={floorUnits}
+          currentUnitId={unitId}
+          projectId={projectId}
+          towerId={towerId}
+          floorNumber={unit?.floor ?? unit?.floorNumber}
+        />
+      )}
 
       {/* Unit Header */}
       <UnitHeader

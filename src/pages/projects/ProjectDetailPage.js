@@ -61,6 +61,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { projectAPI, towerAPI, unitAPI } from '../../services/api';
 import { budgetVarianceAPI } from '../../services/budgetAPI';
+import MiniTowerSilhouette from '../../components/projects/MiniTowerSilhouette';
 
 // Import Budget Variance Dashboard Components
 import BudgetVarianceSummaryCards from '../analytics/BudgetVarianceSummaryCards';
@@ -594,8 +595,13 @@ const TowerCard = ({ tower, projectId }) => {
     >
       <CardContent>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Domain color="primary" />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <MiniTowerSilhouette
+              floors={tower.totalFloors || 5}
+              soldPercentage={salesPercentage || 0}
+              width={24}
+              height={Math.max(32, Math.min(56, (tower.totalFloors || 5) * 3.5))}
+            />
             <Typography variant="h6" sx={{ fontWeight: 600 }}>
               {tower.towerName || `Tower ${tower.towerCode}`}
             </Typography>
