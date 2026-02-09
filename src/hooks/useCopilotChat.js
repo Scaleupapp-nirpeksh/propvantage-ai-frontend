@@ -3,20 +3,25 @@
 // Handles messages, conversation memory, loading, rate limiting, and error states
 
 import { useState, useCallback, useRef } from 'react';
-import { useLocation, useParams } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { copilotAPI } from '../services/api';
 
-// Extract page context from current route
-const getPageContext = (pathname, params) => {
+// Extract page context from current route pathname
+// Parses projectId directly from URL since this hook runs outside Route param scope
+const getPageContext = (pathname) => {
   const context = { currentPage: 'unknown' };
 
   if (pathname === '/dashboard' || pathname === '/') {
     context.currentPage = 'dashboard';
-  } else if (pathname.startsWith('/projects') && params.projectId) {
-    context.currentPage = 'project-detail';
-    context.projectId = params.projectId;
   } else if (pathname.startsWith('/projects')) {
-    context.currentPage = 'projects-list';
+    // Extract projectId from URL pattern: /projects/:projectId/...
+    const parts = pathname.split('/').filter(Boolean);
+    if (parts.length >= 2 && parts[0] === 'projects' && parts[1] !== 'create') {
+      context.currentPage = 'project-detail';
+      context.projectId = parts[1];
+    } else {
+      context.currentPage = 'projects-list';
+    }
   } else if (pathname.startsWith('/leads')) {
     context.currentPage = 'leads-list';
   } else if (pathname.startsWith('/sales')) {
@@ -41,7 +46,6 @@ const useCopilotChat = () => {
   const abortRef = useRef(null);
 
   const location = useLocation();
-  const params = useParams();
 
   const sendMessage = useCallback(async (text) => {
     if (!text.trim() || isLoading) return;
@@ -57,7 +61,7 @@ const useCopilotChat = () => {
     setMessages(prev => [...prev, userMsg]);
 
     try {
-      const context = getPageContext(location.pathname, params);
+      const context = getPageContext(location.pathname);
 
       const response = await copilotAPI.chat({
         message: text,

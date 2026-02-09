@@ -384,18 +384,20 @@ const CopilotChat = ({ open, onClose }) => {
   };
 
   const panelWidth = isMobile ? '100vw' : 400;
-  const panelHeight = isMobile ? '100vh' : 'calc(100vh - 100px)';
 
   return (
     <Slide direction="up" in={open} mountOnEnter unmountOnExit>
       <Box
         sx={{
           position: 'fixed',
+          // On mobile: fill entire screen using inset, avoids Safari 100vh address bar issue
+          top: isMobile ? 0 : 'auto',
+          left: isMobile ? 0 : 'auto',
           bottom: isMobile ? 0 : 24,
           right: isMobile ? 0 : 24,
-          width: panelWidth,
-          height: panelHeight,
-          maxHeight: isMobile ? '100vh' : 640,
+          width: isMobile ? '100%' : panelWidth,
+          height: isMobile ? '100%' : 'calc(100vh - 100px)',
+          maxHeight: isMobile ? 'none' : 640,
           bgcolor: 'background.paper',
           borderRadius: isMobile ? 0 : 3,
           boxShadow: '0 16px 48px rgba(0,0,0,0.16)',
