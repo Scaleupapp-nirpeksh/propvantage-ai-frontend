@@ -485,6 +485,15 @@ export const aiAPI = {
 };
 
 // =============================================================================
+// 11b. AI COPILOT SERVICES (/api/ai/copilot)
+// =============================================================================
+export const copilotAPI = {
+  // Send a chat message to AI Copilot
+  chat: ({ message, conversationId, context }) =>
+    api.post('/ai/copilot/chat', { message, conversationId, context }),
+};
+
+// =============================================================================
 // 12. FILE MANAGEMENT SERVICES (/api/files) - UNCHANGED
 // =============================================================================
 export const fileAPI = {
@@ -1196,6 +1205,7 @@ const apiServices = {
   sales: salesAPI,
   pricing: pricingAPI,
   ai: aiAPI,
+  copilot: copilotAPI,
   file: fileAPI,
   analytics: analyticsAPI, // ENHANCED
   budgetVsActual: budgetVsActualAPI, // ENHANCED

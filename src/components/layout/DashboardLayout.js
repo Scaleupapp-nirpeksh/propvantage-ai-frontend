@@ -74,6 +74,7 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import CommandPalette from '../navigation/CommandPalette';
+import CopilotFAB from '../copilot/CopilotFAB';
 import { useCoachMark } from '../onboarding';
 
 // --- Constants ---
@@ -718,6 +719,9 @@ const DashboardLayout = ({ children }) => {
 
       {/* Command Palette */}
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+
+      {/* AI Copilot FAB */}
+      <CopilotFAB />
     </Box>
   );
 };
