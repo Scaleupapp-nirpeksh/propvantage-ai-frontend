@@ -92,7 +92,7 @@ const EditSalePage = () => {
   const { saleId } = useParams(); // ✅ FIXED: Changed from 'id' to 'saleId' to match route definition
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, canAccess } = useAuth();
+  const { user, canAccess, checkPerm } = useAuth();
 
   // ALL HOOKS MUST BE AT THE TOP - BEFORE ANY CONDITIONAL RETURNS
   
@@ -256,7 +256,7 @@ const EditSalePage = () => {
 
   // Check permissions
   const canEdit = canAccess && canAccess.salesPipeline ? canAccess.salesPipeline() : false;
-  const canCancel = user && (user.role === 'Business Head' || user.role === 'Sales Head' || user.role === 'Project Director');
+  const canCancel = (checkPerm && checkPerm('sales:cancel')) || (user && (user.role === 'Business Head' || user.role === 'Sales Head' || user.role === 'Project Director'));
 
   // Debug logging  
   const allParams = useParams();

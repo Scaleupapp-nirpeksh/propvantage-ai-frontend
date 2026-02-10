@@ -109,6 +109,10 @@ const GenerateInvoicePage = React.lazy(() => import('./pages/sales/GenerateInvoi
 const ProfilePage = React.lazy(() => import('./pages/profile/ProfilePage'));
 const SettingsPage = React.lazy(() => import('./pages/settings/SettingsPage'));
 const UserManagementPage = React.lazy(() => import('./pages/settings/UserManagementPage'));
+const RolesListPage = React.lazy(() => import('./pages/settings/RolesListPage'));
+const CreateEditRolePage = React.lazy(() => import('./pages/settings/CreateEditRolePage'));
+const RoleDetailPage = React.lazy(() => import('./pages/settings/RoleDetailPage'));
+const OrgHierarchyPage = React.lazy(() => import('./pages/settings/OrgHierarchyPage'));
 
 // Error Pages - UNCHANGED
 const NotFoundPage = React.lazy(() => import('./pages/error/NotFoundPage'));
@@ -196,7 +200,7 @@ const LoadingFallback = ({ message = 'Loading...', section = null }) => {
 // =============================================================================
 
 const ProtectedRoute = ({ children, requiredPermission, fallback = <UnauthorizedPage /> }) => {
-  const { isAuthenticated, isLoading, hasPermission, canAccess } = useAuth();
+  const { isAuthenticated, isLoading, hasPermission, canAccess, checkPerm } = useAuth();
 
   if (isLoading) {
     return <LoadingFallback message="Authenticating..." />;
@@ -209,8 +213,16 @@ const ProtectedRoute = ({ children, requiredPermission, fallback = <Unauthorized
   // Check specific permission if provided
   if (requiredPermission) {
     if (typeof requiredPermission === 'string') {
-      if (!hasPermission(requiredPermission)) {
-        return fallback;
+      // New module:action format (e.g. "projects:view")
+      if (requiredPermission.includes(':') && checkPerm) {
+        if (!checkPerm(requiredPermission)) {
+          return fallback;
+        }
+      } else {
+        // Legacy group format (e.g. "ADMIN", "SALES")
+        if (!hasPermission(requiredPermission)) {
+          return fallback;
+        }
       }
     } else if (typeof requiredPermission === 'function') {
       if (!requiredPermission(canAccess)) {
@@ -227,10 +239,23 @@ const ProtectedRoute = ({ children, requiredPermission, fallback = <Unauthorized
 // =============================================================================
 
 const DashboardRouter = () => {
-  const { user } = useAuth();
-  
-  // Route to appropriate dashboard based on user role
+  const { user, roleLevel, isOwner, checkPerm } = useAuth();
+
+  // Route to appropriate dashboard based on role level / permissions first, then fall back to role string
   const getDashboardComponent = () => {
+    // Try permission-based routing when roleRef is available
+    if (roleLevel !== undefined && roleLevel < 100) {
+      if (isOwner || roleLevel <= 5) return <BusinessHeadDashboard />;
+      if (roleLevel <= 15) return <ProjectDirectorDashboard />;
+      if (checkPerm && (checkPerm('sales:view') || checkPerm('leads:view'))) {
+        if (roleLevel <= 30) return <SalesManagerDashboard />;
+      }
+      if (checkPerm && (checkPerm('payments:view') || checkPerm('commissions:view'))) {
+        return <FinanceHeadDashboard />;
+      }
+    }
+
+    // Fallback: legacy role string
     switch (user?.role) {
       case 'Business Head':
         return <BusinessHeadDashboard />;
@@ -965,10 +990,64 @@ const AppRoutes = () => {
       } />
       
       <Route path="/settings/users" element={
-        <ProtectedRoute requiredPermission="ADMIN">
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.userManagement()}>
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback />}>
               <UserManagementPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* ========================================= */}
+      {/* ROLE MANAGEMENT ROUTES */}
+      {/* ========================================= */}
+
+      <Route path="/roles" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.systemSettings()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback />}>
+              <RolesListPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/roles/create" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.systemSettings()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback />}>
+              <CreateEditRolePage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/roles/:roleId" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.systemSettings()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback />}>
+              <RoleDetailPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/roles/:roleId/edit" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.systemSettings()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback />}>
+              <CreateEditRolePage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/org-hierarchy" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback />}>
+              <OrgHierarchyPage />
             </Suspense>
           </DashboardLayout>
         </ProtectedRoute>

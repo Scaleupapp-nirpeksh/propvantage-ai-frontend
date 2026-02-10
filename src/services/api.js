@@ -44,11 +44,22 @@ api.interceptors.response.use(
       window.location.href = '/login';
     }
     
+    // Handle permission errors (403)
+    if (error.response?.status === 403) {
+      const msg = error.response?.data?.message || '';
+      if (msg.includes('permission') || msg.includes('Permission')) {
+        error.permissionDenied = true;
+      }
+      if (msg.includes('hierarchy') || msg.includes('level')) {
+        error.hierarchyViolation = true;
+      }
+    }
+
     // Handle network errors
     if (!error.response) {
       error.message = 'Network error. Please check your connection.';
     }
-    
+
     return Promise.reject(error);
   }
 );
@@ -329,6 +340,20 @@ export const invitationAPI = {
       return `Expires in ${daysRemaining} days`;
     }
   },
+};
+
+// =============================================================================
+// 3b. ROLE MANAGEMENT SERVICES (/api/roles)
+// =============================================================================
+export const rolesAPI = {
+  getRoles: (params = {}) => api.get('/roles', { params }),
+  getRole: (id) => api.get(`/roles/${id}`),
+  createRole: (roleData) => api.post('/roles', roleData),
+  updateRole: (id, roleData) => api.put(`/roles/${id}`, roleData),
+  deleteRole: (id) => api.delete(`/roles/${id}`),
+  duplicateRole: (id, data = {}) => api.post(`/roles/${id}/duplicate`, data),
+  getPermissionCatalog: () => api.get('/roles/permissions/catalog'),
+  transferOwnership: (data) => api.post('/roles/transfer-ownership', data),
 };
 
 // =============================================================================
@@ -1197,6 +1222,7 @@ const apiServices = {
   auth: authAPI,
   user: userAPI, // ENHANCED with new endpoints
   invitation: invitationAPI, // NEW section
+  roles: rolesAPI,
   project: projectAPI,
   projectPayment: projectPaymentAPI,
   tower: towerAPI,

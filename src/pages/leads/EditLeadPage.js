@@ -264,7 +264,7 @@ const EditLeadPage = () => {
           _id: user?.id || user?._id,
           firstName: user?.firstName || 'Current',
           lastName: user?.lastName || 'User',
-          role: user?.role || 'Sales Executive'
+          role: user?.roleRef?.name || user?.role || 'Sales Executive'
         }
       ]);
 

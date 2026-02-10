@@ -71,6 +71,8 @@ import {
   QueryStats,
   PersonAdd,
   Search,
+  AdminPanelSettings,
+  AccountTree,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import CommandPalette from '../navigation/CommandPalette';
@@ -200,7 +202,14 @@ const getNavigationItems = (userRole, canAccess) => {
           requiredAccess: () => canAccess.userManagement() || canAccess.projectManagement(),
           children: [
             { id: 'user-management', title: 'Users', icon: People, path: '/settings/users', requiredAccess: () => canAccess.userManagement() },
+            { id: 'roles', title: 'Roles', icon: AdminPanelSettings, path: '/roles', requiredAccess: () => canAccess.systemSettings() },
           ],
+        },
+        {
+          id: 'org-hierarchy',
+          title: 'Org Hierarchy',
+          icon: AccountTree,
+          path: '/org-hierarchy',
         },
       ],
     },
@@ -343,7 +352,7 @@ const DashboardBreadcrumbs = () => {
     'revenue': 'Revenue', 'budget-variance': 'Budget Planning',
     'predictions': 'Predictions', 'pricing': 'Pricing',
     'dynamic': 'Dynamic Pricing', 'cost-sheet': 'Cost Sheet',
-    'users': 'User Management', 'profile': 'Profile',
+    'users': 'User Management', 'profile': 'Profile', 'roles': 'Roles', 'org-hierarchy': 'Org Hierarchy',
     'payment-plans': 'Payment Plans', 'collections': 'Collections',
   };
 
@@ -418,7 +427,7 @@ const UserMenu = () => {
       >
         <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider', minWidth: 220 }}>
           <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{getUserDisplayName()}</Typography>
-          <Typography variant="caption" color="text.secondary">{user?.role}</Typography>
+          <Typography variant="caption" color="text.secondary">{user?.roleRef?.name || user?.role}</Typography>
         </Box>
         <MenuItem onClick={() => { navigate('/profile'); setAnchorEl(null); }} sx={{ mt: 0.5 }}>
           <ListItemIcon><AccountCircle fontSize="small" /></ListItemIcon>

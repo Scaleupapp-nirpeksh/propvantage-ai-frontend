@@ -23,10 +23,16 @@ const initialState = {
   
   // Error handling
   error: null,
-  
+
   // Login attempt tracking
   loginAttempts: 0,
   lastLoginAttempt: null,
+
+  // Dynamic permission system (from roleRef)
+  roleRef: null,
+  permissions: [],
+  isOwner: false,
+  roleLevel: 100,
 };
 
 // Action types for authentication reducer
@@ -75,6 +81,10 @@ const authReducer = (state, action) => {
         organization: action.payload.organization,
         token: action.payload.token,
         refreshToken: action.payload.refreshToken,
+        roleRef: action.payload.roleRef || null,
+        permissions: action.payload.roleRef?.permissions || [],
+        isOwner: action.payload.roleRef?.isOwnerRole || false,
+        roleLevel: action.payload.roleRef?.level ?? 100,
         error: null,
       };
 
@@ -109,6 +119,10 @@ const authReducer = (state, action) => {
         organization: action.payload.organization,
         token: action.payload.token,
         refreshToken: action.payload.refreshToken,
+        roleRef: action.payload.roleRef || null,
+        permissions: action.payload.roleRef?.permissions || [],
+        isOwner: action.payload.roleRef?.isOwnerRole || false,
+        roleLevel: action.payload.roleRef?.level ?? 100,
         error: null,
         loginAttempts: 0,
       };
@@ -141,6 +155,10 @@ const authReducer = (state, action) => {
         organization: action.payload.organization,
         token: action.payload.token,
         refreshToken: action.payload.refreshToken,
+        roleRef: action.payload.roleRef || null,
+        permissions: action.payload.roleRef?.permissions || [],
+        isOwner: action.payload.roleRef?.isOwnerRole || false,
+        roleLevel: action.payload.roleRef?.level ?? 100,
         error: null,
       };
 
@@ -163,11 +181,19 @@ const authReducer = (state, action) => {
         isInitialized: true,
       };
 
-    case AuthActionTypes.UPDATE_USER:
-      return {
+    case AuthActionTypes.UPDATE_USER: {
+      const updatedState = {
         ...state,
         user: { ...state.user, ...action.payload },
       };
+      if (action.payload.roleRef) {
+        updatedState.roleRef = action.payload.roleRef;
+        updatedState.permissions = action.payload.roleRef.permissions || [];
+        updatedState.isOwner = action.payload.roleRef.isOwnerRole || false;
+        updatedState.roleLevel = action.payload.roleRef.level ?? 100;
+      }
+      return updatedState;
+    }
 
     case AuthActionTypes.UPDATE_ORGANIZATION:
       return {
@@ -293,10 +319,12 @@ export const AuthProvider = ({ children }) => {
       const storedUser = localStorage.getItem('user');
       const storedOrganization = localStorage.getItem('organization');
       const storedRefreshToken = localStorage.getItem('refreshToken');
+      const storedRoleRef = localStorage.getItem('roleRef');
 
       if (storedToken && storedUser) {
         const user = JSON.parse(storedUser);
         const organization = storedOrganization ? JSON.parse(storedOrganization) : null;
+        const roleRef = storedRoleRef ? JSON.parse(storedRoleRef) : (user.roleRef || null);
 
         // Ensure user object has the right structure
         const normalizedUser = {
@@ -319,6 +347,7 @@ export const AuthProvider = ({ children }) => {
             organization,
             token: storedToken,
             refreshToken: storedRefreshToken,
+            roleRef,
           },
         });
       } else {
@@ -346,14 +375,15 @@ export const AuthProvider = ({ children }) => {
       const responseData = response.data;
       
       // Handle different response structures
-      let user, organization, token, refreshToken;
-      
+      let user, organization, token, refreshToken, roleRef;
+
       if (responseData.user) {
         // Nested structure: { user: {...}, organization: {...}, token: "..." }
         user = responseData.user;
         organization = responseData.organization;
         token = responseData.token;
         refreshToken = responseData.refreshToken;
+        roleRef = responseData.roleRef || responseData.user?.roleRef || null;
       } else {
         // Direct structure: { _id, firstName, lastName, role, organization, token }
         user = {
@@ -365,18 +395,18 @@ export const AuthProvider = ({ children }) => {
           role: responseData.role,
           organization: responseData.organization,
         };
-        
+
         // Organization might be an ID or object
-        organization = typeof responseData.organization === 'string' 
+        organization = typeof responseData.organization === 'string'
           ? { _id: responseData.organization }
           : responseData.organization;
-          
+
         token = responseData.token;
         refreshToken = responseData.refreshToken;
+        roleRef = responseData.roleRef || null;
       }
 
-      // Store auth data in localStorage (already done in authAPI.login)
-      // But let's ensure it's stored properly
+      // Store auth data in localStorage
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
       if (organization) {
@@ -384,6 +414,9 @@ export const AuthProvider = ({ children }) => {
       }
       if (refreshToken) {
         localStorage.setItem('refreshToken', refreshToken);
+      }
+      if (roleRef) {
+        localStorage.setItem('roleRef', JSON.stringify(roleRef));
       }
 
       dispatch({
@@ -393,6 +426,7 @@ export const AuthProvider = ({ children }) => {
           organization,
           token,
           refreshToken,
+          roleRef,
         },
       });
 
@@ -423,16 +457,17 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await authAPI.register(registrationData);
       const responseData = response.data;
-      
+
       // Handle different response structures
-      let user, organization, token, refreshToken;
-      
+      let user, organization, token, refreshToken, roleRef;
+
       if (responseData.user) {
         // Nested structure: { user: {...}, organization: {...}, token: "..." }
         user = responseData.user;
         organization = responseData.organization;
         token = responseData.token;
         refreshToken = responseData.refreshToken;
+        roleRef = responseData.roleRef || responseData.user?.roleRef || null;
       } else {
         // Direct structure: { _id, firstName, lastName, role, organization, token }
         user = {
@@ -444,22 +479,26 @@ export const AuthProvider = ({ children }) => {
           role: responseData.role,
           organization: responseData.organization,
         };
-        
+
         // Organization might be an ID or object
-        organization = typeof responseData.organization === 'string' 
+        organization = typeof responseData.organization === 'string'
           ? { _id: responseData.organization }
           : responseData.organization;
-          
+
         token = responseData.token;
         refreshToken = responseData.refreshToken;
+        roleRef = responseData.roleRef || null;
       }
 
-      // Store auth data in localStorage (already done in authAPI.register)
+      // Store auth data in localStorage
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
       localStorage.setItem('organization', JSON.stringify(organization));
       if (refreshToken) {
         localStorage.setItem('refreshToken', refreshToken);
+      }
+      if (roleRef) {
+        localStorage.setItem('roleRef', JSON.stringify(roleRef));
       }
 
       dispatch({
@@ -469,6 +508,7 @@ export const AuthProvider = ({ children }) => {
           organization,
           token,
           refreshToken,
+          roleRef,
         },
       });
 
@@ -561,6 +601,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
     localStorage.removeItem('organization');
+    localStorage.removeItem('roleRef');
   };
 
   // Get dashboard route based on user role
@@ -608,6 +649,27 @@ export const AuthProvider = ({ children }) => {
     return allowedRoles.includes(state.user.role);
   };
 
+  // --- New module:action permission checks (dynamic system) ---
+  const checkPerm = (permission) => {
+    if (state.isOwner) return true;
+    return (state.permissions || []).includes(permission);
+  };
+
+  const checkAnyPerm = (...perms) => {
+    if (state.isOwner) return true;
+    return perms.some(p => (state.permissions || []).includes(p));
+  };
+
+  const checkAllPerms = (...perms) => {
+    if (state.isOwner) return true;
+    return perms.every(p => (state.permissions || []).includes(p));
+  };
+
+  const canManageRoleLevel = (targetLevel) => {
+    if (state.isOwner) return true;
+    return (state.roleLevel ?? 100) < targetLevel;
+  };
+
   // Get user display name
   const getUserDisplayName = () => {
     if (!state.user) return 'Guest';
@@ -621,32 +683,34 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Check if user can access specific features
+  // Bridge: uses new module:action permissions when available, falls back to old groups
+  const _useNew = state.permissions?.length > 0;
   const canAccess = {
     // Admin features
-    userManagement: () => hasPermission('ADMIN'),
-    systemSettings: () => hasPermission('ADMIN'),
-    organizationSettings: () => hasPermission('ADMIN'),
-    
+    userManagement: () => _useNew ? checkAnyPerm('users:view', 'users:update') : hasPermission('ADMIN'),
+    systemSettings: () => _useNew ? checkPerm('roles:view') : hasPermission('ADMIN'),
+    organizationSettings: () => _useNew ? checkPerm('roles:view') : hasPermission('ADMIN'),
+
     // Management features
-    projectManagement: () => hasPermission('MANAGEMENT'),
-    financialReports: () => hasPermission('FINANCE'),
-    salesReports: () => hasPermission('MANAGEMENT'),
-    constructionManagement: () => hasPermission('CONSTRUCTION'),
-    
+    projectManagement: () => _useNew ? checkAnyPerm('projects:create', 'projects:update') : hasPermission('MANAGEMENT'),
+    financialReports: () => _useNew ? checkAnyPerm('payments:view', 'payments:reports') : hasPermission('FINANCE'),
+    salesReports: () => _useNew ? checkAnyPerm('sales:analytics', 'analytics:basic') : hasPermission('MANAGEMENT'),
+    constructionManagement: () => _useNew ? checkAnyPerm('construction:view', 'construction:update') : hasPermission('CONSTRUCTION'),
+
     // Sales features
-    leadManagement: () => hasPermission('SALES'),
-    salesPipeline: () => hasPermission('SALES'),
-    customerInteractions: () => hasPermission('SALES'),
-    
+    leadManagement: () => _useNew ? checkPerm('leads:view') : hasPermission('SALES'),
+    salesPipeline: () => _useNew ? checkPerm('sales:view') : hasPermission('SALES'),
+    customerInteractions: () => _useNew ? checkAnyPerm('leads:view', 'leads:update') : hasPermission('SALES'),
+
     // Specific role checks
-    approveDocuments: () => hasMinimumRole('Sales Manager'),
-    viewFinancials: () => hasPermission('FINANCE'),
-    manageContractors: () => hasPermission('CONSTRUCTION'),
-    
+    approveDocuments: () => _useNew ? checkPerm('documents:approve') : hasMinimumRole('Sales Manager'),
+    viewFinancials: () => _useNew ? checkAnyPerm('payments:view', 'invoices:view') : hasPermission('FINANCE'),
+    manageContractors: () => _useNew ? checkPerm('contractors:manage') : hasPermission('CONSTRUCTION'),
+
     // Data access
-    viewAllProjects: () => hasPermission('MANAGEMENT'),
-    viewOwnLeads: () => hasPermission('SALES'),
-    editPricing: () => hasMinimumRole('Sales Manager'),
+    viewAllProjects: () => _useNew ? checkPerm('projects:view') : hasPermission('MANAGEMENT'),
+    viewOwnLeads: () => _useNew ? checkPerm('leads:view') : hasPermission('SALES'),
+    editPricing: () => _useNew ? checkPerm('pricing:dynamic_pricing') : hasMinimumRole('Sales Manager'),
   };
 
   // Context value
@@ -667,13 +731,23 @@ export const AuthProvider = ({ children }) => {
     getOrganizationDisplayName,
     getDashboardRoute,
     
-    // Access control
+    // Access control (legacy)
     hasRole,
     hasAnyRole,
     hasMinimumRole,
     hasPermission,
     canAccess,
-    
+
+    // Access control (new module:action system)
+    checkPerm,
+    checkAnyPerm,
+    checkAllPerms,
+    canManageRoleLevel,
+    roleRef: state.roleRef,
+    permissions: state.permissions,
+    isOwner: state.isOwner,
+    roleLevel: state.roleLevel,
+
     // Constants
     ROLE_HIERARCHY,
     PERMISSION_GROUPS,
@@ -746,8 +820,9 @@ export const withAuth = (WrappedComponent, requiredPermission = null) => {
 // Hook for role-based rendering
 export const useRoleAccess = () => {
   const auth = useAuth();
-  
+
   return {
+    // Legacy
     hasRole: auth.hasRole,
     hasAnyRole: auth.hasAnyRole,
     hasMinimumRole: auth.hasMinimumRole,
@@ -758,6 +833,12 @@ export const useRoleAccess = () => {
     isManagement: auth.hasPermission('MANAGEMENT'),
     isSales: auth.hasPermission('SALES'),
     isFinance: auth.hasPermission('FINANCE'),
+    // New module:action system
+    checkPerm: auth.checkPerm,
+    checkAnyPerm: auth.checkAnyPerm,
+    checkAllPerms: auth.checkAllPerms,
+    isOwner: auth.isOwner,
+    roleLevel: auth.roleLevel,
   };
 };
 

@@ -16,3 +16,4 @@ export {
   DetailPageSkeleton,
   FormSkeleton,
 } from './LoadingSkeleton';
+export { default as PermissionGate } from './PermissionGate';

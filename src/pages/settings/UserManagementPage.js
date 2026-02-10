@@ -81,7 +81,8 @@ import { format, formatDistanceToNow, isAfter } from 'date-fns';
 
 // Import services and context
 import { useAuth } from '../../context/AuthContext';
-import { userAPI, invitationAPI, handleAPIError } from '../../services/api';
+import { userAPI, invitationAPI, rolesAPI, handleAPIError } from '../../services/api';
+import { PageHeader } from '../../components/common';
 
 // =============================================================================
 // CONSTANTS AND CONFIGURATION
@@ -251,12 +252,14 @@ const getUserStatus = (user) => {
 /**
  * Invite User Dialog Component
  */
-const InviteUserDialog = ({ 
-  open, 
-  onClose, 
-  onInvite, 
+const InviteUserDialog = ({
+  open,
+  onClose,
+  onInvite,
   currentUserRole,
-  inviting = false 
+  inviting = false,
+  dynamicRoles = [],
+  userRoleLevel = 100,
 }) => {
   const [formData, setFormData] = useState({
     firstName: '',
@@ -270,7 +273,21 @@ const InviteUserDialog = ({
   const { enqueueSnackbar } = useSnackbar();
   
   const availableRoles = useMemo(() => {
-    // Define role hierarchy - users can only invite roles below their level
+    // Use dynamic roles from API when available
+    if (dynamicRoles.length > 0) {
+      return dynamicRoles
+        .filter(r => !r.isOwnerRole && r.level > userRoleLevel)
+        .sort((a, b) => a.level - b.level)
+        .map(r => ({
+          value: r.slug || r.name,
+          label: r.name,
+          level: r.level,
+          _id: r._id,
+          permissionCount: r.permissions?.length || 0,
+        }));
+    }
+
+    // Fallback: hardcoded role hierarchy
     const roleOptions = [
       { value: 'Sales Head', label: 'Sales Head', level: 3 },
       { value: 'Marketing Head', label: 'Marketing Head', level: 3 },
@@ -295,7 +312,7 @@ const InviteUserDialog = ({
     }[currentUserRole] || 10;
 
     return roleOptions.filter(role => role.level > currentUserLevel);
-  }, [currentUserRole]);
+  }, [currentUserRole, dynamicRoles, userRoleLevel]);
 
   const handleInputChange = (field) => (event) => {
     const value = event.target.value;
@@ -474,13 +491,18 @@ const InviteUserDialog = ({
                     disabled={inviting}
                   >
                     {availableRoles.map((role) => (
-                      <MenuItem key={role.value} value={role.value}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <MenuItem key={role.value} value={role._id || role.value}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
                           <BusinessCenter sx={{ fontSize: 20 }} />
-                          <Box>
+                          <Box sx={{ flex: 1 }}>
                             <Typography variant="body2">
                               {role.label}
                             </Typography>
+                            {role.permissionCount > 0 && (
+                              <Typography variant="caption" color="text.secondary">
+                                Level {role.level} &middot; {role.permissionCount} permissions
+                              </Typography>
+                            )}
                           </Box>
                         </Box>
                       </MenuItem>
@@ -1226,6 +1248,117 @@ const ArchivedUsersTab = ({
 };
 
 // =============================================================================
+// OWNERSHIP TRANSFER DIALOG
+// =============================================================================
+
+const TransferOwnershipDialog = ({ open, onClose, users, onTransfer }) => {
+  const [selectedUserId, setSelectedUserId] = useState('');
+  const [confirmText, setConfirmText] = useState('');
+  const [transferring, setTransferring] = useState(false);
+  const { enqueueSnackbar } = useSnackbar();
+
+  const eligibleUsers = useMemo(() => {
+    return users.filter(u => u.isActive && u._id);
+  }, [users]);
+
+  const selectedUser = eligibleUsers.find(u => u._id === selectedUserId);
+  const confirmPhrase = 'TRANSFER OWNERSHIP';
+  const canConfirm = selectedUserId && confirmText === confirmPhrase;
+
+  const handleTransfer = async () => {
+    if (!canConfirm) return;
+    try {
+      setTransferring(true);
+      await onTransfer(selectedUserId);
+      enqueueSnackbar('Ownership transferred successfully. Please log in again.', { variant: 'success' });
+      handleClose();
+    } catch (err) {
+      enqueueSnackbar(err.response?.data?.message || 'Failed to transfer ownership', { variant: 'error' });
+    } finally {
+      setTransferring(false);
+    }
+  };
+
+  const handleClose = () => {
+    setSelectedUserId('');
+    setConfirmText('');
+    onClose();
+  };
+
+  return (
+    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+      <DialogTitle>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Avatar sx={{ bgcolor: 'error.main' }}>
+            <AdminPanelSettings />
+          </Avatar>
+          <Box>
+            <Typography variant="h6">Transfer Organization Ownership</Typography>
+            <Typography variant="body2" color="text.secondary">
+              This action is irreversible. You will lose owner privileges.
+            </Typography>
+          </Box>
+        </Box>
+      </DialogTitle>
+      <DialogContent>
+        <Alert severity="error" sx={{ mb: 3 }}>
+          <AlertTitle>Warning</AlertTitle>
+          Transferring ownership will give the selected user full control of this organization,
+          including the ability to delete roles, remove users, and manage all settings. Your role
+          will be reassigned.
+        </Alert>
+
+        <FormControl fullWidth sx={{ mb: 3 }}>
+          <InputLabel>Select New Owner</InputLabel>
+          <Select
+            value={selectedUserId}
+            onChange={(e) => setSelectedUserId(e.target.value)}
+            label="Select New Owner"
+          >
+            {eligibleUsers.map(u => (
+              <MenuItem key={u._id} value={u._id}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <Avatar sx={{ width: 28, height: 28, fontSize: '0.75rem' }}>
+                    {u.firstName?.charAt(0)}{u.lastName?.charAt(0)}
+                  </Avatar>
+                  <Box>
+                    <Typography variant="body2">{u.firstName} {u.lastName}</Typography>
+                    <Typography variant="caption" color="text.secondary">{u.email}</Typography>
+                  </Box>
+                </Box>
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        {selectedUser && (
+          <TextField
+            fullWidth
+            label={`Type "${confirmPhrase}" to confirm`}
+            value={confirmText}
+            onChange={(e) => setConfirmText(e.target.value)}
+            error={confirmText.length > 0 && confirmText !== confirmPhrase}
+            helperText={`Transfer ownership to ${selectedUser.firstName} ${selectedUser.lastName}`}
+          />
+        )}
+      </DialogContent>
+      <DialogActions sx={{ p: 3, pt: 1 }}>
+        <Button onClick={handleClose} disabled={transferring}>Cancel</Button>
+        <Button
+          variant="contained"
+          color="error"
+          onClick={handleTransfer}
+          disabled={!canConfirm || transferring}
+          startIcon={transferring ? <CircularProgress size={16} /> : null}
+        >
+          {transferring ? 'Transferring...' : 'Transfer Ownership'}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
+// =============================================================================
 // MAIN USER MANAGEMENT PAGE COMPONENT
 // =============================================================================
 
@@ -1235,7 +1368,7 @@ const ArchivedUsersTab = ({
 const UserManagementPage = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const { user: currentUser, canAccess } = useAuth();
+  const { user: currentUser, canAccess, checkPerm, isOwner, roleLevel } = useAuth();
   const { enqueueSnackbar } = useSnackbar();
 
   // =============================================================================
@@ -1256,20 +1389,30 @@ const UserManagementPage = () => {
   const [roleFilter, setRoleFilter] = useState('All Roles');
   const [statusFilter, setStatusFilter] = useState('All Status');
   
+  // Dynamic roles from API
+  const [availableRoles, setAvailableRoles] = useState([]);
+
   // Dialog state
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [inviting, setInviting] = useState(false);
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
 
   // =============================================================================
   // COMPUTED VALUES
   // =============================================================================
   
   const canManageUsers = useMemo(() => {
+    // New permission system: check module:action permissions
+    if (checkPerm) {
+      const hasPerm = checkPerm('users:view') || checkPerm('users:update') || isOwner;
+      if (hasPerm) return true;
+    }
+    // Fallback to old role-based check
     return canAccess && currentUser?.role && [
-      'Business Head', 'Project Director', 'Sales Head', 'Marketing Head', 
+      'Business Head', 'Project Director', 'Sales Head', 'Marketing Head',
       'Finance Head', 'Sales Manager', 'Finance Manager', 'Channel Partner Manager'
     ].includes(currentUser.role);
-  }, [canAccess, currentUser]);
+  }, [canAccess, currentUser, checkPerm, isOwner]);
 
   const userStats = useMemo(() => {
     const total = users.length;
@@ -1314,7 +1457,12 @@ const UserManagementPage = () => {
 
     // Apply role filter
     if (roleFilter !== 'All Roles') {
-      if (['Management', 'Sales', 'Finance', 'Partners'].includes(roleFilter)) {
+      if (availableRoles.length > 0) {
+        // Dynamic roles: match by role name (roleRef.name or user.role)
+        filtered = filtered.filter(user =>
+          (user.roleRef?.name || user.role) === roleFilter
+        );
+      } else if (['Management', 'Sales', 'Finance', 'Partners'].includes(roleFilter)) {
         filtered = filtered.filter(user => getRoleCategory(user.role) === roleFilter);
       } else {
         filtered = filtered.filter(user => user.role === roleFilter);
@@ -1330,7 +1478,7 @@ const UserManagementPage = () => {
     }
 
     return filtered;
-  }, [users, activeTab, searchTerm, roleFilter, statusFilter]);
+  }, [users, activeTab, searchTerm, roleFilter, statusFilter, availableRoles]);
 
   // =============================================================================
   // API FUNCTIONS
@@ -1377,165 +1525,49 @@ const UserManagementPage = () => {
     }
   }, [enqueueSnackbar]);
 
-  // NEW: Invitation handler function
+  // Invitation handler function
   const handleInviteUser = useCallback(async (invitationData) => {
     try {
       setInviting(true);
-      
-      console.log('🚀 Generating invitation for:', invitationData);
       const response = await invitationAPI.generateInvitationLink(invitationData);
-      
-      // LOG EVERYTHING ABOUT THE RESPONSE
-      console.log('📤 Full API Response Object:', response);
-      console.log('📤 response.data:', response.data);
-      console.log('📤 response.status:', response.status);
-      console.log('📤 response.headers:', response.headers);
-      
-      // Try to stringify the entire response to see its structure
-      try {
-        console.log('📤 Full response as JSON:', JSON.stringify(response.data, null, 2));
-      } catch (e) {
-        console.log('📤 Could not stringify response.data');
+
+      if (!response.data) throw new Error('No valid response data');
+
+      const d = response.data;
+      const dd = d.data || {};
+
+      // Find invitation link from various response shapes
+      const foundLink =
+        d.invitationLink || d.link || d.url || d.inviteLink ||
+        dd.invitationLink || dd.link || dd.url || dd.inviteLink ||
+        d.user?.invitationLink || d.invitation?.link || d.result?.link;
+
+      if (foundLink) {
+        enqueueSnackbar(`Invitation link generated for ${invitationData.email}`, { variant: 'success' });
+        await fetchUsers();
+        return { success: true, invitationLink: foundLink };
       }
-      
-      // Check if we have success
-      console.log('✅ response.data.success:', response.data?.success);
-      
-      if (response.data) {
-        // Log all top-level keys in the response
-        console.log('🔑 All keys in response.data:', Object.keys(response.data));
-        
-        if (response.data.data) {
-          console.log('🔑 All keys in response.data.data:', Object.keys(response.data.data));
-        }
-        
-        // Try every possible way to get the link
-        const possibleLinks = {
-          'response.data.invitationLink': response.data.invitationLink,
-          'response.data.link': response.data.link,
-          'response.data.url': response.data.url,
-          'response.data.invitation_link': response.data.invitation_link,
-          'response.data.inviteLink': response.data.inviteLink,
-          'response.data.data?.invitationLink': response.data.data?.invitationLink,
-          'response.data.data?.link': response.data.data?.link,
-          'response.data.data?.url': response.data.data?.url,
-          'response.data.data?.invitation_link': response.data.data?.invitation_link,
-          'response.data.data?.inviteLink': response.data.data?.inviteLink,
-          'response.data.user?.invitationLink': response.data.user?.invitationLink,
-          'response.data.invitation?.link': response.data.invitation?.link,
-          'response.data.result?.link': response.data.result?.link,
-        };
-        
-        console.log('🔗 All possible link locations:', possibleLinks);
-        
-        // Find the first non-undefined link
-        const foundLink = Object.entries(possibleLinks).find(([key, value]) => value)?.[1];
-        
-        if (foundLink) {
-          console.log('✅ Found invitation link at:', foundLink);
-          
-          enqueueSnackbar(
-            `Invitation link generated for ${invitationData.email}`, 
-            { variant: 'success' }
-          );
-          
-          await fetchUsers();
-          
-          return { 
-            success: true, 
-            invitationLink: foundLink 
-          };
-        }
-        
-        // If no direct link found, try to build it manually
-        console.log('🔧 No direct link found, trying manual construction...');
-        
-        const possibleUserIds = {
-          'response.data.userId': response.data.userId,
-          'response.data.user_id': response.data.user_id,
-          'response.data.id': response.data.id,
-          'response.data.data?.userId': response.data.data?.userId,
-          'response.data.data?.user_id': response.data.data?.user_id,
-          'response.data.data?.id': response.data.data?.id,
-          'response.data.user?.id': response.data.user?.id,
-          'response.data.user?._id': response.data.user?._id,
-          'response.data.data?.user?.id': response.data.data?.user?.id,
-          'response.data.data?.user?._id': response.data.data?.user?._id,
-          // Since we found the structure, let's specifically check user._id
-          'response.data.data.user._id': response.data.data?.user?._id,
-        };
-        
-        const possibleTokens = {
-          'response.data.token': response.data.token,
-          'response.data.invitationToken': response.data.invitationToken,
-          'response.data.invitation_token': response.data.invitation_token,
-          'response.data.data?.token': response.data.data?.token,
-          'response.data.data?.invitationToken': response.data.data?.invitationToken,
-          'response.data.data?.invitation_token': response.data.data?.invitation_token,
-          'response.data.user?.token': response.data.user?.token,
-          'response.data.user?.invitationToken': response.data.user?.invitationToken,
-          'response.data.invitation?.token': response.data.invitation?.token,
-          'response.data.data?.user?.invitationToken': response.data.data?.user?.invitationToken,
-          // NEW: Check inside the invitation and user objects from the response structure we found
-          'response.data.data?.invitation?.token': response.data.data?.invitation?.token,
-          'response.data.data?.invitation?.invitationToken': response.data.data?.invitation?.invitationToken,
-          'response.data.data?.invitation?.invitation_token': response.data.data?.invitation?.invitation_token,
-          'response.data.data?.user?.token': response.data.data?.user?.token,
-          'response.data.data?.user?.invitation_token': response.data.data?.user?.invitation_token,
-        };
-        
-        console.log('🆔 All possible userIds:', possibleUserIds);
-        console.log('🎫 All possible tokens:', possibleTokens);
-        
-        const userId = Object.entries(possibleUserIds).find(([key, value]) => value)?.[1];
-        const token = Object.entries(possibleTokens).find(([key, value]) => value)?.[1];
-        
-        console.log('🆔 Found userId:', userId);
-        console.log('🎫 Found token:', token);
-        
-        if (userId && token) {
-          const manualLink = `${window.location.origin}/invite/${userId}?token=${token}&email=${encodeURIComponent(invitationData.email)}`;
-          console.log('🔧 Built manual link:', manualLink);
-          
-          enqueueSnackbar(
-            `Invitation link generated for ${invitationData.email}`, 
-            { variant: 'success' }
-          );
-          
-          await fetchUsers();
-          
-          return { 
-            success: true, 
-            invitationLink: manualLink 
-          };
-        } else {
-          console.log('❌ Cannot build manual link - missing userId or token');
-          
-          // FALLBACK: Create a working test link so you can see the copy functionality
-          const testLink = `${window.location.origin}/invite/test-user-id?token=test-token-123&email=${encodeURIComponent(invitationData.email)}`;
-          console.log('🧪 Using test link for demo:', testLink);
-          
-          enqueueSnackbar(
-            `Using test invitation link (API response missing required data)`, 
-            { variant: 'warning' }
-          );
-          
-          return { 
-            success: true, 
-            invitationLink: testLink 
-          };
-        }
+
+      // Try to build link from userId + token
+      const userId = d.userId || d.id || dd.userId || dd.id || d.user?._id || dd.user?._id;
+      const token = d.token || d.invitationToken || dd.token || dd.invitationToken ||
+        d.user?.invitationToken || dd.invitation?.token || dd.user?.invitationToken;
+
+      if (userId && token) {
+        const manualLink = `${window.location.origin}/invite/${userId}?token=${token}&email=${encodeURIComponent(invitationData.email)}`;
+        enqueueSnackbar(`Invitation link generated for ${invitationData.email}`, { variant: 'success' });
+        await fetchUsers();
+        return { success: true, invitationLink: manualLink };
       }
-      
-      throw new Error('No valid response.data found');
-      
+
+      // Fallback
+      const fallbackLink = `${window.location.origin}/invite/pending?email=${encodeURIComponent(invitationData.email)}`;
+      enqueueSnackbar('Invitation created — link may not be available yet', { variant: 'warning' });
+      return { success: true, invitationLink: fallbackLink };
+
     } catch (error) {
-      console.error('❌ Error generating invitation:', error);
       const apiError = handleAPIError(error);
-      enqueueSnackbar(
-        apiError.message || 'Failed to generate invitation link', 
-        { variant: 'error' }
-      );
+      enqueueSnackbar(apiError.message || 'Failed to generate invitation link', { variant: 'error' });
       return { success: false, error: apiError.message };
     } finally {
       setInviting(false);
@@ -1642,6 +1674,12 @@ const UserManagementPage = () => {
     }
   }, [enqueueSnackbar, fetchUsers]);
 
+  const handleTransferOwnership = useCallback(async (newOwnerId) => {
+    await rolesAPI.transferOwnership({ newOwnerId });
+    // Force re-login after ownership transfer
+    window.location.href = '/login';
+  }, []);
+
   // =============================================================================
   // EFFECTS
   // =============================================================================
@@ -1649,6 +1687,13 @@ const UserManagementPage = () => {
   useEffect(() => {
     if (canManageUsers) {
       fetchUsers();
+      // Fetch dynamic roles from API for invite dialog & role display
+      rolesAPI.getRoles().then(res => {
+        const roles = res.data?.data?.roles || res.data?.roles || [];
+        setAvailableRoles(roles);
+      }).catch(() => {
+        // Silently fall back to hardcoded roles if API fails
+      });
     }
   }, [canManageUsers, fetchUsers]);
 
@@ -1748,10 +1793,20 @@ const UserManagementPage = () => {
                         label="Role Filter"
                       >
                         <MenuItem value="All Roles">All Roles</MenuItem>
-                        <MenuItem value="Management">Management</MenuItem>
-                        <MenuItem value="Sales">Sales</MenuItem>
-                        <MenuItem value="Finance">Finance</MenuItem>
-                        <MenuItem value="Partners">Partners</MenuItem>
+                        {availableRoles.length > 0 ? (
+                          availableRoles.map(r => (
+                            <MenuItem key={r._id || r.name} value={r.name}>
+                              {r.name} (L{r.level})
+                            </MenuItem>
+                          ))
+                        ) : (
+                          [
+                            <MenuItem key="mgmt" value="Management">Management</MenuItem>,
+                            <MenuItem key="sales" value="Sales">Sales</MenuItem>,
+                            <MenuItem key="finance" value="Finance">Finance</MenuItem>,
+                            <MenuItem key="partners" value="Partners">Partners</MenuItem>,
+                          ]
+                        )}
                       </Select>
                     </FormControl>
                   </Grid>
@@ -1813,10 +1868,11 @@ const UserManagementPage = () => {
                       displayUsers
                         .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                         .map((user) => {
+                          const roleName = user.roleRef?.name || user.role;
                           const roleConfig = USER_MANAGEMENT_CONFIG.ROLES[user.role] || USER_MANAGEMENT_CONFIG.ROLES['Sales Executive'];
                           const status = getUserStatus(user);
                           const statusConfig = USER_MANAGEMENT_CONFIG.STATUS[status];
-                          
+
                           return (
                             <TableRow key={user._id} hover>
                               <TableCell>
@@ -1837,11 +1893,11 @@ const UserManagementPage = () => {
                                   </Box>
                                 </Box>
                               </TableCell>
-                              
+
                               <TableCell>
                                 <Chip
                                   icon={roleConfig.icon}
-                                  label={roleConfig.label}
+                                  label={roleName}
                                   color={roleConfig.color}
                                   size="small"
                                   variant="outlined"
@@ -1939,167 +1995,72 @@ const UserManagementPage = () => {
   };
 
   return (
-    <Box sx={{ p: 3 }}>
-      {/* Page Header */}
-      <Box sx={{ mb: 4 }}>
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center',
-          flexDirection: isMobile ? 'column' : 'row',
-          gap: 2,
-        }}>
-          <Box>
-            <Typography variant="h4" component="h1" gutterBottom>
-              User Management
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              Manage your organization's users, invitations, and permissions
-            </Typography>
+    <Box>
+      <PageHeader
+        title="User Management"
+        subtitle={`${userStats.total} users · ${userStats.active} active`}
+        icon={People}
+        actions={
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+            {isOwner && (
+              <Button
+                size="small"
+                variant="outlined"
+                color="warning"
+                onClick={() => setTransferDialogOpen(true)}
+              >
+                Transfer Ownership
+              </Button>
+            )}
+            <Button
+              variant="contained"
+              startIcon={<PersonAdd />}
+              onClick={() => setInviteDialogOpen(true)}
+              size="small"
+            >
+              Invite User
+            </Button>
           </Box>
-          
-          <Button
-            variant="contained"
-            startIcon={<PersonAdd />}
-            onClick={() => setInviteDialogOpen(true)}
-            size={isMobile ? 'small' : 'medium'}
-          >
-            Invite User
-          </Button>
-        </Box>
-      </Box>
+        }
+      />
 
-      {/* Statistics Cards */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={2}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Avatar sx={{ bgcolor: 'primary.main' }}>
-                  <People />
+      {/* Compact stats row */}
+      <Paper sx={{ p: 2, mb: 3, borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+        <Grid container spacing={2}>
+          {[
+            { label: 'Total', value: userStats.total, color: theme.palette.primary.main, icon: People },
+            { label: 'Active', value: userStats.active, color: theme.palette.success.main, icon: CheckCircle },
+            { label: 'Pending', value: userStats.pending, color: theme.palette.warning.main, icon: Email },
+            { label: 'Archived', value: userStats.inactive, color: theme.palette.grey[500], icon: Archive },
+          ].map(s => (
+            <Grid item xs={6} sm={3} key={s.label}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Avatar sx={{ width: 36, height: 36, bgcolor: `${s.color}15`, color: s.color }}>
+                  <s.icon sx={{ fontSize: 18 }} />
                 </Avatar>
                 <Box>
-                  <Typography variant="h6" fontWeight={600}>
-                    {userStats.total}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Total Users
-                  </Typography>
+                  <Typography variant="h6" fontWeight={700} lineHeight={1.2}>{s.value}</Typography>
+                  <Typography variant="caption" color="text.secondary">{s.label}</Typography>
                 </Box>
               </Box>
-            </CardContent>
-          </Card>
+            </Grid>
+          ))}
         </Grid>
-        
-        <Grid item xs={12} sm={6} md={2}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Avatar sx={{ bgcolor: 'success.main' }}>
-                  <CheckCircle />
-                </Avatar>
-                <Box>
-                  <Typography variant="h6" fontWeight={600}>
-                    {userStats.active}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Active
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        
-        <Grid item xs={12} sm={6} md={2}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Avatar sx={{ bgcolor: 'warning.main' }}>
-                  <Email />
-                </Avatar>
-                <Box>
-                  <Typography variant="h6" fontWeight={600}>
-                    {userStats.pending}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Pending
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        
-        <Grid item xs={12} sm={6} md={2}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Avatar sx={{ bgcolor: 'error.main' }}>
-                  <Timer />
-                </Avatar>
-                <Box>
-                  <Typography variant="h6" fontWeight={600}>
-                    {userStats.expired}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Expired
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={2}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Avatar sx={{ bgcolor: 'grey.500' }}>
-                  <Archive />
-                </Avatar>
-                <Box>
-                  <Typography variant="h6" fontWeight={600}>
-                    {userStats.inactive}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Archived
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={2}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Avatar sx={{ bgcolor: 'grey.500' }}>
-                  <Cancel />
-                </Avatar>
-                <Box>
-                  <Typography variant="h6" fontWeight={600}>
-                    {userStats.revoked}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Revoked
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+      </Paper>
 
       {/* Navigation Tabs */}
       <Card sx={{ mb: 3 }}>
-        <Tabs value={activeTab} onChange={handleTabChange}>
-          {USER_MANAGEMENT_CONFIG.TABS.map((tab, index) => (
+        <Tabs
+          value={activeTab}
+          onChange={handleTabChange}
+          variant={isMobile ? 'scrollable' : 'standard'}
+          scrollButtons={isMobile ? 'auto' : false}
+        >
+          {USER_MANAGEMENT_CONFIG.TABS.map((tab) => (
             <Tab
               key={tab.id}
               icon={tab.icon}
-              label={tab.label}
+              label={isMobile ? tab.label.split(' ')[0] : tab.label}
               iconPosition="start"
             />
           ))}
@@ -2116,7 +2077,19 @@ const UserManagementPage = () => {
         onInvite={handleInviteUser}
         currentUserRole={currentUser?.role}
         inviting={inviting}
+        dynamicRoles={availableRoles}
+        userRoleLevel={roleLevel}
       />
+
+      {/* Ownership Transfer Dialog */}
+      {isOwner && (
+        <TransferOwnershipDialog
+          open={transferDialogOpen}
+          onClose={() => setTransferDialogOpen(false)}
+          users={users.filter(u => u.isActive && u._id !== currentUser?._id)}
+          onTransfer={handleTransferOwnership}
+        />
+      )}
     </Box>
   );
 };
