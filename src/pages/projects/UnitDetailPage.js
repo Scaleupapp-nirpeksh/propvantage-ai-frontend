@@ -315,7 +315,7 @@ const UnitHeader = ({ project, tower, unit, onEdit, onRefresh, isLoading }) => {
               <Refresh />
             </IconButton>
           </Tooltip>
-          
+
           {canAccess.projectManagement() && (
             <Button
               variant="contained"

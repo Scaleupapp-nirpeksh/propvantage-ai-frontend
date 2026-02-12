@@ -12,6 +12,7 @@ import { SnackbarProvider } from 'notistack';
 // Theme and Context Providers
 import theme from './theme';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ChatProvider } from './context/ChatContext';
 import { CoachMarkProvider, FLOWS } from './components/onboarding';
 
 // Layout Components
@@ -131,6 +132,9 @@ const TeamTasksPage = React.lazy(() => import('./pages/tasks/TeamTasksPage'));
 const TaskAnalyticsPage = React.lazy(() => import('./pages/tasks/TaskAnalyticsPage'));
 const TaskTemplatesPage = React.lazy(() => import('./pages/tasks/TaskTemplatesPage'));
 const CreateEditTemplatePage = React.lazy(() => import('./pages/tasks/CreateEditTemplatePage'));
+
+// Chat
+const ChatPage = React.lazy(() => import('./pages/chat/ChatPage'));
 
 // Error Pages - UNCHANGED
 const NotFoundPage = React.lazy(() => import('./pages/error/NotFoundPage'));
@@ -1219,6 +1223,29 @@ const AppRoutes = () => {
       } />
 
       {/* ========================================= */}
+      {/* CHAT ROUTES */}
+      {/* ========================================= */}
+
+      <Route path="/chat" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.chatAccess()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading chat..." />}>
+              <ChatPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/chat/:conversationId" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.chatAccess()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading chat..." />}>
+              <ChatPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* ========================================= */}
       {/* ERROR ROUTES - UNCHANGED */}
       {/* ========================================= */}
 
@@ -1260,13 +1287,15 @@ const App = () => {
         autoHideDuration={5000}
       >
         <AuthProvider>
-          <CoachMarkProvider flows={FLOWS}>
-            <Router>
-              <Suspense fallback={<LoadingFallback message="Loading PropVantage AI..." />}>
-                <AppRoutes />
-              </Suspense>
-            </Router>
-          </CoachMarkProvider>
+          <ChatProvider>
+            <CoachMarkProvider flows={FLOWS}>
+              <Router>
+                <Suspense fallback={<LoadingFallback message="Loading PropVantage AI..." />}>
+                  <AppRoutes />
+                </Suspense>
+              </Router>
+            </CoachMarkProvider>
+          </ChatProvider>
         </AuthProvider>
       </SnackbarProvider>
     </ThemeProvider>

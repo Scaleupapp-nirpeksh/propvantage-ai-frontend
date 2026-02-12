@@ -1277,6 +1277,38 @@ export const leadershipAPI = {
 };
 
 // =============================================================================
+// CHAT & MESSAGING SERVICES (/api/chat)
+// =============================================================================
+export const chatAPI = {
+  // Conversations
+  createConversation: (data) => api.post('/chat/conversations', data),
+  getConversations: (params = {}) => api.get('/chat/conversations', { params }),
+  getConversation: (id) => api.get(`/chat/conversations/${id}`),
+  updateConversation: (id, data) => api.put(`/chat/conversations/${id}`, data),
+  leaveConversation: (id) => api.delete(`/chat/conversations/${id}`),
+  addParticipants: (id, data) => api.post(`/chat/conversations/${id}/participants`, data),
+  removeParticipant: (id, userId) => api.delete(`/chat/conversations/${id}/participants/${userId}`),
+  markAsRead: (id) => api.put(`/chat/conversations/${id}/read`),
+  archiveConversation: (id, data) => api.put(`/chat/conversations/${id}/archive`, data),
+
+  // Messages
+  sendMessage: (convId, data) => api.post(`/chat/conversations/${convId}/messages`, data),
+  getMessages: (convId, params = {}) => api.get(`/chat/conversations/${convId}/messages`, { params }),
+  getPinnedMessages: (convId) => api.get(`/chat/conversations/${convId}/messages/pinned`),
+  editMessage: (msgId, data) => api.put(`/chat/messages/${msgId}`, data),
+  deleteMessage: (msgId) => api.delete(`/chat/messages/${msgId}`),
+  toggleReaction: (msgId, data) => api.post(`/chat/messages/${msgId}/reactions`, data),
+  togglePin: (msgId) => api.post(`/chat/messages/${msgId}/pin`),
+  forwardMessage: (msgId, data) => api.post(`/chat/messages/${msgId}/forward`, data),
+  createTaskFromMessage: (msgId, data) => api.post(`/chat/messages/${msgId}/create-task`, data),
+
+  // Entity & Search
+  getEntityConversation: (entityType, entityId) => api.get(`/chat/entity/${entityType}/${entityId}`),
+  searchMessages: (params = {}) => api.get('/chat/search', { params }),
+  getOnlineUsers: () => api.get('/chat/online'),
+};
+
+// =============================================================================
 // DEFAULT EXPORT - ENHANCED FOR PHASE 1 + INVITATION SYSTEM (EXISTING + NEW)
 // =============================================================================
 
@@ -1316,6 +1348,9 @@ const apiServices = {
 
   // Leadership Dashboard
   leadership: leadershipAPI,
+
+  // Chat & Messaging
+  chat: chatAPI,
 
   // NEW for Phase 1
   realTime: realTimeAPI,

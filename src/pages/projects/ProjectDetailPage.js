@@ -55,10 +55,12 @@ import {
   AutoGraph,
   PriceChange,
   NotificationsActive,
-  AccountBalance
+  AccountBalance,
+  Chat as ChatIcon,
 } from '@mui/icons-material';
 
 import { useAuth } from '../../context/AuthContext';
+import { useChat } from '../../context/ChatContext';
 import { projectAPI, towerAPI, unitAPI } from '../../services/api';
 import { budgetVarianceAPI } from '../../services/budgetAPI';
 import MiniTowerSilhouette from '../../components/projects/MiniTowerSilhouette';
@@ -137,15 +139,17 @@ const getProjectType = (project, towers, villaUnits) => {
 };
 
 // Enhanced Project Header Component with Budget Variance Badge
-const ProjectHeader = ({ 
-  project, 
-  onEdit, 
-  onRefresh, 
-  isLoading, 
+const ProjectHeader = ({
+  project,
+  onEdit,
+  onRefresh,
+  isLoading,
   projectType,
-  budgetVarianceData 
+  budgetVarianceData
 }) => {
   const { canAccess } = useAuth();
+  const { openEntityConversation } = useChat();
+  const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState(null);
 
   const handleMenuClick = (event) => {
@@ -261,12 +265,22 @@ const ProjectHeader = ({
         </Box>
 
         <Box sx={{ display: 'flex', gap: 1 }}>
+          <Tooltip title="Open Chat">
+            <IconButton onClick={async () => {
+              try {
+                const conv = await openEntityConversation('Project', project?._id);
+                if (conv?._id) navigate(`/chat/${conv._id}`);
+              } catch { /* ignore */ }
+            }}>
+              <ChatIcon />
+            </IconButton>
+          </Tooltip>
           <Tooltip title="Refresh Data">
             <IconButton onClick={onRefresh} disabled={isLoading}>
               <Refresh />
             </IconButton>
           </Tooltip>
-          
+
           {canAccess.projectManagement() && (
             <Button
               variant="contained"

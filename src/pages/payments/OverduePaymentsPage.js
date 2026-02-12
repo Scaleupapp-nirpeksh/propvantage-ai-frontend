@@ -917,7 +917,8 @@ const OverduePaymentsPage = () => {
         sortOrder: sorting.direction,
       });
 
-      const payments = response.data?.data || [];
+      const raw = response.data?.data;
+      const payments = Array.isArray(raw) ? raw : raw?.payments || raw?.results || [];
       console.log('✅ Overdue payments loaded:', payments.length);
 
       setOverduePayments(payments);
@@ -959,6 +960,7 @@ const OverduePaymentsPage = () => {
    * Filtered overdue payments based on current filters
    */
   const filteredPayments = useMemo(() => {
+    if (!Array.isArray(overduePayments)) return [];
     let filtered = [...overduePayments];
 
     // Apply search filter

@@ -5,7 +5,7 @@
  * Location: src/pages/sales/CreateSalePage.js
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Box,
@@ -21,9 +21,6 @@ import {
   Select,
   MenuItem,
   Chip,
-  Stepper,
-  Step,
-  StepLabel,
   Paper,
   Table,
   TableBody,
@@ -40,7 +37,6 @@ import {
   Stack,
   useTheme,
   useMediaQuery,
-  Fab,
   InputAdornment,
   Badge,
   Avatar,
@@ -56,6 +52,7 @@ import {
   Switch,
   Tabs,
   Tab,
+  alpha,
 } from '@mui/material';
 import {
   ArrowBack,
@@ -673,28 +670,18 @@ const UnitSelection = ({
         </Card>
       )}
 
-      {/* Selected Unit Summary */}
+      {/* Selected Unit Summary (collapsible) */}
       {selectedUnit && (
-        <Card sx={{ mt: 3, border: '2px solid', borderColor: 'primary.main' }}>
-          <CardHeader
-            title="Selected Unit"
-            avatar={
-              <Avatar sx={{ bgcolor: 'primary.main' }}>
-                <CheckCircle />
-              </Avatar>
-            }
-            action={
-              <Button 
-                variant="outlined" 
-                size="small"
-                onClick={() => onUnitSelect(null)}
-                startIcon={<Clear />}
-              >
-                Clear Selection
-              </Button>
-            }
-          />
-          <CardContent>
+        <Accordion defaultExpanded={false} sx={{ mt: 2, border: '1px solid', borderColor: 'primary.main' }}>
+          <AccordionSummary expandIcon={<ExpandMore />}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
+              <CheckCircle color="primary" sx={{ fontSize: 20 }} />
+              <Typography variant="subtitle2" fontWeight={600}>
+                {selectedUnit.unitNumber} &mdash; {getUnitProject(selectedUnit, projects)?.name} &mdash; {formatCurrency(selectedUnit.currentPrice || selectedUnit.basePrice)}
+              </Typography>
+            </Box>
+          </AccordionSummary>
+          <AccordionDetails>
             <Grid container spacing={3}>
               <Grid item xs={12} sm={6} md={3}>
                 <Typography variant="body2" color="textSecondary" gutterBottom>
@@ -781,8 +768,8 @@ const UnitSelection = ({
                 </Grid>
               )}
             </Grid>
-          </CardContent>
-        </Card>
+          </AccordionDetails>
+        </Accordion>
       )}
     </Box>
   );
@@ -1050,44 +1037,18 @@ const CustomerSelection = ({
         </Card>
       )}
 
-      {/* Selected Customer Summary */}
+      {/* Selected Customer Summary (collapsible) */}
       {selectedCustomer && (
-        <Card sx={{ mt: 3, border: '2px solid', borderColor: 'primary.main' }}>
-          <CardHeader
-            title="Selected Customer"
-            avatar={
-              <Avatar sx={{ bgcolor: 'primary.main' }}>
-                <CheckCircle />
-              </Avatar>
-            }
-            action={
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                {selectedCustomer.phone && (
-                  <Tooltip title="Call Customer">
-                    <IconButton color="primary" href={`tel:${selectedCustomer.phone}`}>
-                      <Phone />
-                    </IconButton>
-                  </Tooltip>
-                )}
-                {selectedCustomer.email && (
-                  <Tooltip title="Email Customer">
-                    <IconButton color="primary" href={`mailto:${selectedCustomer.email}`}>
-                      <Email />
-                    </IconButton>
-                  </Tooltip>
-                )}
-                <Button 
-                  variant="outlined" 
-                  size="small"
-                  onClick={() => onCustomerSelect(null)}
-                  startIcon={<Clear />}
-                >
-                  Clear Selection
-                </Button>
-              </Box>
-            }
-          />
-          <CardContent>
+        <Accordion defaultExpanded={false} sx={{ mt: 2, border: '1px solid', borderColor: 'primary.main' }}>
+          <AccordionSummary expandIcon={<ExpandMore />}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
+              <CheckCircle color="primary" sx={{ fontSize: 20 }} />
+              <Typography variant="subtitle2" fontWeight={600}>
+                {getCustomerDisplayName(selectedCustomer)} &mdash; {selectedCustomer.email || selectedCustomer.phone || ''}
+              </Typography>
+            </Box>
+          </AccordionSummary>
+          <AccordionDetails>
             <Grid container spacing={3}>
               <Grid item xs={12} sm={6} md={3}>
                 <Typography variant="body2" color="textSecondary" gutterBottom>
@@ -1215,8 +1176,8 @@ const CustomerSelection = ({
                 </>
               )}
             </Grid>
-          </CardContent>
-        </Card>
+          </AccordionDetails>
+        </Accordion>
       )}
     </Box>
   );
@@ -2736,12 +2697,156 @@ const EnhancedReviewAndBook = ({
 };
 
 // ============================================================================
+// COMPACT STEPPER COMPONENT
+// ============================================================================
+
+const CompactStepper = ({ steps, activeStep, isStepCompleted, onStepClick, isMobile }) => {
+  const theme = useTheme();
+
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: isMobile ? 0.5 : 1, py: 1.5, px: 1 }}>
+      {steps.map((step, index) => {
+        const completed = isStepCompleted(index);
+        const active = index === activeStep;
+        const isClickable = index <= activeStep || completed;
+
+        return (
+          <React.Fragment key={step.id}>
+            <Box
+              onClick={() => isClickable && onStepClick(index)}
+              sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: isClickable ? 'pointer' : 'default', opacity: !isClickable ? 0.4 : 1, transition: 'all 200ms ease' }}
+            >
+              <Avatar
+                sx={{
+                  width: isMobile ? 28 : 32,
+                  height: isMobile ? 28 : 32,
+                  fontSize: isMobile ? '0.7rem' : '0.8rem',
+                  bgcolor: completed ? 'success.main' : active ? 'primary.main' : alpha(theme.palette.grey[500], 0.15),
+                  color: completed || active ? '#fff' : 'text.secondary',
+                  transition: 'all 200ms ease',
+                  ...(active && { boxShadow: `0 0 0 3px ${alpha(theme.palette.primary.main, 0.2)}` }),
+                }}
+              >
+                {completed ? <Check sx={{ fontSize: 16 }} /> : (index + 1)}
+              </Avatar>
+              {!isMobile && active && (
+                <Typography variant="subtitle2" fontWeight={600} color="primary" sx={{ whiteSpace: 'nowrap' }}>
+                  {step.label}
+                </Typography>
+              )}
+            </Box>
+            {index < steps.length - 1 && (
+              <Box sx={{ flex: isMobile ? '0 0 16px' : '0 0 40px', height: 2, bgcolor: completed ? 'success.main' : 'grey.300', borderRadius: 1, transition: 'background-color 300ms ease' }} />
+            )}
+          </React.Fragment>
+        );
+      })}
+    </Box>
+  );
+};
+
+// ============================================================================
+// STICKY NAV BAR COMPONENT
+// ============================================================================
+
+const StickyNavBar = ({ activeStep, totalSteps, canProceed, onBack, onNext, onSubmit, submitting, stepLabel }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isLastStep = activeStep === totalSteps - 1;
+  const progressPercent = ((activeStep + 1) / totalSteps) * 100;
+
+  return (
+    <Box sx={{ position: 'sticky', bottom: 0, zIndex: 10, bgcolor: 'background.paper', borderTop: '1px solid', borderColor: 'divider', px: { xs: 2, sm: 3 }, py: 1.5, boxShadow: '0 -4px 12px rgba(0,0,0,0.05)' }}>
+      <LinearProgress
+        variant="determinate"
+        value={progressPercent}
+        sx={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, borderRadius: 0, bgcolor: 'grey.200', '& .MuiLinearProgress-bar': { bgcolor: 'primary.main', transition: 'transform 400ms ease' } }}
+      />
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: 1400, mx: 'auto' }}>
+        <Button disabled={activeStep === 0} onClick={onBack} variant="outlined" startIcon={<ArrowBack />} size={isMobile ? 'medium' : 'large'} sx={{ minWidth: isMobile ? 'auto' : 100 }}>
+          {isMobile ? '' : 'Back'}
+        </Button>
+        {!isMobile && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Typography variant="body2" color="text.secondary" fontWeight={500}>Step {activeStep + 1} of {totalSteps}</Typography>
+            <Typography variant="body2" color="text.secondary">&mdash;</Typography>
+            <Typography variant="body2" color="primary" fontWeight={600}>{stepLabel}</Typography>
+          </Box>
+        )}
+        {isMobile && (
+          <Typography variant="caption" color="text.secondary" fontWeight={500}>{activeStep + 1} / {totalSteps}</Typography>
+        )}
+        {!isLastStep ? (
+          <Button variant="contained" onClick={onNext} disabled={!canProceed} endIcon={<ArrowBack sx={{ transform: 'rotate(180deg)' }} />} size={isMobile ? 'medium' : 'large'} sx={{ minWidth: isMobile ? 'auto' : 140 }}>
+            {isMobile ? 'Next' : 'Next Step'}
+          </Button>
+        ) : (
+          <Button variant="contained" onClick={onSubmit} disabled={!canProceed || submitting} startIcon={submitting ? <CircularProgress size={20} color="inherit" /> : <Save />} size={isMobile ? 'medium' : 'large'} sx={{ minWidth: isMobile ? 'auto' : 160, bgcolor: 'success.main', '&:hover': { bgcolor: 'success.dark' } }}>
+            {submitting ? 'Creating...' : (isMobile ? 'Create' : 'Create Sale')}
+          </Button>
+        )}
+      </Box>
+    </Box>
+  );
+};
+
+// ============================================================================
+// SELECTION SUMMARY CARD COMPONENT
+// ============================================================================
+
+const SelectionSummaryCard = ({ activeStep, selectedUnit, selectedCustomer, projects, onClearUnit, onClearCustomer }) => {
+  const theme = useTheme();
+
+  const showUnitSummary = selectedUnit && activeStep === 0;
+  const showCustomerSummary = selectedCustomer && activeStep === 1;
+
+  if (!showUnitSummary && !showCustomerSummary) return null;
+
+  return (
+    <Box sx={{ mb: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
+      {showUnitSummary && (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 1.5, borderRadius: 2, bgcolor: alpha(theme.palette.success.main, 0.06), border: '1px solid', borderColor: alpha(theme.palette.success.main, 0.2) }}>
+          <Avatar sx={{ bgcolor: 'success.main', width: 36, height: 36 }}>
+            <CheckCircle sx={{ fontSize: 20 }} />
+          </Avatar>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography variant="subtitle2" fontWeight={600}>{selectedUnit.unitNumber} selected</Typography>
+            <Typography variant="caption" color="text.secondary" noWrap>
+              {getUnitProject(selectedUnit, projects)?.name} &bull; {selectedUnit.unitType || selectedUnit.type} &bull; {formatCurrency(selectedUnit.currentPrice || selectedUnit.basePrice)}
+            </Typography>
+          </Box>
+          <Button size="small" variant="text" onClick={onClearUnit} startIcon={<Clear sx={{ fontSize: 16 }} />} sx={{ color: 'text.secondary', flexShrink: 0 }}>
+            Clear
+          </Button>
+        </Box>
+      )}
+      {showCustomerSummary && (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 1.5, borderRadius: 2, bgcolor: alpha(theme.palette.success.main, 0.06), border: '1px solid', borderColor: alpha(theme.palette.success.main, 0.2) }}>
+          <Avatar sx={{ bgcolor: 'success.main', width: 36, height: 36 }}>
+            <CheckCircle sx={{ fontSize: 20 }} />
+          </Avatar>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography variant="subtitle2" fontWeight={600}>{getCustomerDisplayName(selectedCustomer)} selected</Typography>
+            <Typography variant="caption" color="text.secondary" noWrap>
+              {selectedCustomer.email || ''} {selectedCustomer.phone ? `\u2022 ${formatPhoneNumber(selectedCustomer.phone)}` : ''}
+            </Typography>
+          </Box>
+          <Button size="small" variant="text" onClick={onClearCustomer} startIcon={<Clear sx={{ fontSize: 16 }} />} sx={{ color: 'text.secondary', flexShrink: 0 }}>
+            Clear
+          </Button>
+        </Box>
+      )}
+    </Box>
+  );
+};
+
+// ============================================================================
 // MAIN CREATE SALE PAGE COMPONENT
 // ============================================================================
 
 const CreateSalePage = () => {
   const navigate = useNavigate();
-  const { hasPermission } = useAuth();
+  const { canAccess } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [searchParams] = useSearchParams();
@@ -2769,7 +2874,7 @@ const CreateSalePage = () => {
   });
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const [showDebug, setShowDebug] = useState(false);
+  const stepContentRef = useRef(null);
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -2778,9 +2883,64 @@ const CreateSalePage = () => {
     tower: 'all',
   });
 
+  // Handle step navigation
+  const scrollToTop = useCallback(() => {
+    if (stepContentRef.current) {
+      stepContentRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, []);
+
+  const handleNext = useCallback(() => {
+    setActiveStep((prevStep) => Math.min(prevStep + 1, SALE_STEPS.length - 1));
+    setTimeout(scrollToTop, 50);
+  }, [scrollToTop]);
+
+  const handleBack = useCallback(() => {
+    setActiveStep((prevStep) => Math.max(prevStep - 1, 0));
+    setTimeout(scrollToTop, 50);
+  }, [scrollToTop]);
+
+  const handleStepClick = useCallback((step) => {
+    if (step <= activeStep || isStepCompleted(step)) {
+      setActiveStep(step);
+      setTimeout(scrollToTop, 50);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeStep, scrollToTop]);
+
+  const isStepCompleted = (step) => {
+    switch (step) {
+      case 0: return !!selectedUnit;
+      case 1: return !!selectedCustomer;
+      case 2: return !!costSheet;
+      case 3: return !!selectedPaymentPlan && !!paymentSchedule?.length;
+      case 4: return !!selectedUnit && !!selectedCustomer && !!costSheet && !!selectedPaymentPlan;
+      default: return false;
+    }
+  };
+
+  const canProceedToNext = () => {
+    return isStepCompleted(activeStep);
+  };
+
+  const handleUnitSelect = useCallback((unit) => {
+    setSelectedUnit(unit);
+    setCostSheet(null);
+    setSelectedPaymentPlan(null);
+    setPaymentSchedule([]);
+    if (unit) setTimeout(scrollToTop, 50);
+  }, [scrollToTop]);
+
+  const handleCustomerSelect = useCallback((customer) => {
+    setSelectedCustomer(customer);
+    setCostSheet(null);
+    setSelectedPaymentPlan(null);
+    setPaymentSchedule([]);
+    if (customer) setTimeout(scrollToTop, 50);
+  }, [scrollToTop]);
+
   // Check permissions - this can be done after hooks
-  const canCreateSales = hasPermission && typeof hasPermission === 'function' ? 
-    hasPermission('SALES') || hasPermission('SALES_CREATE') : true;
+  const canCreateSales = canAccess?.salesPipeline ? canAccess.salesPipeline() : true;
 
   // Fetch initial data
   useEffect(() => {
@@ -2925,53 +3085,6 @@ const CreateSalePage = () => {
       </Box>
     );
   }
-
-  // Handle step navigation
-  const handleNext = () => {
-    setActiveStep((prevStep) => Math.min(prevStep + 1, SALE_STEPS.length - 1));
-  };
-
-  const handleBack = () => {
-    setActiveStep((prevStep) => Math.max(prevStep - 1, 0));
-  };
-
-  const handleStepClick = (step) => {
-    // Allow navigation only to completed steps
-    if (step <= activeStep || isStepCompleted(step)) {
-      setActiveStep(step);
-    }
-  };
-
-  const isStepCompleted = (step) => {
-    switch (step) {
-      case 0: return !!selectedUnit;
-      case 1: return !!selectedCustomer;
-      case 2: return !!costSheet;
-      case 3: return !!selectedPaymentPlan && !!paymentSchedule?.length;
-      case 4: return !!selectedUnit && !!selectedCustomer && !!costSheet && !!selectedPaymentPlan;
-      default: return false;
-    }
-  };
-
-  const canProceedToNext = () => {
-    return isStepCompleted(activeStep);
-  };
-
-  // Handle unit selection
-  const handleUnitSelect = (unit) => {
-    setSelectedUnit(unit);
-    setCostSheet(null); // Reset cost sheet when unit changes
-    setSelectedPaymentPlan(null); // Reset payment plan when unit changes
-    setPaymentSchedule([]); // Reset payment schedule when unit changes
-  };
-
-  // Handle customer selection
-  const handleCustomerSelect = (customer) => {
-    setSelectedCustomer(customer);
-    setCostSheet(null); // Reset cost sheet when customer changes
-    setSelectedPaymentPlan(null); // Reset payment plan when customer changes
-    setPaymentSchedule([]); // Reset payment schedule when customer changes
-  };
 
   // Handle cost sheet generation
   const handleGenerateCostSheet = (costSheetData) => {
@@ -3119,202 +3232,57 @@ const CreateSalePage = () => {
   };
 
   return (
-    <Box sx={{ flexGrow: 1, p: 3, bgcolor: 'background.default', minHeight: '100vh' }}>
-      {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <IconButton onClick={() => navigate('/sales')} size="large">
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 64px)', m: { xs: -2, sm: -3 } }}>
+      {/* Sticky Header */}
+      <Box sx={{ position: 'sticky', top: 0, zIndex: 10, bgcolor: 'background.default', px: { xs: 2, sm: 3 }, pt: { xs: 2, sm: 3 }, pb: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+          <IconButton onClick={() => navigate('/sales')} size="small">
             <ArrowBack />
           </IconButton>
-          <Box>
-            <Typography variant="h4" component="h1" fontWeight="bold">
-              Create New Sale
-            </Typography>
-            <Typography variant="body1" color="textSecondary">
-              Follow the steps below to book a unit with comprehensive cost sheet and payment plan
-            </Typography>
-          </Box>
-        </Box>
-        
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Typography variant="body2" color="textSecondary">
-            Step {activeStep + 1} of {SALE_STEPS.length}
+          <Typography variant="h5" component="h1" fontWeight="bold">
+            Create New Sale
           </Typography>
-          <LinearProgress 
-            variant="determinate" 
-            value={((activeStep + 1) / SALE_STEPS.length) * 100} 
-            sx={{ width: 100, height: 8, borderRadius: 4 }}
-          />
         </Box>
+        <CompactStepper
+          steps={SALE_STEPS}
+          activeStep={activeStep}
+          isStepCompleted={isStepCompleted}
+          onStepClick={handleStepClick}
+          isMobile={isMobile}
+        />
       </Box>
 
-      {/* Error Alert */}
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
+      {/* Scrollable Step Content */}
+      <Box ref={stepContentRef} sx={{ flex: 1, px: { xs: 2, sm: 3 }, py: 2, pb: '100px' }}>
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
 
-      {/* DIAGNOSTIC: Data Debug Information (remove in production) */}
-      {process.env.NODE_ENV === 'development' && (
-        <Card sx={{ mb: 3, bgcolor: 'info.50', border: '1px solid', borderColor: 'info.200' }}>
-          <CardHeader 
-            title="🔍 Debug Information" 
-            titleTypographyProps={{ variant: 'h6' }}
-            action={
-              <Button size="small" onClick={() => setShowDebug(!showDebug)}>
-                {showDebug ? 'Hide' : 'Show'} Debug
-              </Button>
-            }
-          />
-          {showDebug && (
-            <CardContent>
-              <Grid container spacing={2}>
-                <Grid item xs={12} md={3}>
-                  <Typography variant="subtitle2" color="primary">Projects ({projects.length})</Typography>
-                  {projects.map(p => (
-                    <Typography key={p._id} variant="caption" display="block">
-                      • {p.name} ({p.activePaymentTemplates?.length || 0} templates)
-                    </Typography>
-                  ))}
-                </Grid>
-                <Grid item xs={12} md={3}>
-                  <Typography variant="subtitle2" color="primary">Units ({units.length})</Typography>
-                  {Object.entries(units.reduce((acc, u) => {
-                    const name = u.project?.name || 'Unknown';
-                    acc[name] = (acc[name] || 0) + 1;
-                    return acc;
-                  }, {})).map(([name, count]) => (
-                    <Typography key={name} variant="caption" display="block">
-                      • {name}: {count} units
-                    </Typography>
-                  ))}
-                </Grid>
-                <Grid item xs={12} md={3}>
-                  <Typography variant="subtitle2" color="primary">Leads ({leads.length})</Typography>
-                  {Object.entries(leads.reduce((acc, l) => {
-                    const name = l.project?.name || 'Unknown';
-                    acc[name] = (acc[name] || 0) + 1;
-                    return acc;
-                  }, {})).map(([name, count]) => (
-                    <Typography key={name} variant="caption" display="block">
-                      • {name}: {count} leads
-                    </Typography>
-                  ))}
-                </Grid>
-                <Grid item xs={12} md={3}>
-                  <Typography variant="subtitle2" color="primary">API Status</Typography>
-                  <Typography variant="caption" display="block">
-                    Projects: {loading.projects ? '🔄' : '✅'} Units: {loading.units ? '🔄' : '✅'} Leads: {loading.leads ? '🔄' : '✅'}
-                  </Typography>
-                </Grid>
-              </Grid>
-            </CardContent>
-          )}
-        </Card>
-      )}
+        <SelectionSummaryCard
+          activeStep={activeStep}
+          selectedUnit={selectedUnit}
+          selectedCustomer={selectedCustomer}
+          projects={projects}
+          onClearUnit={() => handleUnitSelect(null)}
+          onClearCustomer={() => handleCustomerSelect(null)}
+        />
 
-      {/* Progress Steps */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Stepper activeStep={activeStep} alternativeLabel={!isMobile}>
-            {SALE_STEPS.map((step, index) => {
-              const StepIcon = step.icon;
-              const isCompleted = isStepCompleted(index);
-              const isClickable = index <= activeStep || isCompleted;
-              
-              return (
-                <Step key={step.id} completed={isCompleted}>
-                  <StepLabel
-                    onClick={() => isClickable && handleStepClick(index)}
-                    sx={{ 
-                      cursor: isClickable ? 'pointer' : 'default',
-                      '& .MuiStepLabel-label': {
-                        fontWeight: index === activeStep ? 'bold' : 'normal'
-                      }
-                    }}
-                    icon={
-                      <Avatar 
-                        sx={{ 
-                          bgcolor: isCompleted ? 'success.main' : index === activeStep ? 'primary.main' : 'grey.400',
-                          width: 40,
-                          height: 40
-                        }}
-                      >
-                        {isCompleted ? <Check /> : <StepIcon />}
-                      </Avatar>
-                    }
-                  >
-                    <Typography variant="subtitle1">{step.label}</Typography>
-                    <Typography variant="body2" color="textSecondary">
-                      {step.description}
-                    </Typography>
-                  </StepLabel>
-                </Step>
-              );
-            })}
-          </Stepper>
-        </CardContent>
-      </Card>
-
-      {/* Step Content */}
-      <Box sx={{ mb: 3 }}>
         {getStepContent(activeStep)}
       </Box>
 
-      {/* Navigation Buttons */}
-      <Card>
-        <CardContent>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Button
-              disabled={activeStep === 0}
-              onClick={handleBack}
-              variant="outlined"
-              startIcon={<ArrowBack />}
-              size="large"
-            >
-              Back
-            </Button>
-
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              {activeStep < SALE_STEPS.length - 1 ? (
-                <Button
-                  variant="contained"
-                  onClick={handleNext}
-                  disabled={!canProceedToNext()}
-                  endIcon={<ArrowBack sx={{ transform: 'rotate(180deg)' }} />}
-                  size="large"
-                >
-                  Next Step
-                </Button>
-              ) : (
-                <Button
-                  variant="contained"
-                  onClick={handleCreateSale}
-                  disabled={!canProceedToNext() || submitting}
-                  startIcon={submitting ? <CircularProgress size={20} /> : <Save />}
-                  size="large"
-                  sx={{ minWidth: 160 }}
-                >
-                  {submitting ? 'Creating...' : 'Create Sale'}
-                </Button>
-              )}
-            </Box>
-          </Box>
-        </CardContent>
-      </Card>
-
-      {/* Floating Help Button for Mobile */}
-      {isMobile && (
-        <Fab
-          color="secondary"
-          aria-label="help"
-          sx={{ position: 'fixed', bottom: 16, left: 16 }}
-          onClick={() => setError('Need help? Contact your system administrator.')}
-        >
-          <Info />
-        </Fab>
-      )}
+      {/* Sticky Bottom Navigation */}
+      <StickyNavBar
+        activeStep={activeStep}
+        totalSteps={SALE_STEPS.length}
+        canProceed={canProceedToNext()}
+        onBack={handleBack}
+        onNext={handleNext}
+        onSubmit={handleCreateSale}
+        submitting={submitting}
+        stepLabel={SALE_STEPS[activeStep].label}
+      />
     </Box>
   );
 };

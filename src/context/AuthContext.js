@@ -717,6 +717,12 @@ export const AuthProvider = ({ children }) => {
     taskTeamView: () => _useNew ? checkPerm('tasks:view_team') : hasPermission('MANAGEMENT'),
     taskAnalytics: () => _useNew ? checkPerm('tasks:analytics') : hasPermission('MANAGEMENT'),
     taskTemplates: () => _useNew ? checkPerm('tasks:manage_templates') : hasPermission('ADMIN'),
+
+    // Chat & messaging
+    chatAccess: () => _useNew ? checkPerm('chat:view') : true,
+    chatSend: () => _useNew ? checkPerm('chat:send') : true,
+    chatCreateGroup: () => _useNew ? checkPerm('chat:create_group') : hasPermission('MANAGEMENT'),
+    chatDeleteAny: () => _useNew ? checkPerm('chat:delete_any') : hasPermission('ADMIN'),
   };
 
   // Context value

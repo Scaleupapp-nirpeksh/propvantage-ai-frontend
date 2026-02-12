@@ -27,6 +27,7 @@ import {
   useTheme,
   useMediaQuery,
   Chip,
+  Badge,
   alpha,
   Fade,
 } from '@mui/material';
@@ -78,8 +79,10 @@ import {
   ListAlt,
   Description,
   Leaderboard,
+  Chat as ChatIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
+import { useChat } from '../../context/ChatContext';
 import CommandPalette from '../navigation/CommandPalette';
 import NotificationBell from '../notifications/NotificationBell';
 import CopilotFAB from '../copilot/CopilotFAB';
@@ -175,6 +178,13 @@ const getNavigationItems = (userRole, canAccess) => {
             { id: 'task-analytics', title: 'Analytics', icon: Assessment, path: '/tasks/analytics', requiredAccess: () => canAccess.taskAnalytics() },
             { id: 'task-templates', title: 'Templates', icon: Description, path: '/tasks/templates', requiredAccess: () => canAccess.taskTemplates() },
           ],
+        },
+        {
+          id: 'chat',
+          title: 'Chat',
+          icon: ChatIcon,
+          path: '/chat',
+          requiredAccess: () => canAccess.chatAccess(),
         },
       ],
     },
@@ -322,7 +332,13 @@ const NavItem = ({ item, isActive, onNavigate, isOpen, onToggle, collapsed, leve
               color: active || isChildActive ? 'primary.main' : 'text.secondary',
             }}
           >
-            <Icon sx={{ fontSize: level > 0 ? 18 : 20 }} />
+            {item.badge ? (
+              <Badge badgeContent={item.badge > 99 ? '99+' : item.badge} color="error" sx={{ '& .MuiBadge-badge': { fontSize: '0.6rem', height: 16, minWidth: 16 } }}>
+                <Icon sx={{ fontSize: level > 0 ? 18 : 20 }} />
+              </Badge>
+            ) : (
+              <Icon sx={{ fontSize: level > 0 ? 18 : 20 }} />
+            )}
           </ListItemIcon>
           {!collapsed && (
             <>
@@ -387,6 +403,7 @@ const DashboardBreadcrumbs = () => {
     'templates': 'Templates', 'all': 'All Tasks',
     'notifications': 'Notifications',
     'leadership': 'Leadership Dashboard',
+    'chat': 'Chat',
   };
 
   const segments = location.pathname.split('/').filter(Boolean);
@@ -495,6 +512,7 @@ const DashboardLayout = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, canAccess } = useAuth();
+  const { totalUnreadCount } = useChat();
   const { startFlow, isFlowComplete } = useCoachMark();
 
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -504,7 +522,18 @@ const DashboardLayout = ({ children }) => {
   const [openMenus, setOpenMenus] = useState({});
   const [paletteOpen, setPaletteOpen] = useState(false);
 
-  const sections = useMemo(() => getNavigationItems(user?.role, canAccess), [user?.role, canAccess]);
+  const sections = useMemo(() => {
+    const items = getNavigationItems(user?.role, canAccess);
+    // Inject chat unread badge
+    items.forEach((section) => {
+      section.items.forEach((item) => {
+        if (item.id === 'chat' && totalUnreadCount > 0) {
+          item.badge = totalUnreadCount;
+        }
+      });
+    });
+    return items;
+  }, [user?.role, canAccess, totalUnreadCount]);
 
   // Open parent menu of active route
   useEffect(() => {

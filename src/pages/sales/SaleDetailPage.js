@@ -77,9 +77,11 @@ import {
   Star,
   Visibility,
   Calculate,
+  Chat as ChatIcon,
 } from '@mui/icons-material';
 
 import { useAuth } from '../../context/AuthContext';
+import { useChat } from '../../context/ChatContext';
 import { formatCurrency, formatDate, formatDateTime, formatPhoneNumber } from '../../utils/formatters';
 
 // ============================================================================
@@ -1006,6 +1008,7 @@ const SaleDetailPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, hasPermission } = useAuth();
+  const { openEntityConversation } = useChat();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -1162,6 +1165,16 @@ const SaleDetailPage = () => {
         </Box>
         
         <Box sx={{ display: 'flex', gap: 1 }}>
+          <Tooltip title="Open Chat">
+            <IconButton onClick={async () => {
+              try {
+                const conv = await openEntityConversation('Sale', saleId);
+                if (conv?._id) navigate(`/chat/${conv._id}`);
+              } catch { /* ignore */ }
+            }}>
+              <ChatIcon />
+            </IconButton>
+          </Tooltip>
           <Button
             variant="outlined"
             startIcon={<Refresh />}
@@ -1170,7 +1183,7 @@ const SaleDetailPage = () => {
           >
             {refreshing ? 'Refreshing...' : 'Refresh'}
           </Button>
-          
+
           <IconButton onClick={handleActionMenuClick}>
             <MoreVert />
           </IconButton>

@@ -8,7 +8,7 @@ import {
   Search, Dashboard, Business, People, AttachMoney, Analytics,
   MonetizationOn, Settings, Add, TrendingUp, Receipt, Payment,
   Assessment, PersonAdd, NoteAdd, Handshake, TaskAlt, ViewKanban,
-  GroupWork, Assignment, Notifications, Leaderboard,
+  GroupWork, Assignment, Notifications, Leaderboard, Chat as ChatIcon,
 } from '@mui/icons-material';
 
 // Static page list
@@ -42,6 +42,7 @@ const PAGES = [
   { label: 'Task Templates', path: '/tasks/templates', icon: TaskAlt, section: 'Pages' },
   { label: 'Notifications', path: '/notifications', icon: Notifications, section: 'Pages' },
   { label: 'Notification Settings', path: '/settings/notifications', icon: Notifications, section: 'Pages' },
+  { label: 'Chat', path: '/chat', icon: ChatIcon, section: 'Pages' },
 ];
 
 const ACTIONS = [

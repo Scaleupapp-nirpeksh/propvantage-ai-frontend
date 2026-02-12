@@ -69,11 +69,13 @@ import {
   ContactPhone,
   InsertComment,
   Refresh,
+  Chat as ChatIcon,
 } from '@mui/icons-material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { useAuth } from '../../context/AuthContext';
+import { useChat } from '../../context/ChatContext';
 import { leadAPI, aiAPI } from '../../services/api';
 
 // =============================================================================
@@ -167,6 +169,8 @@ const getScoreLabel = (score) => {
 
 const LeadHeader = ({ lead, onEdit, onRefresh, isLoading }) => {
   const { canAccess } = useAuth();
+  const { openEntityConversation } = useChat();
+  const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState(null);
 
   const handleMenuClick = (event) => {
@@ -300,12 +304,22 @@ const LeadHeader = ({ lead, onEdit, onRefresh, isLoading }) => {
         </Box>
 
         <Box sx={{ display: 'flex', gap: 1 }}>
+          <Tooltip title="Open Chat">
+            <IconButton onClick={async () => {
+              try {
+                const conv = await openEntityConversation('Lead', lead?._id);
+                if (conv?._id) navigate(`/chat/${conv._id}`);
+              } catch { /* ignore */ }
+            }}>
+              <ChatIcon />
+            </IconButton>
+          </Tooltip>
           <Tooltip title="Refresh Data">
             <IconButton onClick={onRefresh} disabled={isLoading}>
               <Refresh />
             </IconButton>
           </Tooltip>
-          
+
           {canAccess.leadManagement() && (
             <Button
               variant="contained"
