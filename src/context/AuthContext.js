@@ -711,6 +711,12 @@ export const AuthProvider = ({ children }) => {
     viewAllProjects: () => _useNew ? checkPerm('projects:view') : hasPermission('MANAGEMENT'),
     viewOwnLeads: () => _useNew ? checkPerm('leads:view') : hasPermission('SALES'),
     editPricing: () => _useNew ? checkPerm('pricing:dynamic_pricing') : hasMinimumRole('Sales Manager'),
+
+    // Task management
+    taskManagement: () => _useNew ? checkPerm('tasks:view') : true,
+    taskTeamView: () => _useNew ? checkPerm('tasks:view_team') : hasPermission('MANAGEMENT'),
+    taskAnalytics: () => _useNew ? checkPerm('tasks:analytics') : hasPermission('MANAGEMENT'),
+    taskTemplates: () => _useNew ? checkPerm('tasks:manage_templates') : hasPermission('ADMIN'),
   };
 
   // Context value

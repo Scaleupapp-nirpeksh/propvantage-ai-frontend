@@ -7,7 +7,8 @@ import {
 import {
   Search, Dashboard, Business, People, AttachMoney, Analytics,
   MonetizationOn, Settings, Add, TrendingUp, Receipt, Payment,
-  Assessment, PersonAdd, NoteAdd, Handshake,
+  Assessment, PersonAdd, NoteAdd, Handshake, TaskAlt, ViewKanban,
+  GroupWork, Assignment, Notifications, Leaderboard,
 } from '@mui/icons-material';
 
 // Static page list
@@ -29,9 +30,18 @@ const PAGES = [
   { label: 'Revenue Analytics', path: '/analytics/revenue', icon: AttachMoney, section: 'Pages' },
   { label: 'Budget Variance', path: '/analytics/budget-variance', icon: Assessment, section: 'Pages' },
   { label: 'Predictive Analytics', path: '/analytics/predictions', icon: Analytics, section: 'Pages' },
+  { label: 'Leadership Dashboard', path: '/analytics/leadership', icon: Leaderboard, section: 'Pages' },
   { label: 'Dynamic Pricing', path: '/pricing/dynamic', icon: MonetizationOn, section: 'Pages' },
   { label: 'User Management', path: '/settings/users', icon: Settings, section: 'Pages' },
   { label: 'Profile', path: '/profile', icon: Settings, section: 'Pages' },
+  { label: 'My Tasks', path: '/tasks', icon: TaskAlt, section: 'Pages' },
+  { label: 'All Tasks', path: '/tasks/all', icon: Assignment, section: 'Pages' },
+  { label: 'Task Kanban Board', path: '/tasks/kanban', icon: ViewKanban, section: 'Pages' },
+  { label: 'Team Tasks', path: '/tasks/team', icon: GroupWork, section: 'Pages' },
+  { label: 'Task Analytics', path: '/tasks/analytics', icon: Assessment, section: 'Pages' },
+  { label: 'Task Templates', path: '/tasks/templates', icon: TaskAlt, section: 'Pages' },
+  { label: 'Notifications', path: '/notifications', icon: Notifications, section: 'Pages' },
+  { label: 'Notification Settings', path: '/settings/notifications', icon: Notifications, section: 'Pages' },
 ];
 
 const ACTIONS = [
@@ -40,6 +50,7 @@ const ACTIONS = [
   { label: 'New Booking / Sale', path: '/sales/create', icon: NoteAdd, section: 'Actions' },
   { label: 'Record Payment', path: '/payments/record', icon: Payment, section: 'Actions' },
   { label: 'Generate Invoice', path: '/sales/invoices/generate', icon: Receipt, section: 'Actions' },
+  { label: 'Create New Task', path: '/tasks/create', icon: TaskAlt, section: 'Actions' },
 ];
 
 const RECENT_KEY = 'propvantage_recent_pages';

@@ -26,6 +26,9 @@ import {
   HourglassEmpty,
   Description,
   EventAvailable,
+  Assignment,
+  RateReview,
+  PauseCircle,
 } from '@mui/icons-material';
 
 // Lead statuses
@@ -80,6 +83,24 @@ export const PAYMENT_STATUS = {
   cancelled:      { label: 'Cancelled',      color: 'error',   icon: Cancel },
 };
 
+// Task statuses
+export const TASK_STATUS = {
+  'Open':         { label: 'Open',         color: 'info',      icon: Assignment },
+  'In Progress':  { label: 'In Progress',  color: 'warning',   icon: PlayArrow },
+  'Under Review': { label: 'Under Review', color: 'secondary', icon: RateReview },
+  'Completed':    { label: 'Completed',    color: 'success',   icon: CheckCircle },
+  'On Hold':      { label: 'On Hold',      color: 'default',   icon: PauseCircle },
+  'Cancelled':    { label: 'Cancelled',    color: 'error',     icon: Cancel },
+};
+
+// Task priorities
+export const TASK_PRIORITY = {
+  'Critical': { label: 'Critical', color: 'error',   icon: Warning },
+  'High':     { label: 'High',     color: 'warning', icon: Warning },
+  'Medium':   { label: 'Medium',   color: 'info',    icon: null },
+  'Low':      { label: 'Low',      color: 'success', icon: null },
+};
+
 // Convenience lookup: getStatusConfig('lead', 'New') → { label, color, icon }
 export const getStatusConfig = (type, status) => {
   const map = {
@@ -88,6 +109,7 @@ export const getStatusConfig = (type, status) => {
     project: PROJECT_STATUS,
     sale: SALE_STATUS,
     payment: PAYMENT_STATUS,
+    task: TASK_STATUS,
   };
   return map[type]?.[status] || { label: status || '-', color: 'default', icon: null };
 };

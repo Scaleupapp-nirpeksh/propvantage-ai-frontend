@@ -964,6 +964,62 @@ export const analyticsUtils = {
 };
 
 // =============================================================================
+// TASK MANAGEMENT SERVICES (/api/tasks)
+// =============================================================================
+
+export const tasksAPI = {
+  // CRUD
+  getTasks: (params = {}) => api.get('/tasks', { params }),
+  getTask: (id) => api.get(`/tasks/${id}`),
+  createTask: (data) => api.post('/tasks', data),
+  updateTask: (id, data) => api.put(`/tasks/${id}`, data),
+  deleteTask: (id) => api.delete(`/tasks/${id}`),
+
+  // Status & checklist
+  updateStatus: (id, data) => api.put(`/tasks/${id}/status`, data),
+  toggleChecklistItem: (id, itemId, data) => api.put(`/tasks/${id}/checklist/${itemId}`, data),
+
+  // Comments
+  addComment: (id, data) => api.post(`/tasks/${id}/comments`, data),
+  getComments: (id, params = {}) => api.get(`/tasks/${id}/comments`, { params }),
+
+  // Sub-tasks
+  createSubTask: (id, data) => api.post(`/tasks/${id}/subtasks`, data),
+
+  // Special views
+  getMyTasks: (params = {}) => api.get('/tasks/my', { params }),
+  getTeamTasks: (params = {}) => api.get('/tasks/team', { params }),
+  getOverdueTasks: (params = {}) => api.get('/tasks/overdue', { params }),
+  getAnalytics: (params = {}) => api.get('/tasks/analytics', { params }),
+
+  // Bulk operations
+  bulkAssign: (data) => api.put('/tasks/bulk/assign', data),
+  bulkUpdateStatus: (data) => api.put('/tasks/bulk/status', data),
+
+  // Templates
+  getTemplates: (params = {}) => api.get('/tasks/templates', { params }),
+  getTemplate: (id) => api.get(`/tasks/templates/${id}`),
+  createTemplate: (data) => api.post('/tasks/templates', data),
+  updateTemplate: (id, data) => api.put(`/tasks/templates/${id}`, data),
+  deleteTemplate: (id) => api.delete(`/tasks/templates/${id}`),
+  applyTemplate: (id, data) => api.post(`/tasks/templates/${id}/apply`, data),
+};
+
+// =============================================================================
+// NOTIFICATIONS API
+// =============================================================================
+
+export const notificationsAPI = {
+  getNotifications: (params = {}) => api.get('/notifications', { params }),
+  getUnreadCount: () => api.get('/notifications/unread-count'),
+  markAsRead: (id) => api.put(`/notifications/${id}/read`),
+  markAllAsRead: () => api.put('/notifications/read-all'),
+  deleteNotification: (id) => api.delete(`/notifications/${id}`),
+  getPreferences: () => api.get('/notifications/preferences'),
+  updatePreferences: (data) => api.put('/notifications/preferences', data),
+};
+
+// =============================================================================
 // NEW REAL-TIME DATA SERVICE - PHASE 1 ENHANCEMENT
 // =============================================================================
 
@@ -1213,6 +1269,14 @@ export const logout = () => {
 };
 
 // =============================================================================
+// LEADERSHIP DASHBOARD SERVICES (/api/leadership)
+// =============================================================================
+export const leadershipAPI = {
+  getOverview: (params = {}) => api.get('/leadership/overview', { params }),
+  getProjectComparison: (params = {}) => api.get('/leadership/project-comparison', { params }),
+};
+
+// =============================================================================
 // DEFAULT EXPORT - ENHANCED FOR PHASE 1 + INVITATION SYSTEM (EXISTING + NEW)
 // =============================================================================
 
@@ -1243,6 +1307,15 @@ const apiServices = {
   contractor: contractorAPI,
   system: systemAPI,
   invoice: invoiceAPI,
+
+  // Tasks
+  tasks: tasksAPI,
+
+  // Notifications
+  notifications: notificationsAPI,
+
+  // Leadership Dashboard
+  leadership: leadershipAPI,
 
   // NEW for Phase 1
   realTime: realTimeAPI,

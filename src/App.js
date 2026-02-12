@@ -98,6 +98,9 @@ const BudgetVarianceDashboard = React.lazy(() => import('./pages/analytics/Budge
 
 // Phase 2 - Predictive Analytics & Dynamic Pricing
 const PredictiveAnalyticsPage = React.lazy(() => import('./pages/analytics/PredictiveAnalyticsPage'));
+
+// Leadership Dashboard
+const LeadershipDashboardPage = React.lazy(() => import('./pages/analytics/LeadershipDashboardPage'));
 const DynamicPricingPage = React.lazy(() => import('./pages/pricing/DynamicPricingPage'));
 
 // Invoice Management Pages - UNCHANGED
@@ -113,6 +116,21 @@ const RolesListPage = React.lazy(() => import('./pages/settings/RolesListPage'))
 const CreateEditRolePage = React.lazy(() => import('./pages/settings/CreateEditRolePage'));
 const RoleDetailPage = React.lazy(() => import('./pages/settings/RoleDetailPage'));
 const OrgHierarchyPage = React.lazy(() => import('./pages/settings/OrgHierarchyPage'));
+
+// Notification Pages
+const NotificationsPage = React.lazy(() => import('./pages/notifications/NotificationsPage'));
+const NotificationPreferencesPage = React.lazy(() => import('./pages/settings/NotificationPreferencesPage'));
+
+// Task Management Pages
+const MyTasksPage = React.lazy(() => import('./pages/tasks/MyTasksPage'));
+const TaskListPage = React.lazy(() => import('./pages/tasks/TaskListPage'));
+const TaskKanbanPage = React.lazy(() => import('./pages/tasks/TaskKanbanPage'));
+const TaskDetailPage = React.lazy(() => import('./pages/tasks/TaskDetailPage'));
+const CreateEditTaskPage = React.lazy(() => import('./pages/tasks/CreateEditTaskPage'));
+const TeamTasksPage = React.lazy(() => import('./pages/tasks/TeamTasksPage'));
+const TaskAnalyticsPage = React.lazy(() => import('./pages/tasks/TaskAnalyticsPage'));
+const TaskTemplatesPage = React.lazy(() => import('./pages/tasks/TaskTemplatesPage'));
+const CreateEditTemplatePage = React.lazy(() => import('./pages/tasks/CreateEditTemplatePage'));
 
 // Error Pages - UNCHANGED
 const NotFoundPage = React.lazy(() => import('./pages/error/NotFoundPage'));
@@ -386,7 +404,7 @@ const AppRoutes = () => {
       } />
       
       <Route path="/projects/create" element={
-        <ProtectedRoute requiredPermission="MANAGEMENT">
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.projectManagement()}>
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback />}>
               <CreateProjectPage />
@@ -406,7 +424,7 @@ const AppRoutes = () => {
       } />
 
       <Route path="/projects/:projectId/edit" element={
-        <ProtectedRoute requiredPermission="MANAGEMENT">
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.projectManagement()}>
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback message="Loading project editor..." />}>
               <EditProjectPage />
@@ -416,7 +434,7 @@ const AppRoutes = () => {
       } />
 
       <Route path="/projects/:projectId/towers/:towerId/edit" element={
-        <ProtectedRoute requiredPermission="MANAGEMENT">
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.projectManagement()}>
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback message="Loading tower editor..." />}>
               <EditTowerPage />
@@ -426,7 +444,7 @@ const AppRoutes = () => {
       } />
 
       <Route path="/projects/:projectId/towers/:towerId/units/:unitId/edit" element={
-        <ProtectedRoute requiredPermission="MANAGEMENT">
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.projectManagement()}>
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback message="Loading unit editor..." />}>
               <EditUnitPage />
@@ -436,7 +454,7 @@ const AppRoutes = () => {
       } />
 
       <Route path="/projects/:projectId/units/:unitId/edit" element={
-        <ProtectedRoute requiredPermission="MANAGEMENT">
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.projectManagement()}>
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback message="Loading villa editor..." />}>
               <EditUnitPage />
@@ -446,7 +464,7 @@ const AppRoutes = () => {
       } />
 
       <Route path="/projects/:projectId/units/create" element={
-        <ProtectedRoute requiredPermission="MANAGEMENT">
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.projectManagement()}>
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback />}>
               <CreateUnitPage />
@@ -466,7 +484,7 @@ const AppRoutes = () => {
       } />
 
       <Route path="/projects/:projectId/towers/create" element={
-        <ProtectedRoute requiredPermission="MANAGEMENT">
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.projectManagement()}>
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback />}>
               <CreateTowerPage />
@@ -486,7 +504,7 @@ const AppRoutes = () => {
       } />
 
       <Route path="/projects/:projectId/towers/:towerId/units/create" element={
-        <ProtectedRoute requiredPermission="MANAGEMENT">
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.projectManagement()}>
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback />}>
               <CreateUnitPage />
@@ -510,7 +528,7 @@ const AppRoutes = () => {
       {/* ========================================= */}
 
       <Route path="/leads" element={
-        <ProtectedRoute requiredPermission="SALES">
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.leadManagement()}>
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback />}>
               <LeadsListPage />
@@ -520,7 +538,7 @@ const AppRoutes = () => {
       } />
       
       <Route path="/leads/create" element={
-        <ProtectedRoute requiredPermission="SALES">
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.leadManagement()}>
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback />}>
               <CreateLeadPage />
@@ -530,7 +548,7 @@ const AppRoutes = () => {
       } />
       
       <Route path="/leads/:leadId" element={
-        <ProtectedRoute requiredPermission="SALES">
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.leadManagement()}>
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback />}>
               <LeadDetailPage />
@@ -540,7 +558,7 @@ const AppRoutes = () => {
       } />
       
       <Route path="/leads/:leadId/edit" element={
-        <ProtectedRoute requiredPermission="SALES">
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.leadManagement()}>
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback message="Loading lead editor..." />}>
               <EditLeadPage />
@@ -550,7 +568,7 @@ const AppRoutes = () => {
       } />
       
       <Route path="/leads/pipeline" element={
-        <ProtectedRoute requiredPermission="SALES">
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.leadManagement()}>
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback />}>
               <LeadsPipelinePage />
@@ -564,7 +582,7 @@ const AppRoutes = () => {
       {/* ========================================= */}
 
       <Route path="/sales" element={
-        <ProtectedRoute requiredPermission="SALES">
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesPipeline()}>
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback />}>
               <SalesListPage />
@@ -574,7 +592,7 @@ const AppRoutes = () => {
       } />
       
       <Route path="/sales/create" element={
-        <ProtectedRoute requiredPermission="SALES">
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesPipeline()}>
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback />}>
               <CreateSalePage />
@@ -584,7 +602,7 @@ const AppRoutes = () => {
       } />
       
       <Route path="/sales/:saleId" element={
-        <ProtectedRoute requiredPermission="SALES">
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesPipeline()}>
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback />}>
               <SaleDetailPage />
@@ -594,7 +612,7 @@ const AppRoutes = () => {
       } />
 
       <Route path="/sales/:saleId/edit" element={
-        <ProtectedRoute requiredPermission="SALES">
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesPipeline()}>
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback message="Loading sale editor..." />}>
               <EditSalePage />
@@ -636,7 +654,7 @@ const AppRoutes = () => {
 
       {/* Payment Plan Management Routes - UNCHANGED */}
       <Route path="/sales/payment-plans" element={
-        <ProtectedRoute requiredPermission="SALES">
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesPipeline()}>
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback message="Loading payment plan templates..." />}>
               <PaymentPlanManagementPage />
@@ -646,7 +664,7 @@ const AppRoutes = () => {
       } />
 
       <Route path="/payments/plans/:saleId" element={
-        <ProtectedRoute requiredPermission="SALES">
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesPipeline()}>
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback message="Loading payment plan..." />}>
               <PaymentPlanPage />
@@ -657,7 +675,7 @@ const AppRoutes = () => {
 
       {/* Sales Pipeline & Reports Routes - UNCHANGED */}
       <Route path="/sales/pipeline" element={
-        <ProtectedRoute requiredPermission="SALES">
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesPipeline()}>
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback message="Loading sales pipeline..." />}>
               <SalesPipelinePage />
@@ -842,7 +860,7 @@ const AppRoutes = () => {
 
       {/* EXISTING Analytics Routes - UNCHANGED */}
       <Route path="/analytics" element={
-        <ProtectedRoute requiredPermission="MANAGEMENT">
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.projectManagement()}>
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback section="analytics" />}>
               <AnalyticsDashboard />
@@ -852,7 +870,7 @@ const AppRoutes = () => {
       } />
       
       <Route path="/analytics/sales" element={
-        <ProtectedRoute requiredPermission="MANAGEMENT">
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesReports()}>
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback section="analytics" />}>
               <SalesAnalytics />
@@ -862,7 +880,7 @@ const AppRoutes = () => {
       } />
       
       <Route path="/analytics/revenue" element={
-        <ProtectedRoute requiredPermission="FINANCE">
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.viewFinancials()}>
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback section="analytics" />}>
               <RevenueAnalytics />
@@ -872,7 +890,7 @@ const AppRoutes = () => {
       } />
       
       <Route path="/analytics/leads" element={
-        <ProtectedRoute requiredPermission="SALES">
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.leadManagement()}>
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback section="analytics" />}>
               <LeadAnalytics />
@@ -916,7 +934,16 @@ const AppRoutes = () => {
   </ProtectedRoute>
 } />
 
-      
+      {/* Leadership Dashboard */}
+      <Route path="/analytics/leadership" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.projectManagement()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback section="analytics" message="Loading leadership dashboard..." />}>
+              <LeadershipDashboardPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
 
       {/* Enhanced Budget Analysis Routes - NEW for Phase 1 */}
       <Route path="/analytics/budget/variance" element={
@@ -945,7 +972,7 @@ const AppRoutes = () => {
 
       {/* Predictive Analytics Page */}
       <Route path="/analytics/predictions" element={
-        <ProtectedRoute requiredPermission="MANAGEMENT">
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.projectManagement()}>
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback section="analytics" message="Loading predictive analytics..." />}>
               <PredictiveAnalyticsPage />
@@ -956,7 +983,7 @@ const AppRoutes = () => {
 
       {/* Dynamic Pricing Page */}
       <Route path="/pricing/dynamic" element={
-        <ProtectedRoute requiredPermission="MANAGEMENT">
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.editPricing()}>
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback message="Loading dynamic pricing..." />}>
               <DynamicPricingPage />
@@ -980,7 +1007,7 @@ const AppRoutes = () => {
       } />
       
       <Route path="/settings" element={
-        <ProtectedRoute requiredPermission="MANAGEMENT">
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.systemSettings()}>
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback />}>
               <SettingsPage />
@@ -994,6 +1021,30 @@ const AppRoutes = () => {
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback />}>
               <UserManagementPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* ========================================= */}
+      {/* NOTIFICATION ROUTES */}
+      {/* ========================================= */}
+
+      <Route path="/notifications" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback />}>
+              <NotificationsPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/settings/notifications" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback />}>
+              <NotificationPreferencesPage />
             </Suspense>
           </DashboardLayout>
         </ProtectedRoute>
@@ -1048,6 +1099,120 @@ const AppRoutes = () => {
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback />}>
               <OrgHierarchyPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* ========================================= */}
+      {/* TASK MANAGEMENT ROUTES */}
+      {/* ========================================= */}
+
+      <Route path="/tasks" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.taskManagement()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback />}>
+              <MyTasksPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/tasks/all" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.taskManagement()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback />}>
+              <TaskListPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/tasks/kanban" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.taskManagement()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback />}>
+              <TaskKanbanPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/tasks/create" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.taskManagement()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback />}>
+              <CreateEditTaskPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/tasks/team" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.taskTeamView()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback />}>
+              <TeamTasksPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/tasks/analytics" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.taskAnalytics()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback section="analytics" />}>
+              <TaskAnalyticsPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/tasks/templates" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.taskManagement()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback />}>
+              <TaskTemplatesPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/tasks/templates/create" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.taskTemplates()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback />}>
+              <CreateEditTemplatePage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/tasks/templates/:templateId" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.taskTemplates()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback />}>
+              <CreateEditTemplatePage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/tasks/:taskId" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.taskManagement()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback />}>
+              <TaskDetailPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/tasks/:taskId/edit" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.taskManagement()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback />}>
+              <CreateEditTaskPage />
             </Suspense>
           </DashboardLayout>
         </ProtectedRoute>

@@ -17,7 +17,6 @@ import {
   Avatar,
   Menu,
   MenuItem,
-  Badge,
   Tooltip,
   Collapse,
   ListItemButton,
@@ -73,9 +72,16 @@ import {
   Search,
   AdminPanelSettings,
   AccountTree,
+  TaskAlt,
+  ViewKanban,
+  GroupWork,
+  ListAlt,
+  Description,
+  Leaderboard,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import CommandPalette from '../navigation/CommandPalette';
+import NotificationBell from '../notifications/NotificationBell';
 import CopilotFAB from '../copilot/CopilotFAB';
 import { useCoachMark } from '../onboarding';
 
@@ -155,12 +161,34 @@ const getNavigationItems = (userRole, canAccess) => {
             { id: 'payment-plans', title: 'Payment Plans', icon: AccountBalanceWallet, path: '/sales/payment-plans', requiredAccess: () => canAccess.salesPipeline() },
           ],
         },
+        {
+          id: 'tasks',
+          title: 'Tasks',
+          icon: TaskAlt,
+          path: '/tasks',
+          requiredAccess: () => canAccess.taskManagement(),
+          children: [
+            { id: 'my-tasks', title: 'My Tasks', icon: Assignment, path: '/tasks' },
+            { id: 'all-tasks', title: 'All Tasks', icon: ListAlt, path: '/tasks/all' },
+            { id: 'kanban', title: 'Kanban Board', icon: ViewKanban, path: '/tasks/kanban' },
+            { id: 'team-tasks', title: 'Team View', icon: GroupWork, path: '/tasks/team', requiredAccess: () => canAccess.taskTeamView() },
+            { id: 'task-analytics', title: 'Analytics', icon: Assessment, path: '/tasks/analytics', requiredAccess: () => canAccess.taskAnalytics() },
+            { id: 'task-templates', title: 'Templates', icon: Description, path: '/tasks/templates', requiredAccess: () => canAccess.taskTemplates() },
+          ],
+        },
       ],
     },
     // INTELLIGENCE
     {
       section: 'INTELLIGENCE',
       items: [
+        {
+          id: 'leadership',
+          title: 'Leadership',
+          icon: Leaderboard,
+          path: '/analytics/leadership',
+          requiredAccess: () => canAccess.projectManagement(),
+        },
         {
           id: 'analytics',
           title: 'Analytics',
@@ -203,6 +231,7 @@ const getNavigationItems = (userRole, canAccess) => {
           children: [
             { id: 'user-management', title: 'Users', icon: People, path: '/settings/users', requiredAccess: () => canAccess.userManagement() },
             { id: 'roles', title: 'Roles', icon: AdminPanelSettings, path: '/roles', requiredAccess: () => canAccess.systemSettings() },
+            { id: 'notification-settings', title: 'Notifications', icon: Notifications, path: '/settings/notifications' },
           ],
         },
         {
@@ -354,6 +383,10 @@ const DashboardBreadcrumbs = () => {
     'dynamic': 'Dynamic Pricing', 'cost-sheet': 'Cost Sheet',
     'users': 'User Management', 'profile': 'Profile', 'roles': 'Roles', 'org-hierarchy': 'Org Hierarchy',
     'payment-plans': 'Payment Plans', 'collections': 'Collections',
+    'tasks': 'Tasks', 'kanban': 'Kanban Board', 'team': 'Team View',
+    'templates': 'Templates', 'all': 'All Tasks',
+    'notifications': 'Notifications',
+    'leadership': 'Leadership Dashboard',
   };
 
   const segments = location.pathname.split('/').filter(Boolean);
@@ -660,13 +693,7 @@ const DashboardLayout = ({ children }) => {
           </Tooltip>
 
           {/* Notifications */}
-          <Tooltip title="Notifications">
-            <IconButton size="small" data-coach="quick-create">
-              <Badge variant="dot" color="error">
-                <Notifications sx={{ fontSize: 20 }} />
-              </Badge>
-            </IconButton>
-          </Tooltip>
+          <NotificationBell />
 
           <UserMenu />
         </Toolbar>
