@@ -52,6 +52,7 @@ import {
 } from 'recharts';
 import { useAuth } from '../../context/AuthContext';
 import { pricingAPI, projectAPI } from '../../services/api';
+import { useProjectContext } from '../../context/ProjectContext';
 
 const formatCurrency = (amount) => {
   if (!amount && amount !== 0) return '₹0';
@@ -145,11 +146,12 @@ const PricingSuggestionCard = ({ suggestion }) => {
 // Main Dynamic Pricing Page
 const DynamicPricingPage = () => {
   useAuth();
+  const { activeProjectId } = useProjectContext();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState(0);
-  const [selectedProject, setSelectedProject] = useState('');
+  const [selectedProject, setSelectedProject] = useState(() => activeProjectId || '');
   const [projects, setProjects] = useState([]);
   const [pricingData, setPricingData] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(new Date());
@@ -161,13 +163,14 @@ const DynamicPricingPage = () => {
       const data = response.data?.data || [];
       const projectsList = Array.isArray(data) ? data : [];
       setProjects(projectsList);
-      if (projectsList.length > 0 && !selectedProject) {
+      // Only auto-select first project if no global project is set and nothing selected
+      if (projectsList.length > 0 && !selectedProject && !activeProjectId) {
         setSelectedProject(projectsList[0]._id);
       }
     } catch (err) {
       console.error('Error fetching projects:', err);
     }
-  }, [selectedProject]);
+  }, [selectedProject, activeProjectId]);
 
   // Fetch dynamic pricing
   const fetchDynamicPricing = useCallback(async () => {

@@ -33,6 +33,9 @@ import {
   useTheme,
   useMediaQuery,
   LinearProgress,
+  ToggleButtonGroup,
+  ToggleButton,
+  Tooltip,
 } from '@mui/material';
 import {
   Add,
@@ -56,6 +59,8 @@ import {
   SwapHoriz,
   WhatsApp,
   Clear,
+  ViewKanban,
+  TableRows,
 } from '@mui/icons-material';
 import { useSnackbar } from 'notistack';
 
@@ -521,6 +526,77 @@ const PipelineColumn = ({ stage, leads, onDrop, onCardClick, onStatusChange, onQ
   );
 };
 
+// Vertical layout: full-width section per stage, leads in a responsive grid
+const VerticalPipelineColumn = ({ stage, leads, onCardClick, onQuickAction, onDrop }) => {
+  const [isDragOver, setIsDragOver] = useState(false);
+  const stageLeads = leads.filter((lead) => lead.status === stage.id);
+  if (stageLeads.length === 0) return null;
+
+  const totalValue = stageLeads.reduce((sum, l) => sum + (l.requirements?.specificBudget || 0), 0);
+
+  const handleDragOver = (e) => { e.preventDefault(); setIsDragOver(true); };
+  const handleDragLeave = () => setIsDragOver(false);
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const leadId = e.dataTransfer.getData('leadId');
+    const currentStatus = e.dataTransfer.getData('currentStatus');
+    if (leadId && currentStatus !== stage.id) onDrop(leadId, stage.id);
+  };
+
+  return (
+    <Box
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      sx={{
+        mb: 4,
+        border: `2px dashed ${isDragOver ? stage.color : 'transparent'}`,
+        borderRadius: 2,
+        bgcolor: isDragOver ? `${stage.color}08` : 'transparent',
+        p: isDragOver ? 1 : 0,
+        transition: 'all 0.2s ease',
+      }}
+    >
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+          mb: 2,
+          pb: 1.5,
+          borderBottom: `2px solid ${stage.color}55`,
+        }}
+      >
+        <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: stage.color, flexShrink: 0 }} />
+        <Typography variant="subtitle1" fontWeight={700}>{stage.title}</Typography>
+        <Chip
+          label={stageLeads.length}
+          size="small"
+          sx={{ height: 20, fontSize: '0.688rem', fontWeight: 600, bgcolor: `${stage.color}22`, color: stage.color }}
+        />
+        {totalValue > 0 && (
+          <Typography variant="body2" sx={{ fontWeight: 600, color: 'primary.main', ml: 'auto' }}>
+            {formatCurrency(totalValue)}
+          </Typography>
+        )}
+      </Box>
+      <Grid container spacing={2}>
+        {stageLeads.map((lead) => (
+          <Grid item xs={12} sm={6} md={4} lg={3} key={lead._id}>
+            <LeadCard
+              lead={lead}
+              onCardClick={onCardClick}
+              onStatusChange={() => {}}
+              onQuickAction={onQuickAction}
+            />
+          </Grid>
+        ))}
+      </Grid>
+    </Box>
+  );
+};
+
 // Main Pipeline Page Component
 const LeadsPipelinePage = () => {
   const navigate = useNavigate();
@@ -528,6 +604,17 @@ const LeadsPipelinePage = () => {
   const { enqueueSnackbar } = useSnackbar();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('lg'));
+
+  // Kanban orientation: 'horizontal' | 'vertical' (persisted)
+  const [orientation, setOrientation] = useState(
+    () => localStorage.getItem('kanbanOrientation') || 'horizontal'
+  );
+  const handleOrientationChange = (_, value) => {
+    if (!value) return;
+    setOrientation(value);
+    localStorage.setItem('kanbanOrientation', value);
+  };
+  const effectiveOrientation = isMobile ? 'vertical' : orientation;
 
   // State management
   const [leads, setLeads] = useState([]);
@@ -728,7 +815,15 @@ const LeadsPipelinePage = () => {
               Visual lead management with drag-and-drop functionality
             </Typography>
           </Box>
-          <Box sx={{ display: 'flex', gap: 1 }}>
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+            {!isMobile && (
+              <Tooltip title={orientation === 'horizontal' ? 'Switch to vertical layout' : 'Switch to horizontal layout'}>
+                <ToggleButtonGroup value={orientation} exclusive onChange={handleOrientationChange} size="small">
+                  <ToggleButton value="horizontal"><ViewKanban sx={{ fontSize: 18 }} /></ToggleButton>
+                  <ToggleButton value="vertical"><TableRows sx={{ fontSize: 18 }} /></ToggleButton>
+                </ToggleButtonGroup>
+              </Tooltip>
+            )}
             <Button
               variant="outlined"
               startIcon={<Refresh />}
@@ -885,21 +980,25 @@ const LeadsPipelinePage = () => {
         </Box>
       )}
 
-      {/* Pipeline Columns */}
-      {isMobile ? (
-        <Alert severity="info" sx={{ mb: 3 }}>
-          <Typography variant="body2">
-            Pipeline view is optimized for desktop. Please use a larger screen for the best experience.
-          </Typography>
-          <Button
-            variant="outlined"
-            onClick={() => navigate('/leads')}
-            size="small"
-            sx={{ mt: 1 }}
-          >
-            View Lead List
-          </Button>
-        </Alert>
+      {/* Pipeline Board */}
+      {effectiveOrientation === 'vertical' ? (
+        <Box sx={{ mt: 2 }}>
+          {PIPELINE_STAGES.map((stage) => (
+            <VerticalPipelineColumn
+              key={stage.id}
+              stage={stage}
+              leads={leads}
+              onCardClick={handleCardClick}
+              onQuickAction={handleQuickAction}
+              onDrop={handleDrop}
+            />
+          ))}
+          {leads.length === 0 && !loading && (
+            <Box sx={{ textAlign: 'center', py: 8, color: 'text.secondary' }}>
+              <Typography>No leads found. Try adjusting your filters.</Typography>
+            </Box>
+          )}
+        </Box>
       ) : (
         <Box
           sx={{

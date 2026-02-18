@@ -32,7 +32,6 @@ import {
   Stack,
   Alert,
   CircularProgress,
-  useTheme,
   Table,
   TableBody,
   TableCell,
@@ -41,7 +40,6 @@ import {
   TableRow,
   TablePagination,
   Tooltip,
-  Badge,
   Divider,
   ListItemText,
   ListItemIcon,
@@ -86,7 +84,8 @@ import {
 
 import { useAuth } from '../../context/AuthContext';
 import { paymentAPI } from '../../services/api';
-import { formatCurrency, formatPhoneNumber } from '../../utils/formatters';
+import { formatCurrency, fmtCurrency, formatPhoneNumber } from '../../utils/formatters';
+import { KPICard } from '../../components/common';
 
 // ============================================================================
 // CONSTANTS AND CONFIGURATIONS
@@ -242,115 +241,50 @@ const calculateSummary = (payments) => {
  * @param {boolean} loading - Loading state
  */
 const DueTodaySummary = ({ duePayments, loading }) => {
-  const theme = useTheme();
   const summary = useMemo(() => calculateSummary(duePayments), [duePayments]);
 
-  const summaryCards = [
-    {
-      title: 'Total Due Today',
-      value: summary.total.toString(),
-      subtitle: `${formatCurrency(summary.totalAmount)}`,
-      icon: Today,
-      color: 'primary',
-      gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    },
-    {
-      title: 'High Priority',
-      value: summary.priorityBreakdown.high.toString(),
-      subtitle: 'Requires immediate attention',
-      icon: PriorityHigh,
-      color: 'error',
-      gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-      alert: summary.priorityBreakdown.high > 0,
-    },
-    {
-      title: 'Medium Priority',
-      value: summary.priorityBreakdown.medium.toString(),
-      subtitle: 'Regular follow-up needed',
-      icon: Flag,
-      color: 'warning',
-      gradient: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)',
-    },
-    {
-      title: 'Collection Target',
-      value: summary.total > 0 ? '85%' : '0%',
-      subtitle: 'Today\'s target collection rate',
-      icon: TrendingUp,
-      color: 'success',
-      gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
-    },
-  ];
-
-  if (loading) {
-    return (
-      <Grid container spacing={3}>
-        {summaryCards.map((_, index) => (
-          <Grid item xs={12} sm={6} lg={3} key={index}>
-            <Card sx={{ height: 140 }}>
-              <CardContent sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                <CircularProgress size={30} />
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
-    );
-  }
-
   return (
-    <Grid container spacing={3}>
-      {summaryCards.map((card, index) => (
-        <Grid item xs={12} sm={6} lg={3} key={index}>
-          <Card 
-            sx={{ 
-              height: 140,
-              background: card.gradient,
-              color: 'white',
-              position: 'relative',
-              overflow: 'hidden',
-              '&:hover': {
-                transform: 'translateY(-2px)',
-                boxShadow: theme.shadows[8],
-              },
-              transition: 'all 0.3s ease-in-out',
-            }}
-          >
-            <CardContent sx={{ position: 'relative', zIndex: 1 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-                <Box>
-                  <Typography variant="body2" sx={{ opacity: 0.9, fontSize: '0.875rem' }}>
-                    {card.title}
-                  </Typography>
-                  <Typography variant="h4" fontWeight="bold" sx={{ my: 0.5 }}>
-                    {card.value}
-                  </Typography>
-                  <Typography variant="caption" sx={{ opacity: 0.8 }}>
-                    {card.subtitle}
-                  </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                  <card.icon sx={{ fontSize: 40, opacity: 0.8 }} />
-                </Box>
-              </Box>
-              
-              {card.alert && (
-                <Badge
-                  color="error"
-                  variant="dot"
-                  sx={{
-                    position: 'absolute',
-                    top: 16,
-                    right: 16,
-                    '& .MuiBadge-badge': {
-                      animation: 'pulse 2s infinite',
-                    },
-                  }}
-                />
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-      ))}
+    <Grid container spacing={2}>
+      <Grid item xs={6} sm={6} md={3}>
+        <KPICard
+          title="Total Due Today"
+          value={summary.total}
+          subtitle={fmtCurrency(summary.totalAmount)}
+          icon={Today}
+          color="primary"
+          loading={loading}
+        />
+      </Grid>
+      <Grid item xs={6} sm={6} md={3}>
+        <KPICard
+          title="High Priority"
+          value={summary.priorityBreakdown.high}
+          subtitle="Requires immediate attention"
+          icon={PriorityHigh}
+          color="error"
+          loading={loading}
+        />
+      </Grid>
+      <Grid item xs={6} sm={6} md={3}>
+        <KPICard
+          title="Medium Priority"
+          value={summary.priorityBreakdown.medium}
+          subtitle="Regular follow-up needed"
+          icon={Flag}
+          color="warning"
+          loading={loading}
+        />
+      </Grid>
+      <Grid item xs={6} sm={6} md={3}>
+        <KPICard
+          title="Collection Target"
+          value={summary.total > 0 ? '85%' : '0%'}
+          subtitle="Today's target collection rate"
+          icon={TrendingUp}
+          color="success"
+          loading={loading}
+        />
+      </Grid>
     </Grid>
   );
 };

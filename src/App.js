@@ -14,6 +14,7 @@ import theme from './theme';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ChatProvider } from './context/ChatContext';
 import { CoachMarkProvider, FLOWS } from './components/onboarding';
+import { ProjectProvider } from './context/ProjectContext';
 
 // Layout Components
 import AuthLayout from './components/layout/AuthLayout';
@@ -117,6 +118,7 @@ const RolesListPage = React.lazy(() => import('./pages/settings/RolesListPage'))
 const CreateEditRolePage = React.lazy(() => import('./pages/settings/CreateEditRolePage'));
 const RoleDetailPage = React.lazy(() => import('./pages/settings/RoleDetailPage'));
 const OrgHierarchyPage = React.lazy(() => import('./pages/settings/OrgHierarchyPage'));
+const ProjectAccessPage = React.lazy(() => import('./pages/settings/ProjectAccessPage'));
 
 // Notification Pages
 const NotificationsPage = React.lazy(() => import('./pages/notifications/NotificationsPage'));
@@ -1030,6 +1032,16 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
 
+      <Route path="/settings/project-access" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.projectManagement()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback />}>
+              <ProjectAccessPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
       {/* ========================================= */}
       {/* NOTIFICATION ROUTES */}
       {/* ========================================= */}
@@ -1287,15 +1299,17 @@ const App = () => {
         autoHideDuration={5000}
       >
         <AuthProvider>
-          <ChatProvider>
-            <CoachMarkProvider flows={FLOWS}>
-              <Router>
-                <Suspense fallback={<LoadingFallback message="Loading PropVantage AI..." />}>
-                  <AppRoutes />
-                </Suspense>
-              </Router>
-            </CoachMarkProvider>
-          </ChatProvider>
+          <ProjectProvider>
+            <ChatProvider>
+              <CoachMarkProvider flows={FLOWS}>
+                <Router>
+                  <Suspense fallback={<LoadingFallback message="Loading PropVantage AI..." />}>
+                    <AppRoutes />
+                  </Suspense>
+                </Router>
+              </CoachMarkProvider>
+            </ChatProvider>
+          </ProjectProvider>
         </AuthProvider>
       </SnackbarProvider>
     </ThemeProvider>

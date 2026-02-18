@@ -59,6 +59,7 @@ import {
 } from 'recharts';
 
 import { useAuth } from '../../context/AuthContext';
+import { useProjectContext } from '../../context/ProjectContext';
 import { projectAPI, predictiveAPI } from '../../services/api';
 
 // ─── Utility ─────────────────────────────────────────────────────────────────
@@ -618,10 +619,12 @@ const ForecastSummaryWidget = ({ navigate, isLoading: parentLoading }) => {
 // ─── Main Dashboard ──────────────────────────────────────────────────────────
 const BusinessHeadDashboard = () => {
   const { user, getOrganizationDisplayName } = useAuth();
+  const { activeProjectId, activeProject } = useProjectContext();
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
+  const [allProjects, setAllProjects] = useState([]);
   const [dashboardData, setDashboardData] = useState({
     kpis: { totalRevenue: 0, totalProjects: 0, totalUnits: 0, avgProjectValue: 0 },
     projects: [],
@@ -636,16 +639,7 @@ const BusinessHeadDashboard = () => {
       setError(null);
 
       const projectsResult = await projectAPI.getProjects();
-      const projects = projectsResult.data.data || projectsResult.data || [];
-
-      const totalRevenue = projects.reduce((sum, p) => sum + (p.targetRevenue || 0), 0);
-      const totalUnits = projects.reduce((sum, p) => sum + (p.totalUnits || 0), 0);
-      const avgProjectValue = projects.length > 0 ? totalRevenue / projects.length : 0;
-
-      setDashboardData({
-        kpis: { totalRevenue, totalProjects: projects.length, totalUnits, avgProjectValue },
-        projects,
-      });
+      setAllProjects(projectsResult.data.data || projectsResult.data || []);
       setLoading({ kpis: false, projects: false });
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
@@ -659,6 +653,20 @@ const BusinessHeadDashboard = () => {
   useEffect(() => {
     fetchDashboardData();
   }, [fetchDashboardData]);
+
+  // Recompute KPIs and project list whenever project selection or raw data changes
+  useEffect(() => {
+    const projects = activeProjectId
+      ? allProjects.filter((p) => p._id === activeProjectId)
+      : allProjects;
+    const totalRevenue = projects.reduce((sum, p) => sum + (p.targetRevenue || 0), 0);
+    const totalUnits = projects.reduce((sum, p) => sum + (p.totalUnits || 0), 0);
+    const avgProjectValue = projects.length > 0 ? totalRevenue / projects.length : 0;
+    setDashboardData({
+      kpis: { totalRevenue, totalProjects: projects.length, totalUnits, avgProjectValue },
+      projects,
+    });
+  }, [allProjects, activeProjectId]);
 
   const handleRefresh = () => fetchDashboardData(true);
 
@@ -681,7 +689,8 @@ const BusinessHeadDashboard = () => {
                 Executive Dashboard
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Welcome back, {user?.firstName}! Overview for {getOrganizationDisplayName()}.
+                Welcome back, {user?.firstName}!{' '}
+                {activeProject ? `Showing data for ${activeProject.name}.` : `Overview for ${getOrganizationDisplayName()}.`}
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', gap: 1, flexShrink: 0 }}>
@@ -734,7 +743,7 @@ const BusinessHeadDashboard = () => {
           <ExecutiveMetricCard
             title="Total Revenue Target"
             value={formatCurrency(dashboardData.kpis.totalRevenue)}
-            subtitle="Across all projects"
+            subtitle={activeProject ? activeProject.name : 'Across all projects'}
             icon={AttachMoney}
             color="success"
             isLoading={loading.kpis}
@@ -745,7 +754,7 @@ const BusinessHeadDashboard = () => {
           <ExecutiveMetricCard
             title="Active Projects"
             value={dashboardData.kpis.totalProjects}
-            subtitle="In pipeline"
+            subtitle={activeProject ? activeProject.name : 'In pipeline'}
             icon={Business}
             color="primary"
             isLoading={loading.kpis}
@@ -756,7 +765,7 @@ const BusinessHeadDashboard = () => {
           <ExecutiveMetricCard
             title="Total Units"
             value={formatNumber(dashboardData.kpis.totalUnits)}
-            subtitle="Across all projects"
+            subtitle={activeProject ? activeProject.name : 'Across all projects'}
             icon={Construction}
             color="info"
             isLoading={loading.kpis}
@@ -767,7 +776,7 @@ const BusinessHeadDashboard = () => {
           <ExecutiveMetricCard
             title="Avg Project Value"
             value={formatCurrency(dashboardData.kpis.avgProjectValue)}
-            subtitle="Revenue per project"
+            subtitle={activeProject ? activeProject.name : 'Revenue per project'}
             icon={Timeline}
             color="warning"
             isLoading={loading.kpis}

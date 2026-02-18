@@ -185,7 +185,7 @@ const TaskListPage = () => {
       id: 'select',
       label: '',
       width: 40,
-      render: (row) => (
+      render: (_, row) => (
         <Checkbox
           size="small"
           checked={selected.includes(row._id)}
@@ -201,7 +201,7 @@ const TaskListPage = () => {
     {
       id: 'title',
       label: 'Title',
-      render: (row) => row.title,
+      render: (val) => val,
       sortable: true,
     },
     {
@@ -209,7 +209,7 @@ const TaskListPage = () => {
       label: 'Status',
       width: 140,
       sortable: true,
-      render: (row) => (
+      render: (_, row) => (
         <StatusTransitionMenu
           currentStatus={row.status}
           onStatusChange={(s, d) => handleStatusChange(row._id, s, d)}
@@ -222,10 +222,10 @@ const TaskListPage = () => {
       label: 'Priority',
       width: 100,
       sortable: true,
-      render: (row) => (
+      render: (val) => (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-          <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: PRIORITY_COLORS[row.priority] || theme.palette.grey[400] }} />
-          {row.priority}
+          <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: PRIORITY_COLORS[val] || theme.palette.grey[400] }} />
+          {val}
         </Box>
       ),
     },
@@ -233,17 +233,14 @@ const TaskListPage = () => {
       id: 'assignedTo',
       label: 'Assignee',
       width: 120,
-      render: (row) => {
-        const user = row.assignedTo;
-        return user ? formatName(user.firstName, user.lastName, { format: 'full' }) : '-';
-      },
+      render: (user) => user ? formatName(user.firstName, user.lastName, { format: 'full' }) : '-',
     },
     {
       id: 'dueDate',
       label: 'Due Date',
       width: 110,
       sortable: true,
-      render: (row) => {
+      render: (_, row) => {
         if (!row.dueDate) return '-';
         const isOverdue = row.isOverdue || row.overdueDays > 0;
         return (
@@ -258,7 +255,7 @@ const TaskListPage = () => {
       label: 'Category',
       width: 120,
       sortable: true,
-      render: (row) => row.category || '-',
+      render: (val) => val || '-',
     },
   ];
 
@@ -351,18 +348,21 @@ const TaskListPage = () => {
         <DataTable
           columns={columns}
           rows={tasks}
-          getRowId={(row) => row._id}
           onRowClick={(row) => navigate(`/tasks/${row._id}`)}
-          page={pagination.page}
-          rowsPerPage={pagination.limit}
-          totalRows={pagination.total}
-          onPageChange={(p) => {
-            const next = new URLSearchParams(searchParams);
-            next.set('page', String(p));
-            setSearchParams(next);
+          pagination={{
+            total: pagination.total,
+            page: pagination.page,
+            rowsPerPage: pagination.limit,
+            onPageChange: (p) => {
+              const next = new URLSearchParams(searchParams);
+              next.set('page', String(p));
+              setSearchParams(next);
+            },
           }}
-          sortBy={searchParams.get('sortBy') || ''}
-          sortOrder={searchParams.get('sortOrder') || 'desc'}
+          currentSort={{
+            field: searchParams.get('sortBy') || '',
+            direction: searchParams.get('sortOrder') || 'desc',
+          }}
           onSort={handleSort}
           responsive="card"
           mobileCardRenderer={(row) => (

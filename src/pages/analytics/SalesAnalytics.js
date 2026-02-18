@@ -20,8 +20,9 @@ import {
 
 import { useAuth } from '../../context/AuthContext';
 import { salesAPI, projectAPI, userAPI } from '../../services/api';
-import { formatCurrency } from '../../utils/formatters';
+import { formatCurrency, fmtCurrency } from '../../utils/formatters';
 import { PageHeader, KPICard, FilterBar } from '../../components/common';
+import { useProjectContext } from '../../context/ProjectContext';
 import { CHART_COLORS } from '../../constants/statusConfig';
 
 // ---------------------------------------------------------------------------
@@ -422,6 +423,7 @@ const SalesAnalytics = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [searchParams, setSearchParams] = useSearchParams();
+  const { activeProjectId } = useProjectContext();
 
   const [activeTab, setActiveTab] = useState(0);
   const [salesData, setSalesData] = useState([]);
@@ -435,7 +437,7 @@ const SalesAnalytics = () => {
   const [filters, setFilters] = useState({
     search: '',
     period: searchParams.get('period') || 'all',
-    project: searchParams.get('project') || '',
+    project: searchParams.get('project') || activeProjectId || '',
     salesperson: searchParams.get('salesperson') || '',
   });
 
@@ -611,10 +613,10 @@ const SalesAnalytics = () => {
           <KPICard title="Total Sales" value={totalSales} icon={Assessment} color="primary" loading={loading} />
         </Grid>
         <Grid item xs={6} sm={4} md={2}>
-          <KPICard title="Revenue" value={formatCurrency(totalRevenue)} icon={MonetizationOn} color="success" loading={loading} />
+          <KPICard title="Revenue" value={fmtCurrency(totalRevenue)} icon={MonetizationOn} color="success" loading={loading} />
         </Grid>
         <Grid item xs={6} sm={4} md={2}>
-          <KPICard title="Avg Deal" value={formatCurrency(avgValue)} icon={TrendingUp} color="info" loading={loading} />
+          <KPICard title="Avg Deal" value={fmtCurrency(avgValue)} icon={TrendingUp} color="info" loading={loading} />
         </Grid>
         <Grid item xs={6} sm={4} md={2}>
           <KPICard title="Completion" value={`${completionRate}%`} icon={CheckCircle} color="warning" loading={loading} />

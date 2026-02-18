@@ -19,6 +19,7 @@ import { useAuth } from '../../context/AuthContext';
 import { salesAPI, projectAPI, userAPI } from '../../services/api';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { PageHeader, KPICard, FilterBar, DataTable } from '../../components/common';
+import { useProjectContext } from '../../context/ProjectContext';
 
 // Status configs
 const SALE_STATUSES = [
@@ -151,6 +152,7 @@ const SalesListPage = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [searchParams, setSearchParams] = useSearchParams();
+  const { activeProjectId } = useProjectContext();
 
   // State
   const [sales, setSales] = useState([]);
@@ -172,7 +174,7 @@ const SalesListPage = () => {
     search: searchParams.get('search') || '',
     status: searchParams.get('status') || '',
     paymentStatus: searchParams.get('paymentStatus') || '',
-    project: searchParams.get('project') || '',
+    project: searchParams.get('project') || activeProjectId || '',
     salesperson: searchParams.get('salesperson') || '',
     sortBy: searchParams.get('sortBy') || 'bookingDate',
     sortOrder: searchParams.get('sortOrder') || 'desc',

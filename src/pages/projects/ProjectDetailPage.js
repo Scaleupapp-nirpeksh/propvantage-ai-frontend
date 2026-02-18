@@ -64,6 +64,7 @@ import { useChat } from '../../context/ChatContext';
 import { projectAPI, towerAPI, unitAPI } from '../../services/api';
 import { budgetVarianceAPI } from '../../services/budgetAPI';
 import MiniTowerSilhouette from '../../components/projects/MiniTowerSilhouette';
+import ProjectTeamPanel from '../../components/projects/ProjectTeamPanel';
 
 // Import Budget Variance Dashboard Components
 import BudgetVarianceSummaryCards from '../analytics/BudgetVarianceSummaryCards';
@@ -1269,7 +1270,11 @@ const ProjectDetailPage = () => {
 
     } catch (error) {
       console.error('❌ Error fetching project data:', error);
-      setError('Failed to load project details. Please try again.');
+      if (error.projectAccessDenied) {
+        setError('ACCESS_DENIED');
+      } else {
+        setError('Failed to load project details. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -1313,9 +1318,17 @@ const ProjectDetailPage = () => {
     );
   }
 
+  if (error === 'ACCESS_DENIED') {
+    return (
+      <Alert severity="warning" sx={{ mt: 2 }}>
+        <strong>Access Denied</strong> — You don't have access to this project. Contact your administrator to request access.
+      </Alert>
+    );
+  }
+
   if (error) {
     return (
-      <Alert 
+      <Alert
         severity="error"
         action={
           <Button color="inherit" size="small" onClick={fetchProjectData}>
@@ -1352,17 +1365,18 @@ const ProjectDetailPage = () => {
     }
     
     tabs.push({ label: 'Timeline', value: tabs.length });
-    
+    tabs.push({ label: 'Team', value: tabs.length });
+
     // Add Budget Analytics tab if user has financial permissions
     if (canAccess.viewFinancials()) {
-      tabs.push({ 
-        label: 'Budget Analytics', 
+      tabs.push({
+        label: 'Budget Analytics',
         value: tabs.length,
         icon: <QueryStats />,
         badge: budgetVarianceData?.alerts?.hasVariance ? 'alert' : null
       });
     }
-    
+
     return tabs;
   };
 
@@ -1487,29 +1501,38 @@ const ProjectDetailPage = () => {
         </Paper>
       )}
 
-      {/* Budget Analytics Tab */}
+      {/* Team Tab — villa=2, apartment=2, hybrid=3 */}
+      {((projectType === 'villa' && activeTab === 2) ||
+        (projectType === 'apartment' && activeTab === 2) ||
+        (projectType === 'hybrid' && activeTab === 3)) && (
+        <Paper sx={{ p: 3 }}>
+          <ProjectTeamPanel projectId={projectId} projectName={project?.name} />
+        </Paper>
+      )}
+
+      {/* Budget Analytics Tab — villa=3, apartment=3, hybrid=4 */}
       {canAccess.viewFinancials() && (
         <>
           {/* Villa Projects - Budget Analytics */}
-          {projectType === 'villa' && activeTab === 2 && (
+          {projectType === 'villa' && activeTab === 3 && (
             <IntegratedBudgetVarianceDashboard
               projectId={projectId}
               projectName={project.name}
               onNavigateBack={handleNavigateBack}
             />
           )}
-          
+
           {/* Apartment Projects - Budget Analytics */}
-          {projectType === 'apartment' && activeTab === 2 && (
+          {projectType === 'apartment' && activeTab === 3 && (
             <IntegratedBudgetVarianceDashboard
               projectId={projectId}
               projectName={project.name}
               onNavigateBack={handleNavigateBack}
             />
           )}
-          
+
           {/* Hybrid Projects - Budget Analytics */}
-          {projectType === 'hybrid' && activeTab === 3 && (
+          {projectType === 'hybrid' && activeTab === 4 && (
             <IntegratedBudgetVarianceDashboard
               projectId={projectId}
               projectName={project.name}

@@ -57,6 +57,7 @@ import {
 import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
 
 import { useAuth } from '../../context/AuthContext';
+import { useProjectContext } from '../../context/ProjectContext';
 import { projectAPI } from '../../services/api';
 
 // =============================================================================
@@ -507,7 +508,10 @@ const ConstructionAlertsCard = ({ alerts, isLoading }) => (
 // Main Project Director Dashboard Component
 const ProjectDirectorDashboard = () => {
   const { user, getOrganizationDisplayName } = useAuth();
+  const { activeProjectId, activeProject } = useProjectContext();
   const navigate = useNavigate();
+
+  const [allProjects, setAllProjects] = useState([]);
 
   // State management
   const [dashboardData, setDashboardData] = useState({
@@ -538,39 +542,8 @@ const ProjectDirectorDashboard = () => {
   const fetchProjectData = useCallback(async () => {
     try {
       setLoading(prev => ({ ...prev, projects: true, kpis: true }));
-      
       const projectsResponse = await projectAPI.getProjects();
-      const projects = projectsResponse.data?.data || projectsResponse.data || [];
-
-      // Calculate KPIs from project data
-      const totalProjects = projects.length;
-      const activeProjects = projects.filter(p => p.status === 'active').length;
-      const totalUnits = projects.reduce((sum, project) => sum + (project.totalUnits || 0), 0);
-      const totalRevenue = projects.reduce((sum, project) => sum + (project.revenueAchieved || 0), 0);
-      
-      // Calculate average construction progress
-      const projectsWithProgress = projects.filter(p => (p.constructionProgress || 0) > 0);
-      const averageProgress = projectsWithProgress.length > 0 
-        ? projectsWithProgress.reduce((sum, project) => sum + (project.constructionProgress || 0), 0) / projectsWithProgress.length
-        : 0;
-      
-      // Calculate completion rate
-      const completedProjects = projects.filter(p => p.status === 'completed').length;
-      const completionRate = totalProjects > 0 ? (completedProjects / totalProjects) * 100 : 0;
-
-      setDashboardData(prev => ({
-        ...prev,
-        kpis: {
-          totalProjects,
-          activeProjects,
-          totalUnits,
-          totalRevenue,
-          averageProgress,
-          completionRate,
-        },
-        projects: projects
-      }));
-
+      setAllProjects(projectsResponse.data?.data || projectsResponse.data || []);
     } catch (error) {
       console.error('Error fetching project data:', error);
       setError('Failed to load project data');
@@ -659,6 +632,28 @@ const ProjectDirectorDashboard = () => {
   useEffect(() => {
     fetchDashboardData();
   }, [fetchDashboardData]);
+
+  // Recompute KPIs whenever raw projects or active project changes
+  useEffect(() => {
+    const projects = activeProjectId
+      ? allProjects.filter((p) => p._id === activeProjectId)
+      : allProjects;
+    const totalProjects = projects.length;
+    const activeProjects = projects.filter(p => p.status === 'active').length;
+    const totalUnits = projects.reduce((sum, p) => sum + (p.totalUnits || 0), 0);
+    const totalRevenue = projects.reduce((sum, p) => sum + (p.revenueAchieved || 0), 0);
+    const projectsWithProgress = projects.filter(p => (p.constructionProgress || 0) > 0);
+    const averageProgress = projectsWithProgress.length > 0
+      ? projectsWithProgress.reduce((sum, p) => sum + (p.constructionProgress || 0), 0) / projectsWithProgress.length
+      : 0;
+    const completedProjects = projects.filter(p => p.status === 'completed').length;
+    const completionRate = totalProjects > 0 ? (completedProjects / totalProjects) * 100 : 0;
+    setDashboardData(prev => ({
+      ...prev,
+      kpis: { totalProjects, activeProjects, totalUnits, totalRevenue, averageProgress, completionRate },
+      projects,
+    }));
+  }, [allProjects, activeProjectId]);
 
   // Handle refresh
   const handleRefresh = () => {

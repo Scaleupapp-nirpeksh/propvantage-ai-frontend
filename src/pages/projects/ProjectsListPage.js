@@ -844,15 +844,15 @@ const ProjectsListPage = () => {
         <Paper sx={{ textAlign: 'center', py: 8 }}>
           <Business sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
           <Typography variant="h6" color="text.secondary" gutterBottom>
-            {filters.search || filters.type || filters.status 
-              ? 'No projects match your filters' 
-              : 'No projects found'
+            {filters.search || filters.type || filters.status
+              ? 'No projects match your filters'
+              : 'No projects assigned to you'
             }
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
             {filters.search || filters.type || filters.status
               ? 'Try adjusting your search criteria'
-              : 'Get started by creating your first project'
+              : "You haven't been assigned to any projects yet. Contact your administrator to get access."
             }
           </Typography>
           {canAccess.projectManagement() && (

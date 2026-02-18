@@ -44,6 +44,8 @@ import {
   LinearProgress,
   List,
   ListItem,
+  Checkbox,
+  Divider,
 } from '@mui/material';
 import {
   PersonAdd,
@@ -73,6 +75,9 @@ import {
   Group,
   Archive,
   DateRange,
+  FolderSpecial,
+  WarningAmber,
+  EditOutlined,
 } from '@mui/icons-material';
 import { CircularProgress } from '@mui/material';
 
@@ -81,8 +86,9 @@ import { format, formatDistanceToNow, isAfter } from 'date-fns';
 
 // Import services and context
 import { useAuth } from '../../context/AuthContext';
-import { userAPI, invitationAPI, rolesAPI, handleAPIError } from '../../services/api';
+import { userAPI, invitationAPI, rolesAPI, projectAccessAPI, handleAPIError } from '../../services/api';
 import { PageHeader } from '../../components/common';
+import UserProjectsDrawer from '../../components/users/UserProjectsDrawer';
 
 // =============================================================================
 // CONSTANTS AND CONFIGURATION
@@ -271,6 +277,11 @@ const InviteUserDialog = ({
   const [invitationLink, setInvitationLink] = useState('');
   const [showLink, setShowLink] = useState(false);
   const { enqueueSnackbar } = useSnackbar();
+
+  // Project access selection
+  const [myProjects, setMyProjects] = useState([]);
+  const [selectedProjectIds, setSelectedProjectIds] = useState([]);
+  const [loadingProjects, setLoadingProjects] = useState(false);
   
   const availableRoles = useMemo(() => {
     // Use dynamic roles from API when available
@@ -313,6 +324,19 @@ const InviteUserDialog = ({
 
     return roleOptions.filter(role => role.level > currentUserLevel);
   }, [currentUserRole, dynamicRoles, userRoleLevel]);
+
+  // Load accessible projects when dialog opens
+  useEffect(() => {
+    if (!open) { setSelectedProjectIds([]); return; }
+    setLoadingProjects(true);
+    projectAccessAPI.getMyProjects()
+      .then((res) => {
+        const assignments = res.data?.data || [];
+        setMyProjects(assignments.map((a) => a.project).filter(Boolean));
+      })
+      .catch(() => {/* silently fail if endpoint unavailable */})
+      .finally(() => setLoadingProjects(false));
+  }, [open]);
 
   const handleInputChange = (field) => (event) => {
     const value = event.target.value;
@@ -359,24 +383,30 @@ const InviteUserDialog = ({
   const handleSubmit = async () => {
     if (validateForm()) {
       try {
-        console.log('📝 Form submitted with data:', formData);
         const result = await onInvite(formData);
-        console.log('📬 Invitation result:', result);
-        
+
+        // Step 2: Assign to selected projects if any
+        if (result?.data?.user?._id && selectedProjectIds.length > 0) {
+          try {
+            await projectAccessAPI.bulkAssign([result.data.user._id], selectedProjectIds);
+          } catch {
+            enqueueSnackbar(
+              'Invitation sent but project assignment failed. Assign projects manually from Settings → Project Access.',
+              { variant: 'warning' }
+            );
+          }
+        }
+
         if (result && result.success && result.invitationLink) {
-          console.log('✅ Setting invitation link:', result.invitationLink);
           setInvitationLink(result.invitationLink);
           setShowLink(true);
         } else {
-          console.log('❌ No invitation link in result, using fallback');
-          // Fallback for testing - generate a mock link
           const mockLink = `${window.location.origin}/invite/user123?token=abc123&email=${encodeURIComponent(formData.email)}`;
           setInvitationLink(mockLink);
           setShowLink(true);
           enqueueSnackbar('Using test invitation link (check console for API response)', { variant: 'warning' });
         }
       } catch (error) {
-        console.error('❌ Error in dialog submit:', error);
         enqueueSnackbar('Error generating invitation link', { variant: 'error' });
       }
     }
@@ -397,6 +427,7 @@ const InviteUserDialog = ({
     setErrors({});
     setInvitationLink('');
     setShowLink(false);
+    setSelectedProjectIds([]);
     onClose();
   };
 
@@ -516,6 +547,69 @@ const InviteUserDialog = ({
                 </FormControl>
               </Grid>
             </Grid>
+
+            {/* Project Access Section */}
+            {myProjects.length > 0 && (
+              <Box sx={{ mt: 3 }}>
+                <Divider sx={{ mb: 2 }} />
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <FolderSpecial sx={{ fontSize: 18, color: 'primary.main' }} />
+                    <Typography variant="subtitle2" fontWeight={600}>Project Access</Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Button size="small" onClick={() => setSelectedProjectIds(myProjects.map((p) => p._id))} sx={{ textTransform: 'none', fontSize: '0.75rem' }}>
+                      Select All
+                    </Button>
+                    <Button size="small" onClick={() => setSelectedProjectIds([])} sx={{ textTransform: 'none', fontSize: '0.75rem' }}>
+                      Deselect All
+                    </Button>
+                  </Box>
+                </Box>
+                <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5, overflow: 'hidden' }}>
+                  {loadingProjects ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}><CircularProgress size={20} /></Box>
+                  ) : (
+                    myProjects.map((project) => {
+                      const checked = selectedProjectIds.includes(project._id);
+                      return (
+                        <Box
+                          key={project._id}
+                          onClick={() => setSelectedProjectIds((prev) =>
+                            prev.includes(project._id) ? prev.filter((id) => id !== project._id) : [...prev, project._id]
+                          )}
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1,
+                            px: 1.5,
+                            py: 1,
+                            cursor: 'pointer',
+                            '&:not(:last-child)': { borderBottom: '1px solid', borderBottomColor: 'divider' },
+                            '&:hover': { bgcolor: 'action.hover' },
+                          }}
+                        >
+                          <Checkbox size="small" checked={checked} onChange={() => {}} />
+                          <FolderSpecial sx={{ fontSize: 16, color: checked ? 'primary.main' : 'text.secondary' }} />
+                          <Typography variant="body2" fontWeight={checked ? 600 : 400}>{project.name}</Typography>
+                          {project.location?.city && (
+                            <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto' }}>{project.location.city}</Typography>
+                          )}
+                        </Box>
+                      );
+                    })
+                  )}
+                </Box>
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                  The user will only be able to see data from selected projects.
+                </Typography>
+                {selectedProjectIds.length === 0 && (
+                  <Alert severity="warning" icon={<WarningAmber />} sx={{ mt: 1, py: 0.5 }}>
+                    <Typography variant="caption">Warning: This user won't be able to see any projects until you assign them later.</Typography>
+                  </Alert>
+                )}
+              </Box>
+            )}
 
             {availableRoles.length === 0 && (
               <Alert severity="warning" sx={{ mt: 2 }}>
@@ -1359,6 +1453,166 @@ const TransferOwnershipDialog = ({ open, onClose, users, onTransfer }) => {
 };
 
 // =============================================================================
+// EDIT USER DIALOG COMPONENT
+// =============================================================================
+
+const EditUserDialog = ({ open, onClose, user, dynamicRoles, onSuccess }) => {
+  const { enqueueSnackbar } = useSnackbar();
+  const [selectedRoleId, setSelectedRoleId] = useState('');
+  const [myProjects, setMyProjects] = useState([]);
+  const [selectedProjectIds, setSelectedProjectIds] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    if (!open || !user) { setSearch(''); return; }
+    setLoading(true);
+    // Initialise role from user's current roleRef or legacy role string
+    setSelectedRoleId(user.roleRef?._id || user.roleRef || '');
+    Promise.all([
+      projectAccessAPI.getMyProjects(),
+      projectAccessAPI.getUserProjects(user._id),
+    ])
+      .then(([adminRes, userRes]) => {
+        const adminProjects = (adminRes.data?.data || []).map((a) => a.project).filter(Boolean);
+        const userAssignments = userRes.data?.data || [];
+        const userProjectIds = new Set(userAssignments.map((a) => a.project?._id || a.project));
+        setMyProjects(adminProjects);
+        setSelectedProjectIds(adminProjects.filter((p) => userProjectIds.has(p._id)).map((p) => p._id));
+      })
+      .catch(() => enqueueSnackbar('Failed to load project data', { variant: 'error' }))
+      .finally(() => setLoading(false));
+  }, [open, user, enqueueSnackbar]);
+
+  const toggleProject = (id) => {
+    setSelectedProjectIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+  };
+
+  const handleSave = async () => {
+    if (!user) return;
+    setSubmitting(true);
+    try {
+      const rolePayload = {};
+      if (selectedRoleId) rolePayload.roleRef = selectedRoleId;
+      await Promise.all([
+        Object.keys(rolePayload).length > 0
+          ? userAPI.updateUser(user._id, rolePayload)
+          : Promise.resolve(),
+        projectAccessAPI.syncUserProjects(user._id, selectedProjectIds),
+      ]);
+      enqueueSnackbar('User updated successfully', { variant: 'success' });
+      onSuccess?.();
+      onClose();
+    } catch (err) {
+      enqueueSnackbar(err.response?.data?.message || 'Failed to update user', { variant: 'error' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const filtered = myProjects.filter((p) =>
+    `${p.name} ${p.location?.city || ''}`.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        Edit User
+        <Typography variant="body2" color="text.secondary">
+          {user?.firstName} {user?.lastName}
+        </Typography>
+      </DialogTitle>
+      <DialogContent dividers>
+        {/* Role */}
+        <FormControl fullWidth size="small" sx={{ mb: 3 }}>
+          <InputLabel>Role</InputLabel>
+          <Select
+            value={selectedRoleId}
+            onChange={(e) => setSelectedRoleId(e.target.value)}
+            label="Role"
+          >
+            {dynamicRoles.map((role) => (
+              <MenuItem key={role._id || role.value} value={role._id || role.value}>
+                {role.label || role.name}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        {/* Project Access */}
+        <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+          Project Access
+        </Typography>
+        <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1.5 }}>
+          Select the projects this user can access. Unchecking all removes all project access.
+        </Typography>
+        {selectedProjectIds.length === 0 && !loading && (
+          <Alert severity="warning" sx={{ mb: 1.5 }}>
+            This user will not be able to see any projects.
+          </Alert>
+        )}
+        <TextField
+          size="small"
+          placeholder="Search projects…"
+          fullWidth
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          InputProps={{ startAdornment: <InputAdornment position="start"><Search sx={{ fontSize: 18 }} /></InputAdornment> }}
+          sx={{ mb: 1 }}
+        />
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
+            <CircularProgress size={24} />
+          </Box>
+        ) : myProjects.length === 0 ? (
+          <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
+            No accessible projects
+          </Typography>
+        ) : (
+          <List dense disablePadding sx={{ maxHeight: 260, overflow: 'auto', border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+            {filtered.map((project) => {
+              const checked = selectedProjectIds.includes(project._id);
+              return (
+                <ListItem
+                  key={project._id}
+                  button
+                  onClick={() => toggleProject(project._id)}
+                  sx={{ px: 1.5, '&:hover': { bgcolor: 'action.hover' } }}
+                >
+                  <Checkbox size="small" checked={checked} onChange={() => toggleProject(project._id)} disableRipple sx={{ mr: 1 }} />
+                  <ListItemText
+                    primary={project.name}
+                    secondary={project.location?.city || project.type}
+                    primaryTypographyProps={{ variant: 'body2', fontWeight: 500 }}
+                    secondaryTypographyProps={{ variant: 'caption' }}
+                  />
+                </ListItem>
+              );
+            })}
+          </List>
+        )}
+        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+          {selectedProjectIds.length} of {myProjects.length} project{myProjects.length !== 1 ? 's' : ''} selected
+        </Typography>
+      </DialogContent>
+      <DialogActions sx={{ px: 2.5, py: 1.5 }}>
+        <Button onClick={onClose} size="small">Cancel</Button>
+        <Button
+          variant="contained"
+          size="small"
+          onClick={handleSave}
+          disabled={submitting}
+          startIcon={submitting ? <CircularProgress size={14} /> : null}
+        >
+          Save Changes
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
+// =============================================================================
 // MAIN USER MANAGEMENT PAGE COMPONENT
 // =============================================================================
 
@@ -1396,6 +1650,12 @@ const UserManagementPage = () => {
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [inviting, setInviting] = useState(false);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+
+  // User Projects Drawer
+  const [projectDrawerUser, setProjectDrawerUser] = useState(null);
+
+  // Edit User Dialog
+  const [editingUser, setEditingUser] = useState(null);
 
   // =============================================================================
   // COMPUTED VALUES
@@ -1926,17 +2186,37 @@ const UserManagementPage = () => {
                               </TableCell>
                               
                               <TableCell align="right">
-                                {currentUser?._id !== user._id && canManageUsers && (
-                                  <Tooltip title="Deactivate User">
-                                    <IconButton 
-                                      size="small" 
-                                      onClick={() => handleToggleUserStatus(user._id, false)}
-                                      color="warning"
+                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5 }}>
+                                  <Tooltip title="View Project Access">
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => setProjectDrawerUser(user)}
                                     >
-                                      <PersonOff />
+                                      <FolderSpecial sx={{ fontSize: 18 }} />
                                     </IconButton>
                                   </Tooltip>
-                                )}
+                                  {canManageUsers && (
+                                    <Tooltip title="Edit User">
+                                      <IconButton
+                                        size="small"
+                                        onClick={() => setEditingUser(user)}
+                                      >
+                                        <EditOutlined sx={{ fontSize: 18 }} />
+                                      </IconButton>
+                                    </Tooltip>
+                                  )}
+                                  {currentUser?._id !== user._id && canManageUsers && (
+                                    <Tooltip title="Deactivate User">
+                                      <IconButton
+                                        size="small"
+                                        onClick={() => handleToggleUserStatus(user._id, false)}
+                                        color="warning"
+                                      >
+                                        <PersonOff />
+                                      </IconButton>
+                                    </Tooltip>
+                                  )}
+                                </Box>
                               </TableCell>
                             </TableRow>
                           );
@@ -2090,6 +2370,23 @@ const UserManagementPage = () => {
           onTransfer={handleTransferOwnership}
         />
       )}
+
+      {/* User Projects Drawer */}
+      <UserProjectsDrawer
+        open={!!projectDrawerUser}
+        onClose={() => setProjectDrawerUser(null)}
+        userId={projectDrawerUser?._id}
+        userName={projectDrawerUser ? `${projectDrawerUser.firstName} ${projectDrawerUser.lastName}` : ''}
+      />
+
+      {/* Edit User Dialog */}
+      <EditUserDialog
+        open={!!editingUser}
+        onClose={() => setEditingUser(null)}
+        user={editingUser}
+        dynamicRoles={availableRoles}
+        onSuccess={fetchUsers}
+      />
     </Box>
   );
 };

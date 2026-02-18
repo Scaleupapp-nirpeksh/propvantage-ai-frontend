@@ -3,14 +3,16 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Box, Grid, Typography, Button, IconButton, Tooltip, Avatar, Chip,
   Paper, Menu, MenuItem, Skeleton, Stack, Alert, LinearProgress,
-  useTheme, useMediaQuery, alpha,
+  useTheme, useMediaQuery, alpha, ToggleButtonGroup, ToggleButton,
 } from '@mui/material';
 import {
   Add, Refresh, Visibility, Edit, ArrowForward, MoreVert,
   PlayArrow, Assignment, CheckCircle, Cancel, Assessment,
   MonetizationOn, TrendingUp, Timeline as TimelineIcon,
+  ViewKanban, TableRows,
 } from '@mui/icons-material';
 
+import { useSnackbar } from 'notistack';
 import { useAuth } from '../../context/AuthContext';
 import { salesAPI, projectAPI, userAPI } from '../../services/api';
 import { formatCurrency, formatDate } from '../../utils/formatters';
@@ -58,15 +60,28 @@ const getUnitName = (sale) => sale?.unit?.unitNumber || sale?.unit?.fullAddress 
 const SaleCard = ({ sale, onClick }) => {
   const theme = useTheme();
   const [anchorEl, setAnchorEl] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleDragStart = (e) => {
+    setIsDragging(true);
+    e.dataTransfer.setData('saleId', sale._id);
+    e.dataTransfer.setData('currentStatus', sale.status || 'Booked');
+    e.dataTransfer.effectAllowed = 'move';
+  };
+  const handleDragEnd = () => setIsDragging(false);
 
   return (
     <>
       <Paper
+        draggable
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
         onClick={() => onClick(sale)}
         elevation={0}
         sx={{
           p: 1.5,
-          cursor: 'pointer',
+          cursor: 'grab',
+          opacity: isDragging ? 0.5 : 1,
           border: '1px solid',
           borderColor: 'divider',
           borderRadius: 2,
@@ -142,10 +157,21 @@ const SaleCard = ({ sale, onClick }) => {
 // Pipeline Column
 // ---------------------------------------------------------------------------
 
-const PipelineColumn = ({ stage, sales, totalValue, loading, onSaleClick }) => {
+const PipelineColumn = ({ stage, sales, totalValue, loading, onSaleClick, onDrop }) => {
   const theme = useTheme();
   const paletteColor = theme.palette[stage.color]?.main || theme.palette.grey[500];
   const StageIcon = stage.icon;
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  const handleDragOver = (e) => { e.preventDefault(); setIsDragOver(true); };
+  const handleDragLeave = () => setIsDragOver(false);
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const saleId = e.dataTransfer.getData('saleId');
+    const currentStatus = e.dataTransfer.getData('currentStatus');
+    if (saleId && currentStatus !== stage.key) onDrop(saleId, stage.key);
+  };
 
   if (loading) {
     return (
@@ -159,7 +185,21 @@ const PipelineColumn = ({ stage, sales, totalValue, loading, onSaleClick }) => {
   }
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <Box
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        border: `2px dashed ${isDragOver ? paletteColor : 'transparent'}`,
+        borderRadius: 2,
+        bgcolor: isDragOver ? alpha(paletteColor, 0.04) : 'transparent',
+        transition: 'all 0.2s ease',
+        p: isDragOver ? 0.5 : 0,
+      }}
+    >
       {/* Column header */}
       <Box
         sx={{
@@ -228,15 +268,95 @@ const PipelineColumn = ({ stage, sales, totalValue, loading, onSaleClick }) => {
 };
 
 // ---------------------------------------------------------------------------
+// Vertical layout: full-width section per stage, sale cards in a responsive grid
+// ---------------------------------------------------------------------------
+
+const VerticalPipelineStage = ({ stage, sales, totalValue, loading, onSaleClick, onDrop }) => {
+  const theme = useTheme();
+  const paletteColor = theme.palette[stage.color]?.main || theme.palette.grey[500];
+  const StageIcon = stage.icon;
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  const handleDragOver = (e) => { e.preventDefault(); setIsDragOver(true); };
+  const handleDragLeave = () => setIsDragOver(false);
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const saleId = e.dataTransfer.getData('saleId');
+    const currentStatus = e.dataTransfer.getData('currentStatus');
+    if (saleId && currentStatus !== stage.key) onDrop(saleId, stage.key);
+  };
+
+  if (loading || sales.length === 0) return null;
+
+  return (
+    <Box
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      sx={{
+        mb: 4,
+        border: `2px dashed ${isDragOver ? paletteColor : 'transparent'}`,
+        borderRadius: 2,
+        bgcolor: isDragOver ? alpha(paletteColor, 0.04) : 'transparent',
+        p: isDragOver ? 1 : 0,
+        transition: 'all 0.2s ease',
+      }}
+    >
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+          mb: 2,
+          pb: 1.5,
+          borderBottom: `2px solid ${alpha(paletteColor, 0.35)}`,
+        }}
+      >
+        <StageIcon sx={{ fontSize: 18, color: paletteColor }} />
+        <Typography variant="subtitle1" fontWeight={700}>{stage.label}</Typography>
+        <Chip
+          label={sales.length}
+          size="small"
+          sx={{ height: 20, fontSize: '0.688rem', fontWeight: 600, bgcolor: alpha(paletteColor, 0.12), color: paletteColor }}
+        />
+        <Typography variant="body2" sx={{ fontWeight: 700, color: paletteColor, ml: 'auto' }}>
+          {formatCurrency(totalValue)}
+        </Typography>
+      </Box>
+      <Grid container spacing={2}>
+        {sales.map((sale) => (
+          <Grid item xs={12} sm={6} md={4} lg={3} key={sale._id}>
+            <SaleCard sale={sale} onClick={onSaleClick} />
+          </Grid>
+        ))}
+      </Grid>
+    </Box>
+  );
+};
+
+// ---------------------------------------------------------------------------
 // Main Page
 // ---------------------------------------------------------------------------
 
 const SalesPipelinePage = () => {
   const navigate = useNavigate();
   const { canAccess } = useAuth();
+  const { enqueueSnackbar } = useSnackbar();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [searchParams, setSearchParams] = useSearchParams();
+
+  // Kanban orientation: 'horizontal' | 'vertical' (shared localStorage key)
+  const [orientation, setOrientation] = useState(
+    () => localStorage.getItem('kanbanOrientation') || 'horizontal'
+  );
+  const handleOrientationChange = (_, value) => {
+    if (!value) return;
+    setOrientation(value);
+    localStorage.setItem('kanbanOrientation', value);
+  };
+  const effectiveOrientation = isMobile ? 'vertical' : orientation;
 
   // State
   const [pipelineData, setPipelineData] = useState([]);
@@ -339,6 +459,32 @@ const SalesPipelinePage = () => {
   const clearFilters = () => setFilters({ search: '', timePeriod: 'all', project: '', salesperson: '' });
   const handleSaleClick = (sale) => navigate(`/sales/${sale._id}`);
 
+  const handleDrop = useCallback(async (saleId, newStatus) => {
+    // Optimistic UI update
+    setSalesData(prev => {
+      const next = { ...prev };
+      let movedSale = null;
+      Object.keys(next).forEach(status => {
+        const idx = (next[status] || []).findIndex(s => s._id === saleId);
+        if (idx !== -1) {
+          movedSale = next[status][idx];
+          next[status] = next[status].filter(s => s._id !== saleId);
+        }
+      });
+      if (movedSale) {
+        next[newStatus] = [...(next[newStatus] || []), { ...movedSale, status: newStatus }];
+      }
+      return next;
+    });
+    try {
+      await salesAPI.updateSale(saleId, { status: newStatus });
+      enqueueSnackbar(`Sale moved to ${newStatus}`, { variant: 'success' });
+    } catch {
+      enqueueSnackbar('Failed to update sale status', { variant: 'error' });
+      fetchPipelineData();
+    }
+  }, [enqueueSnackbar, fetchPipelineData]);
+
   // ---------------------------------------------------------------------------
   // Derived data
   // ---------------------------------------------------------------------------
@@ -413,7 +559,15 @@ const SalesPipelinePage = () => {
         subtitle="Track sales progress across every stage"
         icon={TimelineIcon}
         actions={
-          <>
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+            {!isMobile && (
+              <Tooltip title={orientation === 'horizontal' ? 'Switch to vertical layout' : 'Switch to horizontal layout'}>
+                <ToggleButtonGroup value={orientation} exclusive onChange={handleOrientationChange} size="small">
+                  <ToggleButton value="horizontal"><ViewKanban sx={{ fontSize: 18 }} /></ToggleButton>
+                  <ToggleButton value="vertical"><TableRows sx={{ fontSize: 18 }} /></ToggleButton>
+                </ToggleButtonGroup>
+              </Tooltip>
+            )}
             <Tooltip title="Refresh">
               <IconButton onClick={() => fetchPipelineData(true)} disabled={refreshing}>
                 <Refresh />
@@ -428,7 +582,7 @@ const SalesPipelinePage = () => {
             >
               {!isMobile && 'New Sale'}
             </Button>
-          </>
+          </Box>
         }
       />
 
@@ -466,39 +620,55 @@ const SalesPipelinePage = () => {
         onClear={clearFilters}
       />
 
-      {/* Kanban Board */}
-      <Box
-        sx={{
-          display: 'flex',
-          gap: 2,
-          overflowX: 'auto',
-          pb: 2,
-          minHeight: isMobile ? 400 : 500,
-          '&::-webkit-scrollbar': { height: 6 },
-          '&::-webkit-scrollbar-thumb': {
-            bgcolor: 'action.hover',
-            borderRadius: 3,
-          },
-        }}
-      >
-        {stages.map((stage) => (
-          <Box
-            key={stage.key}
-            sx={{
-              minWidth: { xs: 260, md: 0 },
-              flex: { xs: '0 0 260px', md: 1 },
-            }}
-          >
-            <PipelineColumn
+      {/* Pipeline Board */}
+      {effectiveOrientation === 'vertical' ? (
+        <Box sx={{ mt: 2 }}>
+          {stages.map((stage) => (
+            <VerticalPipelineStage
+              key={stage.key}
               stage={stage}
               sales={stage.sales}
               totalValue={stage.totalValue}
               loading={loading}
               onSaleClick={handleSaleClick}
+              onDrop={handleDrop}
             />
-          </Box>
-        ))}
-      </Box>
+          ))}
+          {!loading && stages.every((s) => s.sales.length === 0) && (
+            <Box sx={{ textAlign: 'center', py: 8, color: 'text.secondary' }}>
+              <Typography>No sales found. Try adjusting your filters.</Typography>
+            </Box>
+          )}
+        </Box>
+      ) : (
+        <Box
+          sx={{
+            display: 'flex',
+            gap: 2,
+            overflowX: 'auto',
+            pb: 2,
+            minHeight: isMobile ? 400 : 500,
+            '&::-webkit-scrollbar': { height: 6 },
+            '&::-webkit-scrollbar-thumb': { bgcolor: 'action.hover', borderRadius: 3 },
+          }}
+        >
+          {stages.map((stage) => (
+            <Box
+              key={stage.key}
+              sx={{ minWidth: { xs: 260, md: 0 }, flex: { xs: '0 0 260px', md: 1 } }}
+            >
+              <PipelineColumn
+                stage={stage}
+                sales={stage.sales}
+                totalValue={stage.totalValue}
+                loading={loading}
+                onSaleClick={handleSaleClick}
+                onDrop={handleDrop}
+              />
+            </Box>
+          ))}
+        </Box>
+      )}
     </Box>
   );
 };

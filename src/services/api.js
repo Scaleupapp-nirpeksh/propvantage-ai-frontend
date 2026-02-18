@@ -9,7 +9,7 @@ import axios from 'axios';
 const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000/api';
 
 // Create axios instance with default configuration
-const api = axios.create({
+export const api = axios.create({
   baseURL: BASE_URL,
   timeout: 30000, // 30 seconds timeout
   headers: {
@@ -47,10 +47,11 @@ api.interceptors.response.use(
     // Handle permission errors (403)
     if (error.response?.status === 403) {
       const msg = error.response?.data?.message || '';
-      if (msg.includes('permission') || msg.includes('Permission')) {
+      if (msg.includes('do not have access to this project')) {
+        error.projectAccessDenied = true;
+      } else if (msg.includes('permission') || msg.includes('Permission')) {
         error.permissionDenied = true;
-      }
-      if (msg.includes('hierarchy') || msg.includes('level')) {
+      } else if (msg.includes('hierarchy') || msg.includes('level')) {
         error.hierarchyViolation = true;
       }
     }
@@ -366,6 +367,28 @@ export const projectAPI = {
   createProject: (projectData) => api.post('/projects', projectData),
   updateProject: (id, projectData) => api.put(`/projects/${id}`, projectData),
   deleteProject: (id) => api.delete(`/projects/${id}`),
+};
+
+// =============================================================================
+// 4b. PROJECT ACCESS CONTROL SERVICES (/api/project-access)
+// =============================================================================
+export const projectAccessAPI = {
+  getMyProjects: () =>
+    api.get('/project-access/me'),
+  getProjectUsers: (projectId) =>
+    api.get(`/project-access/projects/${projectId}/users`),
+  getUserProjects: (userId) =>
+    api.get(`/project-access/users/${userId}/projects`),
+  assignUser: (userId, projectId, notes = '') =>
+    api.post('/project-access/assign', { userId, projectId, notes }),
+  bulkAssign: (userIds, projectIds, notes = '') =>
+    api.post('/project-access/bulk-assign', { userIds, projectIds, notes }),
+  revokeUser: (userId, projectId) =>
+    api.delete('/project-access/revoke', { data: { userId, projectId } }),
+  bulkRevoke: (userIds, projectIds) =>
+    api.post('/project-access/bulk-revoke', { userIds, projectIds }),
+  syncUserProjects: (userId, projectIds) =>
+    api.put(`/project-access/users/${userId}/sync`, { projectIds }),
 };
 
 // =============================================================================

@@ -31,7 +31,6 @@ import {
   Stack,
   Alert,
   CircularProgress,
-  useTheme,
   Paper,
   LinearProgress,
   Tooltip,
@@ -68,15 +67,14 @@ import {
   CalendarToday,
   Phone,
   Today,
-  ArrowUpward,
-  ArrowDownward,
   Assignment,
   Speed,
 } from '@mui/icons-material';
 
 import { useAuth } from '../../context/AuthContext';
 import { paymentAPI } from '../../services/api';
-import { formatCurrency, formatDate, formatDateTime, formatPercentage } from '../../utils/formatters';
+import { formatCurrency, fmtCurrency, formatDate, formatDateTime } from '../../utils/formatters';
+import { KPICard } from '../../components/common';
 
 // ============================================================================
 // CONSTANTS AND CONFIGURATIONS
@@ -156,22 +154,6 @@ const getPaymentMethodConfig = (method) => {
   return PAYMENT_METHOD_CONFIG[method] || PAYMENT_METHOD_CONFIG.other;
 };
 
-/**
- * Calculates percentage change between two values
- * @param {number} current - Current value
- * @param {number} previous - Previous value
- * @returns {Object} Change percentage and direction
- */
-const calculatePercentageChange = (current, previous) => {
-  if (!previous || previous === 0) return { percentage: 0, direction: 'neutral' };
-  
-  const change = ((current - previous) / previous) * 100;
-  return {
-    percentage: Math.abs(change),
-    direction: change > 0 ? 'up' : change < 0 ? 'down' : 'neutral'
-  };
-};
-
 // ============================================================================
 // PAYMENT OVERVIEW CARDS COMPONENT
 // ============================================================================
@@ -182,8 +164,6 @@ const calculatePercentageChange = (current, previous) => {
  * @param {boolean} loading - Loading state
  */
 const PaymentOverviewCards = ({ statistics, loading }) => {
-  const theme = useTheme();
-
   // Extract data with fallbacks
   const totalPayments = statistics?.payments?.totalPayments || 0;
   const totalAmount = statistics?.payments?.totalAmount || 0;
@@ -191,129 +171,48 @@ const PaymentOverviewCards = ({ statistics, loading }) => {
   const overdueCount = statistics?.overdue?.overdueInstallments || 0;
   const overdueAmount = statistics?.overdue?.overdueAmount || 0;
 
-  // Sample previous period data calculation (you can enhance this with actual API)
-  const previousPeriodMultiplier = 0.85; // Simulate previous period comparison
-  const previousTotalAmount = totalAmount * previousPeriodMultiplier;
-  const amountChange = calculatePercentageChange(totalAmount, previousTotalAmount);
-
-  const overviewCards = [
-    {
-      title: 'Total Collections',
-      value: formatCurrency(totalAmount),
-      subtitle: `${totalPayments} payments`,
-      icon: AccountBalanceWallet,
-      color: 'primary',
-      gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      change: amountChange,
-    },
-    {
-      title: 'Average Payment',
-      value: formatCurrency(averagePayment),
-      subtitle: 'Per transaction',
-      icon: TrendingUp,
-      color: 'success',
-      gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-    },
-    {
-      title: 'Overdue Payments',
-      value: overdueCount.toString(),
-      subtitle: formatCurrency(overdueAmount),
-      icon: Warning,
-      color: 'error',
-      gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-      alert: overdueCount > 0,
-    },
-    {
-      title: 'Collection Rate',
-      value: totalPayments > 0 ? '94%' : '0%',
-      subtitle: 'Success rate',
-      icon: Speed,
-      color: 'info',
-      gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
-    },
-  ];
-
-  if (loading) {
-    return (
-      <Grid container spacing={3}>
-        {[1, 2, 3, 4].map((index) => (
-          <Grid item xs={12} sm={6} lg={3} key={index}>
-            <Card sx={{ height: 140 }}>
-              <CardContent sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                <CircularProgress size={40} />
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
-    );
-  }
-
   return (
-    <Grid container spacing={3}>
-      {overviewCards.map((card, index) => (
-        <Grid item xs={12} sm={6} lg={3} key={index}>
-          <Card 
-            sx={{ 
-              height: 140,
-              background: card.gradient,
-              color: 'white',
-              position: 'relative',
-              overflow: 'hidden',
-              '&:hover': {
-                transform: 'translateY(-2px)',
-                boxShadow: theme.shadows[8],
-              },
-              transition: 'all 0.3s ease-in-out',
-            }}
-          >
-            <CardContent sx={{ position: 'relative', zIndex: 1 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-                <Box>
-                  <Typography variant="body2" sx={{ opacity: 0.9, fontSize: '0.875rem' }}>
-                    {card.title}
-                  </Typography>
-                  <Typography variant="h4" fontWeight="bold" sx={{ my: 0.5 }}>
-                    {card.value}
-                  </Typography>
-                  <Typography variant="caption" sx={{ opacity: 0.8 }}>
-                    {card.subtitle}
-                  </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                  <card.icon sx={{ fontSize: 40, opacity: 0.8 }} />
-                  {card.change && (
-                    <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-                      {card.change.direction === 'up' ? (
-                        <ArrowUpward sx={{ fontSize: 16, mr: 0.5 }} />
-                      ) : card.change.direction === 'down' ? (
-                        <ArrowDownward sx={{ fontSize: 16, mr: 0.5 }} />
-                      ) : null}
-                      <Typography variant="caption" sx={{ opacity: 0.9 }}>
-                        {formatPercentage(card.change.percentage / 100)}
-                      </Typography>
-                    </Box>
-                  )}
-                </Box>
-              </Box>
-              {card.alert && (
-                <Badge
-                  color="error"
-                  variant="dot"
-                  sx={{
-                    position: 'absolute',
-                    top: 16,
-                    right: 16,
-                    '& .MuiBadge-badge': {
-                      animation: 'pulse 2s infinite',
-                    },
-                  }}
-                />
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-      ))}
+    <Grid container spacing={2}>
+      <Grid item xs={6} sm={6} md={3}>
+        <KPICard
+          title="Total Collections"
+          value={fmtCurrency(totalAmount)}
+          subtitle={`${totalPayments} payments`}
+          icon={AccountBalanceWallet}
+          color="primary"
+          loading={loading}
+        />
+      </Grid>
+      <Grid item xs={6} sm={6} md={3}>
+        <KPICard
+          title="Average Payment"
+          value={fmtCurrency(averagePayment)}
+          subtitle="Per transaction"
+          icon={TrendingUp}
+          color="success"
+          loading={loading}
+        />
+      </Grid>
+      <Grid item xs={6} sm={6} md={3}>
+        <KPICard
+          title="Overdue Payments"
+          value={overdueCount}
+          subtitle={fmtCurrency(overdueAmount)}
+          icon={Warning}
+          color="error"
+          loading={loading}
+        />
+      </Grid>
+      <Grid item xs={6} sm={6} md={3}>
+        <KPICard
+          title="Collection Rate"
+          value={totalPayments > 0 ? '94%' : '0%'}
+          subtitle="Success rate"
+          icon={Speed}
+          color="info"
+          loading={loading}
+        />
+      </Grid>
     </Grid>
   );
 };

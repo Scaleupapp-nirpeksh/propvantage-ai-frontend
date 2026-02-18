@@ -52,6 +52,7 @@ import {
   Bar,
 } from 'recharts';
 import { analyticsAPI, projectAPI } from '../../services/api';
+import { useProjectContext } from '../../context/ProjectContext';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const TIME_PERIODS = [
@@ -158,12 +159,13 @@ const ChartCard = ({ title, loading, children, minHeight = 260, action }) => {
 const AnalyticsDashboard = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const { activeProjectId } = useProjectContext();
 
   // ── State ──
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [period, setPeriod] = useState('year');
-  const [projectFilter, setProjectFilter] = useState('all');
+  const [projectFilter, setProjectFilter] = useState(() => activeProjectId || 'all');
   const [projects, setProjects] = useState([]);
   const [data, setData] = useState({
     overview: {},
@@ -181,7 +183,7 @@ const AnalyticsDashboard = () => {
 
     try {
       const params = { period };
-      if (projectFilter !== 'all') params.projectId = projectFilter;
+      if (projectFilter !== 'all') params.project = projectFilter;
 
       // Single API call for dashboard summary + optional sales report
       const [summaryRes, salesRes, projRes] = await Promise.allSettled([

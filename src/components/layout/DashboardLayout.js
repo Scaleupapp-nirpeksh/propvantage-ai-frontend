@@ -80,6 +80,7 @@ import {
   Description,
   Leaderboard,
   Chat as ChatIcon,
+  VpnKey,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import { useChat } from '../../context/ChatContext';
@@ -87,6 +88,8 @@ import CommandPalette from '../navigation/CommandPalette';
 import NotificationBell from '../notifications/NotificationBell';
 import CopilotFAB from '../copilot/CopilotFAB';
 import { useCoachMark } from '../onboarding';
+import ProjectSwitcher from './ProjectSwitcher';
+import { useProjectContext } from '../../context/ProjectContext';
 
 // --- Constants ---
 const DRAWER_WIDTH = 260;
@@ -241,6 +244,7 @@ const getNavigationItems = (userRole, canAccess) => {
           children: [
             { id: 'user-management', title: 'Users', icon: People, path: '/settings/users', requiredAccess: () => canAccess.userManagement() },
             { id: 'roles', title: 'Roles', icon: AdminPanelSettings, path: '/roles', requiredAccess: () => canAccess.systemSettings() },
+            { id: 'project-access', title: 'Project Access', icon: VpnKey, path: '/settings/project-access', requiredAccess: () => canAccess.projectManagement() },
             { id: 'notification-settings', title: 'Notifications', icon: Notifications, path: '/settings/notifications' },
           ],
         },
@@ -514,6 +518,7 @@ const DashboardLayout = ({ children }) => {
   const { user, canAccess } = useAuth();
   const { totalUnreadCount } = useChat();
   const { startFlow, isFlowComplete } = useCoachMark();
+  const { activeProjectId } = useProjectContext();
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => {
@@ -714,6 +719,9 @@ const DashboardLayout = ({ children }) => {
             <DashboardBreadcrumbs />
           </Box>
 
+          {/* Project switcher */}
+          <ProjectSwitcher />
+
           {/* Search button */}
           <Tooltip title="Search (⌘K)">
             <IconButton size="small" onClick={() => setPaletteOpen(true)}>
@@ -775,7 +783,7 @@ const DashboardLayout = ({ children }) => {
         }}
       >
         <Toolbar sx={{ minHeight: '56px !important' }} />
-        <Fade in timeout={200} key={location.pathname}>
+        <Fade in timeout={200} key={`${location.pathname}|${activeProjectId || ''}`}>
           <Box sx={{ p: { xs: 2, sm: 3 }, maxWidth: 1400, mx: 'auto' }}>
             {children}
           </Box>
