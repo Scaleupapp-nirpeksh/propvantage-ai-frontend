@@ -508,7 +508,7 @@ const ConstructionAlertsCard = ({ alerts, isLoading }) => (
 // Main Project Director Dashboard Component
 const ProjectDirectorDashboard = () => {
   const { user, getOrganizationDisplayName } = useAuth();
-  const { activeProjectId, activeProject } = useProjectContext();
+  const { activeProjectId } = useProjectContext();
   const navigate = useNavigate();
 
   const [allProjects, setAllProjects] = useState([]);
