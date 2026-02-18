@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { useAuth } from './AuthContext';
 import { projectAccessAPI, api } from '../services/api';
 
 // Paths that are org-wide and should NOT receive a project filter param
@@ -18,6 +19,7 @@ const PROJECT_FILTER_EXCLUDED = [
 const ProjectContext = createContext(null);
 
 export const ProjectProvider = ({ children }) => {
+  const { isAuthenticated } = useAuth();
   const [myProjects, setMyProjects] = useState([]);
   const [activeProjectId, setActiveProjectIdState] = useState(
     () => localStorage.getItem('activeProjectId') || null
@@ -36,16 +38,20 @@ export const ProjectProvider = ({ children }) => {
         localStorage.removeItem('activeProjectId');
       }
     } catch {
-      // Silently fail — user may not have the endpoint yet or is not logged in
       setMyProjects([]);
     } finally {
       setLoadingProjects(false);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Only fetch when user is authenticated — prevents 401 loop on login page
   useEffect(() => {
+    if (!isAuthenticated) {
+      setLoadingProjects(false);
+      return;
+    }
     fetchMyProjects();
-  }, [fetchMyProjects]);
+  }, [isAuthenticated, fetchMyProjects]);
 
   // Global axios interceptor: inject ?project=activeProjectId into all GET requests
   // so every page automatically filters to the selected project.
