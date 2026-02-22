@@ -572,11 +572,30 @@ const EditUnitPage = () => {
       console.log('🚀 Updating unit with data:', backendPayload);
 
       const response = await unitAPI.updateUnit(validUnitId, backendPayload);
-      
+
       console.log('✅ Unit updated successfully:', response.data);
-      
+
+      // Check if price change requires approval
+      if (response.data?.pendingApproval) {
+        setError(null);
+        setSuccess(true);
+        // Show info message — other fields were still applied
+        setTimeout(() => {
+          if (isVillaProject) {
+            navigate(`/projects/${validProjectId}`, {
+              state: { message: response.data.message || 'Price change submitted for approval. Other fields updated.' }
+            });
+          } else {
+            navigate(`/projects/${validProjectId}/towers/${validTowerId}`, {
+              state: { message: response.data.message || 'Price change submitted for approval. Other fields updated.' }
+            });
+          }
+        }, 1500);
+        return;
+      }
+
       setSuccess(true);
-      
+
       // Navigate back to appropriate page after success
       setTimeout(() => {
         if (isVillaProject) {

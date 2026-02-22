@@ -135,6 +135,11 @@ const TaskAnalyticsPage = React.lazy(() => import('./pages/tasks/TaskAnalyticsPa
 const TaskTemplatesPage = React.lazy(() => import('./pages/tasks/TaskTemplatesPage'));
 const CreateEditTemplatePage = React.lazy(() => import('./pages/tasks/CreateEditTemplatePage'));
 
+// Approval Management Pages
+const ApprovalsDashboardPage = React.lazy(() => import('./pages/approvals/ApprovalsDashboardPage'));
+const ApprovalDetailPage = React.lazy(() => import('./pages/approvals/ApprovalDetailPage'));
+const ApprovalPoliciesPage = React.lazy(() => import('./pages/approvals/ApprovalPoliciesPage'));
+
 // Chat
 const ChatPage = React.lazy(() => import('./pages/chat/ChatPage'));
 
@@ -1229,6 +1234,40 @@ const AppRoutes = () => {
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback />}>
               <CreateEditTaskPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* ========================================= */}
+      {/* APPROVAL MANAGEMENT ROUTES */}
+      {/* ========================================= */}
+
+      <Route path="/approvals" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.approvalsView()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading approvals..." />}>
+              <ApprovalsDashboardPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/approvals/policies" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.approvalsPolicies()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading policies..." />}>
+              <ApprovalPoliciesPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/approvals/:approvalId" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.approvalsView()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading approval details..." />}>
+              <ApprovalDetailPage />
             </Suspense>
           </DashboardLayout>
         </ProtectedRoute>

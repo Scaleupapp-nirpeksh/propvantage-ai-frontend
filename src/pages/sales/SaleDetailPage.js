@@ -1071,12 +1071,17 @@ const SaleDetailPage = () => {
 
   const handleCancelSale = async () => {
     try {
-      await salesAPI.cancelSale(saleId, {
+      const response = await salesAPI.cancelSale(saleId, {
         reason: 'Cancelled by user',
         cancelledBy: user._id,
       });
       setCancelDialog(false);
-      setSnackbar({ open: true, message: 'Sale cancelled successfully', severity: 'success' });
+      // Check if cancellation requires approval
+      if (response.data?.pendingApproval) {
+        setSnackbar({ open: true, message: 'Cancellation request submitted for approval. You\'ll be notified when it\'s reviewed.', severity: 'info' });
+      } else {
+        setSnackbar({ open: true, message: 'Sale cancelled successfully', severity: 'success' });
+      }
       fetchSaleData(true);
     } catch (error) {
       console.error('Error cancelling sale:', error);

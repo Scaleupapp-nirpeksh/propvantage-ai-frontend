@@ -81,6 +81,7 @@ import {
   Leaderboard,
   Chat as ChatIcon,
   VpnKey,
+  RuleFolder,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import { useChat } from '../../context/ChatContext';
@@ -181,6 +182,13 @@ const getNavigationItems = (userRole, canAccess) => {
             { id: 'task-analytics', title: 'Analytics', icon: Assessment, path: '/tasks/analytics', requiredAccess: () => canAccess.taskAnalytics() },
             { id: 'task-templates', title: 'Templates', icon: Description, path: '/tasks/templates', requiredAccess: () => canAccess.taskTemplates() },
           ],
+        },
+        {
+          id: 'approvals',
+          title: 'Approvals',
+          icon: RuleFolder,
+          path: '/approvals',
+          requiredAccess: () => canAccess.approvalsView(),
         },
         {
           id: 'chat',

@@ -898,6 +898,29 @@ export const constructionAPI = {
   getConstructionAnalytics: (params = {}) => api.get('/construction/analytics', { params }),
 };
 
+// =============================================================================
+// APPROVAL SERVICES
+// =============================================================================
+export const approvalsAPI = {
+  // Dashboard
+  getDashboard: () => api.get('/approvals/dashboard'),
+  // Pending queue (my queue)
+  getPending: (params = {}) => api.get('/approvals/pending', { params }),
+  // All requests (admin view)
+  getAll: (params = {}) => api.get('/approvals', { params }),
+  // Single request detail
+  getApproval: (id) => api.get(`/approvals/${id}`),
+  // Actions
+  approve: (id, data = {}) => api.post(`/approvals/${id}/approve`, data),
+  reject: (id, data) => api.post(`/approvals/${id}/reject`, data),
+  cancel: (id, data = {}) => api.post(`/approvals/${id}/cancel`, data),
+  // Policy management
+  getPolicies: () => api.get('/approvals/policies'),
+  getPolicy: (id) => api.get(`/approvals/policies/${id}`),
+  createPolicy: (data) => api.post('/approvals/policies', data),
+  updatePolicy: (id, data) => api.put(`/approvals/policies/${id}`, data),
+};
+
 // Contractor services - UNCHANGED
 export const contractorAPI = {
   getContractors: (params = {}) => api.get('/contractors', { params }),

@@ -735,6 +735,13 @@ export const AuthProvider = ({ children }) => {
     taskAnalytics: () => _useNew ? checkPerm('tasks:analytics') : hasPermission('MANAGEMENT'),
     taskTemplates: () => _useNew ? checkPerm('tasks:manage_templates') : hasPermission('ADMIN'),
 
+    // Approvals
+    approvalsView: () => _useNew ? checkPerm('approvals:view') : true,
+    approvalsViewAll: () => _useNew ? checkPerm('approvals:view_all') : hasPermission('MANAGEMENT'),
+    approvalsApprove: () => _useNew ? checkPerm('approvals:approve') : hasPermission('MANAGEMENT'),
+    approvalsReject: () => _useNew ? checkPerm('approvals:reject') : hasPermission('MANAGEMENT'),
+    approvalsPolicies: () => _useNew ? checkPerm('approvals:manage_policies') : hasPermission('ADMIN'),
+
     // Chat & messaging
     chatAccess: () => _useNew ? checkPerm('chat:view') : true,
     chatSend: () => _useNew ? checkPerm('chat:send') : true,

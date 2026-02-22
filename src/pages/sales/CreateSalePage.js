@@ -3144,7 +3144,16 @@ const CreateSalePage = () => {
       }
 
       const response = await salesAPI.createSale(saleData);
-      const createdSale = response.data.data || response.data;
+      const responseData = response.data;
+      const createdSale = responseData.data || responseData;
+
+      // Check if sale requires approval (e.g., discount exceeds user's limit)
+      if (responseData.pendingApproval) {
+        navigate('/sales', {
+          state: { message: responseData.message || 'Sale submitted for approval' }
+        });
+        return;
+      }
 
       // Navigate to sale detail page
       navigate(`/sales/${createdSale._id}`, {

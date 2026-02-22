@@ -23,6 +23,7 @@ import { useProjectContext } from '../../context/ProjectContext';
 
 // Status configs
 const SALE_STATUSES = [
+  { value: 'Pending Approval', label: 'Pending Approval', color: 'warning' },
   { value: 'booked', label: 'Booked', color: 'success' },
   { value: 'agreement_signed', label: 'Agreement Signed', color: 'info' },
   { value: 'registration_pending', label: 'Registration Pending', color: 'warning' },

@@ -73,6 +73,7 @@ export const TOWER_STATUS = {
 
 // Sale statuses
 export const SALE_STATUS = {
+  'Pending Approval': { label: 'Pending Approval', color: 'warning', icon: HourglassEmpty },
   'Booked':           { label: 'Booked',           color: 'primary', icon: Sell },
   'Agreement Signed': { label: 'Agreement Signed', color: 'info',    icon: Description },
   'Registered':       { label: 'Registered',       color: 'success', icon: EventAvailable },
@@ -110,6 +111,15 @@ export const TASK_PRIORITY = {
   'Low':      { label: 'Low',      color: 'success', icon: null },
 };
 
+// Approval request statuses
+export const APPROVAL_STATUS = {
+  pending:   { label: 'Pending',   color: 'warning', icon: HourglassEmpty },
+  approved:  { label: 'Approved',  color: 'success', icon: CheckCircle },
+  rejected:  { label: 'Rejected',  color: 'error',   icon: Cancel },
+  cancelled: { label: 'Cancelled', color: 'default', icon: Block },
+  expired:   { label: 'Expired',   color: 'default', icon: Schedule },
+};
+
 // Convenience lookup: getStatusConfig('lead', 'New') → { label, color, icon }
 export const getStatusConfig = (type, status) => {
   const map = {
@@ -120,6 +130,7 @@ export const getStatusConfig = (type, status) => {
     sale: SALE_STATUS,
     payment: PAYMENT_STATUS,
     task: TASK_STATUS,
+    approval: APPROVAL_STATUS,
   };
   return map[type]?.[status] || { label: status || '-', color: 'default', icon: null };
 };
