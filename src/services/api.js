@@ -11,7 +11,8 @@ const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000/api';
 // Create axios instance with default configuration
 export const api = axios.create({
   baseURL: BASE_URL,
-  timeout: 30000, // 30 seconds timeout
+  timeout: 30000,
+  withCredentials: true, // Send httpOnly cookies (refresh token) with every request
   headers: {
     'Content-Type': 'application/json',
   },
@@ -31,20 +32,76 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor for error handling
+// ─── Token refresh queue ────────────────────────────────────────────────────
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach(({ resolve, reject }) => {
+    if (error) reject(error);
+    else resolve(token);
+  });
+  failedQueue = [];
+};
+
+// URLs where a 401 means "bad credentials", not "expired token"
+const SKIP_REFRESH_URLS = ['/auth/login', '/auth/register', '/auth/refresh'];
+
+// Response interceptor — auto-refresh on 401, keep 403 handling
 api.interceptors.response.use(
-  (response) => {
-    return response;
-  },
-  (error) => {
-    // Handle authentication errors
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    // ── Handle 401: auto-refresh ──
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      // Don't try to refresh for login/register/refresh endpoints
+      if (SKIP_REFRESH_URLS.some((url) => originalRequest.url?.includes(url))) {
+        return Promise.reject(error);
+      }
+
+      if (isRefreshing) {
+        // Another refresh is in-flight — queue this request
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        }).then((token) => {
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+          return api(originalRequest);
+        });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        const { data } = await api.post('/auth/refresh');
+        const newToken = data.token;
+
+        localStorage.setItem('token', newToken);
+        api.defaults.headers.common.Authorization = `Bearer ${newToken}`;
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+
+        // Notify AuthContext + Socket of the new token
+        window.dispatchEvent(new CustomEvent('auth:token-refreshed', { detail: { token: newToken } }));
+
+        // Update live socket connection if present
+        if (window.__socket?.connected) {
+          window.__socket.emit('auth:update-token', { token: newToken });
+        }
+
+        processQueue(null, newToken);
+        return api(originalRequest);
+      } catch (refreshError) {
+        processQueue(refreshError, null);
+        // Refresh failed — session is truly expired
+        window.dispatchEvent(new CustomEvent('auth:session-expired'));
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
     }
-    
-    // Handle permission errors (403)
+
+    // ── Handle 403: permission errors ──
     if (error.response?.status === 403) {
       const msg = error.response?.data?.message || '';
       if (msg.includes('do not have access to this project')) {
@@ -56,7 +113,7 @@ api.interceptors.response.use(
       }
     }
 
-    // Handle network errors
+    // ── Handle network errors ──
     if (!error.response) {
       error.message = 'Network error. Please check your connection.';
     }
@@ -79,6 +136,7 @@ export const authAPI = {
   // These routes may need to be implemented on backend:
   refresh: () => api.post('/auth/refresh'),
   logout: () => api.post('/auth/logout'),
+  logoutAll: () => api.post('/auth/logout-all'),
   forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
   resetPassword: (token, password) => api.post('/auth/reset-password', { token, password }),
   verifyEmail: (token) => api.post('/auth/verify-email', { token }),
@@ -556,6 +614,9 @@ export const fileAPI = {
   
   // Get files for a specific resource (confirmed in backend)
   getFilesForResource: (resourceId) => api.get(`/files/resource/${resourceId}`),
+
+  // Get a fresh pre-signed download URL for a single file (expires after 1 hour)
+  getDownloadUrl: (fileId) => api.get(`/files/${fileId}/download`),
 };
 
 // =============================================================================

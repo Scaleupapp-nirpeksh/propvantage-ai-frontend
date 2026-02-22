@@ -298,17 +298,41 @@ export const AuthProvider = ({ children }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Auto-refresh token before expiry
+  // Auto-refresh token before expiry (12 min = 3 min before 15-min token expires)
   useEffect(() => {
     if (state.isAuthenticated && state.token) {
       const tokenRefreshInterval = setInterval(() => {
         refreshTokenIfNeeded();
-      }, 15 * 60 * 1000); // Check every 15 minutes
+      }, 12 * 60 * 1000);
 
       return () => clearInterval(tokenRefreshInterval);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.isAuthenticated, state.token]);
+
+  // Sync auth state with interceptor token refresh / session-expired events
+  useEffect(() => {
+    const handleTokenRefreshed = (event) => {
+      const { token } = event.detail;
+      dispatch({
+        type: AuthActionTypes.REFRESH_TOKEN_SUCCESS,
+        payload: { token, refreshToken: null },
+      });
+    };
+
+    const handleSessionExpired = () => {
+      clearStoredAuth();
+      dispatch({ type: AuthActionTypes.LOGOUT });
+    };
+
+    window.addEventListener('auth:token-refreshed', handleTokenRefreshed);
+    window.addEventListener('auth:session-expired', handleSessionExpired);
+
+    return () => {
+      window.removeEventListener('auth:token-refreshed', handleTokenRefreshed);
+      window.removeEventListener('auth:session-expired', handleSessionExpired);
+    };
+  }, []); // dispatch is stable from useReducer
 
   // Initialize authentication from stored tokens
   const initializeAuth = async () => {
@@ -318,7 +342,6 @@ export const AuthProvider = ({ children }) => {
       const storedToken = localStorage.getItem('token');
       const storedUser = localStorage.getItem('user');
       const storedOrganization = localStorage.getItem('organization');
-      const storedRefreshToken = localStorage.getItem('refreshToken');
       const storedRoleRef = localStorage.getItem('roleRef');
 
       if (storedToken && storedUser) {
@@ -346,7 +369,7 @@ export const AuthProvider = ({ children }) => {
             user: normalizedUser,
             organization,
             token: storedToken,
-            refreshToken: storedRefreshToken,
+            refreshToken: null, // Now httpOnly cookie
             roleRef,
           },
         });
@@ -406,14 +429,11 @@ export const AuthProvider = ({ children }) => {
         roleRef = responseData.roleRef || null;
       }
 
-      // Store auth data in localStorage
+      // Store auth data in localStorage (refreshToken is now httpOnly cookie — not stored)
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
       if (organization) {
         localStorage.setItem('organization', JSON.stringify(organization));
-      }
-      if (refreshToken) {
-        localStorage.setItem('refreshToken', refreshToken);
       }
       if (roleRef) {
         localStorage.setItem('roleRef', JSON.stringify(roleRef));
@@ -437,7 +457,8 @@ export const AuthProvider = ({ children }) => {
         redirectTo: getDashboardRoute(user.role),
       };
     } catch (error) {
-      const errorMessage = error.message || 'Login failed. Please try again.';
+      const status = error.response?.status;
+      const errorMessage = error.response?.data?.message || error.message || 'Login failed. Please try again.';
       dispatch({
         type: AuthActionTypes.LOGIN_FAILURE,
         payload: errorMessage,
@@ -446,6 +467,7 @@ export const AuthProvider = ({ children }) => {
       return {
         success: false,
         error: errorMessage,
+        status,
       };
     }
   };
@@ -494,9 +516,6 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
       localStorage.setItem('organization', JSON.stringify(organization));
-      if (refreshToken) {
-        localStorage.setItem('refreshToken', refreshToken);
-      }
       if (roleRef) {
         localStorage.setItem('roleRef', JSON.stringify(roleRef));
       }
@@ -569,29 +588,27 @@ export const AuthProvider = ({ children }) => {
     dispatch({ type: AuthActionTypes.CLEAR_ERROR });
   };
 
-  // Refresh token if needed
+  // Proactive token refresh (cookie-based — no need to check state.refreshToken)
   const refreshTokenIfNeeded = async () => {
     try {
-      if (state.refreshToken) {
-        const response = await authAPI.refresh();
-        const { token, refreshToken } = response.data;
-        
-        localStorage.setItem('token', token);
-        if (refreshToken) {
-          localStorage.setItem('refreshToken', refreshToken);
-        }
-        
-        dispatch({
-          type: AuthActionTypes.REFRESH_TOKEN_SUCCESS,
-          payload: { token, refreshToken },
-        });
-      }
+      const response = await authAPI.refresh();
+      const { token } = response.data;
+
+      localStorage.setItem('token', token);
+
+      dispatch({
+        type: AuthActionTypes.REFRESH_TOKEN_SUCCESS,
+        payload: { token, refreshToken: null },
+      });
     } catch (error) {
       console.error('Token refresh failed:', error);
-      dispatch({
-        type: AuthActionTypes.REFRESH_TOKEN_FAILURE,
-        payload: 'Session expired. Please login again.',
-      });
+      // Only force logout on auth rejection, not network blips
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        dispatch({
+          type: AuthActionTypes.REFRESH_TOKEN_FAILURE,
+          payload: 'Session expired. Please login again.',
+        });
+      }
     }
   };
 

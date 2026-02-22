@@ -118,6 +118,8 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [rateLimitSeconds, setRateLimitSeconds] = useState(0);
+  const [isLocked, setIsLocked] = useState(false);
 
   // Clear auth errors on component mount
   useEffect(() => {
@@ -131,6 +133,15 @@ const LoginPage = () => {
       navigate(from, { replace: true });
     }
   }, [isAuthenticated, navigate, location]);
+
+  // Countdown timer for rate limit
+  useEffect(() => {
+    if (rateLimitSeconds <= 0) return;
+    const timer = setInterval(() => {
+      setRateLimitSeconds((prev) => (prev <= 1 ? 0 : prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [rateLimitSeconds]);
 
   // Handle input changes
   const handleInputChange = (field) => (event) => {
@@ -187,30 +198,30 @@ const LoginPage = () => {
       });
 
       if (result.success) {
-        enqueueSnackbar(`Welcome back, ${result.user.firstName}!`, {
-          variant: 'success',
-        });
-
-        // Get redirect path
+        enqueueSnackbar(`Welcome back, ${result.user.firstName}!`, { variant: 'success' });
         const from = location.state?.from?.pathname || result.redirectTo || '/dashboard';
-        
-        // Small delay to show success message
-        setTimeout(() => {
-          navigate(from, { replace: true });
-        }, 100);
-
+        setTimeout(() => navigate(from, { replace: true }), 100);
+      } else if (result.status === 429) {
+        // Rate limited
+        setRateLimitSeconds(60);
+        const msg = result.error || 'Too many login attempts. Please try again later.';
+        enqueueSnackbar(msg, { variant: 'warning' });
+        setErrors({ submit: msg });
+      } else if (result.status === 423) {
+        // Account locked
+        setIsLocked(true);
+        const msg = result.error || 'Account locked due to too many failed attempts.';
+        enqueueSnackbar(msg, { variant: 'error', autoHideDuration: 10000 });
+        setErrors({ submit: msg });
       } else {
-        throw new Error(result.error || 'Login failed');
+        const errorMessage = result.error || 'Login failed. Please check your credentials.';
+        enqueueSnackbar(errorMessage, { variant: 'error' });
+        setErrors({ submit: errorMessage });
       }
     } catch (error) {
       console.error('Login error:', error);
-      const errorMessage = error.message || 'Login failed. Please check your credentials and try again.';
-      
-      enqueueSnackbar(errorMessage, {
-        variant: 'error',
-      });
-      
-      setErrors({ submit: errorMessage });
+      enqueueSnackbar('An unexpected error occurred. Please try again.', { variant: 'error' });
+      setErrors({ submit: 'An unexpected error occurred.' });
     } finally {
       setIsLoading(false);
     }
@@ -258,8 +269,18 @@ const LoginPage = () => {
               </Typography>
             </Box>
 
-            {/* Error Display */}
-            {(errors.submit || authError) && (
+            {/* Error / Rate Limit / Lockout Display */}
+            {isLocked && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                Your account has been locked after multiple failed login attempts. Please try again later or contact your administrator.
+              </Alert>
+            )}
+            {rateLimitSeconds > 0 && (
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                Too many attempts. Please wait {rateLimitSeconds} seconds before trying again.
+              </Alert>
+            )}
+            {!isLocked && rateLimitSeconds <= 0 && (errors.submit || authError) && (
               <Alert severity="error" sx={{ mb: 3 }}>
                 {errors.submit || authError}
               </Alert>
@@ -354,7 +375,7 @@ const LoginPage = () => {
                 fullWidth
                 variant="contained"
                 size="large"
-                disabled={isLoading}
+                disabled={isLoading || rateLimitSeconds > 0 || isLocked}
                 startIcon={
                   isLoading ? (
                     <CircularProgress size={20} color="inherit" />
@@ -373,7 +394,13 @@ const LoginPage = () => {
                   },
                 }}
               >
-                {isLoading ? 'Signing In...' : 'Sign In'}
+                {isLoading
+                  ? 'Signing In...'
+                  : rateLimitSeconds > 0
+                    ? `Try again in ${rateLimitSeconds}s`
+                    : isLocked
+                      ? 'Account Locked'
+                      : 'Sign In'}
               </Button>
 
 

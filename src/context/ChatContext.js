@@ -334,6 +334,12 @@ function chatReducer(state, action) {
       return { ...state, typingUsers: { ...state.typingUsers, [conversationId]: convTyping } };
     }
 
+    // Auth
+    case 'SOCKET_AUTH_EXPIRED':
+      return { ...state, socketError: 'Token expired, refreshing...' };
+    case 'SOCKET_AUTH_REVOKED':
+      return { ...state, socketError: 'Session revoked', isSocketConnected: false };
+
     default:
       return state;
   }
@@ -363,6 +369,18 @@ export function ChatProvider({ children }) {
       socketRef.current = null;
     };
   }, [isAuthenticated, token, user?._id]);
+
+  // Update socket token when interceptor refreshes it (avoids disconnect/reconnect)
+  useEffect(() => {
+    const handleTokenRefreshed = (event) => {
+      const { token: newToken } = event.detail;
+      if (socketRef.current) {
+        socketRef.current.updateToken(newToken);
+      }
+    };
+    window.addEventListener('auth:token-refreshed', handleTokenRefreshed);
+    return () => window.removeEventListener('auth:token-refreshed', handleTokenRefreshed);
+  }, []);
 
   // Refresh conversations after reconnect
   useEffect(() => {

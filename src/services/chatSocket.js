@@ -19,12 +19,14 @@ class ChatSocketManager {
 
     this.socket = io(getSocketUrl(), {
       auth: { token: this.token },
+      withCredentials: true,
       reconnection: true,
       reconnectionAttempts: 10,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
     });
 
+    window.__socket = this.socket;
     this._setupListeners();
   }
 
@@ -126,6 +128,16 @@ class ChatSocketManager {
     socket.on('user:offline', ({ userId }) => {
       dispatch({ type: 'USER_OFFLINE', payload: userId });
     });
+
+    // ─── Auth events from server ────────────────────────────────────
+    socket.on('auth:expired', () => {
+      dispatch({ type: 'SOCKET_AUTH_EXPIRED' });
+    });
+
+    socket.on('auth:revoked', () => {
+      dispatch({ type: 'SOCKET_AUTH_REVOKED' });
+      window.dispatchEvent(new CustomEvent('auth:session-expired'));
+    });
   }
 
   // ─── Emit Helpers ─────────────────────────────────────────────────────
@@ -149,11 +161,19 @@ class ChatSocketManager {
     this.socket?.emit('typing:stop', { conversationId });
   }
 
+  updateToken(newToken) {
+    this.token = newToken;
+    if (this.socket?.connected) {
+      this.socket.emit('auth:update-token', { token: newToken });
+    }
+  }
+
   disconnect() {
     if (this.socket) {
       this.socket.removeAllListeners();
       this.socket.disconnect();
       this.socket = null;
+      window.__socket = null;
     }
   }
 }

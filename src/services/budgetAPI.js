@@ -1,47 +1,8 @@
 // File: src/services/budgetAPI.js
-// Description: Enhanced API service for budget variance tracking - FIXED VERSION
-// Version: 1.2 - Fixed API import issue and improved error handling
+// Description: Enhanced API service for budget variance tracking
+// Uses shared axios instance from api.js (withCredentials, auto-refresh, etc.)
 
-// Fix: Import axios directly and configure it properly
-import axios from 'axios';
-
-// Create a configured axios instance for API calls
-const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:3000/api',
-  timeout: 30000, // 30 second timeout
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Add request interceptor to include auth token
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-
-// Add response interceptor for error handling
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Handle unauthorized access
-      localStorage.removeItem('authToken');
-      sessionStorage.removeItem('authToken');
-      window.location.href = '/login';
-    }
-    return Promise.reject(error);
-  }
-);
+import { api } from './api';
 
 /**
  * Budget Variance API Service
@@ -429,8 +390,5 @@ export const budgetTransformers = {
     }));
   }
 };
-
-// Also export the api instance for use in other services if needed
-export { api };
 
 export default budgetVarianceAPI;
