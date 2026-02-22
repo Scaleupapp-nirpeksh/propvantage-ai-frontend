@@ -71,21 +71,20 @@ const UNIT_TYPES = [
 
 const UNIT_STATUSES = [
   { value: 'available', label: 'Available', color: 'success' },
+  { value: 'booked', label: 'Booked', color: 'info' },
   { value: 'blocked', label: 'Blocked', color: 'warning' },
   { value: 'sold', label: 'Sold', color: 'error' },
-  { value: 'on-hold', label: 'On Hold', color: 'info' },
 ];
 
 const FACING_OPTIONS = [
-  'North', 'South', 'East', 'West', 'North-East', 'North-West', 
-  'South-East', 'South-West', 'Park Facing', 'Road Facing', 'Garden Facing'
+  'North', 'South', 'East', 'West', 'North-East', 'North-West',
+  'South-East', 'South-West',
 ];
 
 const HANDOVER_STATUS_OPTIONS = [
-  { value: 'not-ready', label: 'Not Ready', color: 'warning' },
+  { value: 'pending', label: 'Pending', color: 'warning' },
   { value: 'ready', label: 'Ready for Handover', color: 'info' },
-  { value: 'handed-over', label: 'Handed Over', color: 'success' },
-  { value: 'delayed', label: 'Delayed', color: 'error' },
+  { value: 'handed_over', label: 'Handed Over', color: 'success' },
 ];
 
 // Utility function to extract ID safely

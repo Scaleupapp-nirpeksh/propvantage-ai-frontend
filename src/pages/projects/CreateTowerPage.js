@@ -48,7 +48,8 @@ import { projectAPI, towerAPI } from '../../services/api';
 const TOWER_TYPES = [
   { value: 'residential', label: 'Residential' },
   { value: 'commercial', label: 'Commercial' },
-  { value: 'mixed', label: 'Mixed Use' },
+  { value: 'mixed_use', label: 'Mixed Use' },
+  { value: 'parking', label: 'Parking' },
 ];
 
 const UNIT_TYPES = [
@@ -141,7 +142,7 @@ const CreateTowerPage = () => {
     construction: {
       startDate: '',
       expectedCompletion: '',
-      constructionStatus: 'not-started',
+      constructionStatus: 'not_started',
     },
     
     // Additional metadata

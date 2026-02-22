@@ -195,12 +195,13 @@ const getStatusColor = (status) => {
     case 'available': return 'success';
     case 'sold': return 'error';
     case 'blocked': return 'warning';
-    case 'on-hold': return 'info';
+    case 'booked': return 'info';
+    case 'on-hold': case 'on_hold': return 'info';
     case 'completed': return 'success';
     case 'approved': return 'success';
-    case 'pending': return 'warning';
-    case 'in-progress': return 'info';
-    case 'rejected': return 'error';
+    case 'pending': case 'planning': return 'warning';
+    case 'in-progress': case 'under_construction': case 'under-construction': return 'info';
+    case 'rejected': case 'cancelled': return 'error';
     default: return 'default';
   }
 };
@@ -210,15 +211,20 @@ const getStatusIcon = (status) => {
     available: CheckCircle,
     sold: Home,
     blocked: Block,
+    booked: Home,
     'on-hold': Warning,
+    'on_hold': Warning,
     completed: CheckCircle,
     approved: VerifiedUser,
     pending: Schedule,
+    planning: Schedule,
     'in-progress': Timeline,
+    'under_construction': Timeline,
+    'under-construction': Timeline,
   };
-  
+
   const icon = icons[status?.toLowerCase()];
-  return icon || Info || Domain; // Fallback to Info, then Domain if that fails too
+  return icon || Info || Domain;
 };
 
 // Breadcrumb Navigation Component
@@ -1439,10 +1445,9 @@ const UnitsGrid = ({ units, viewMode, onAddUnit, projectId, towerId }) => {
 
   const getHandoverStatusColor = (status) => {
     switch (status?.toLowerCase()) {
-      case 'handed-over': return 'success';
+      case 'handed_over': return 'success';
       case 'ready': return 'info';
-      case 'delayed': return 'error';
-      case 'not-ready': return 'warning';
+      case 'pending': return 'warning';
       default: return 'default';
     }
   };

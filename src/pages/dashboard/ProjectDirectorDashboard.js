@@ -90,13 +90,15 @@ const getStatusColor = (status) => {
   const statusColors = {
     'planning': 'info',
     'pre-launch': 'warning',
-    'active': 'success',
-    'completed': 'primary',
+    'launched': 'success',
+    'under-construction': 'primary',
+    'completed': 'success',
     'on-hold': 'error',
-    'not-started': 'default',
+    'not_started': 'default',
     'foundation': 'info',
     'structure': 'warning',
     'finishing': 'primary',
+    'mep': 'primary',
   };
   return statusColors[status] || 'default';
 };

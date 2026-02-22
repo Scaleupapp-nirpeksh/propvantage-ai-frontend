@@ -51,21 +51,20 @@ const UNIT_TYPES = [
 
 const UNIT_STATUSES = [
   { value: 'available', label: 'Available' },
+  { value: 'booked', label: 'Booked' },
   { value: 'blocked', label: 'Blocked' },
   { value: 'sold', label: 'Sold' },
-  { value: 'on-hold', label: 'On Hold' },
 ];
 
 const FACING_OPTIONS = [
-  'North', 'South', 'East', 'West', 'North-East', 'North-West', 
-  'South-East', 'South-West', 'Park Facing', 'Road Facing', 'Garden Facing'
+  'North', 'South', 'East', 'West', 'North-East', 'North-West',
+  'South-East', 'South-West',
 ];
 
 const HANDOVER_STATUS_OPTIONS = [
-  { value: 'not-ready', label: 'Not Ready' },
+  { value: 'pending', label: 'Pending' },
   { value: 'ready', label: 'Ready for Handover' },
-  { value: 'handed-over', label: 'Handed Over' },
-  { value: 'delayed', label: 'Delayed' },
+  { value: 'handed_over', label: 'Handed Over' },
 ];
 
 // Breadcrumb Navigation Component

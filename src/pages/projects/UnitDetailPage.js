@@ -40,7 +40,6 @@ import {
   MoreVert,
   Home,
   CheckCircle,
-  Warning,
   Block,
   Schedule,
   Analytics,
@@ -106,7 +105,7 @@ const getStatusColor = (status) => {
     case 'available': return 'success';
     case 'sold': return 'error';
     case 'blocked': return 'warning';
-    case 'on-hold': return 'info';
+    case 'booked': return 'primary';
     default: return 'default';
   }
 };
@@ -116,17 +115,16 @@ const getStatusIcon = (status) => {
     available: CheckCircle,
     sold: Home,
     blocked: Block,
-    'on-hold': Warning,
+    booked: Home,
   };
   return icons[status?.toLowerCase()] || Info;
 };
 
 const getHandoverStatusColor = (status) => {
   switch (status?.toLowerCase()) {
-    case 'handed-over': return 'success';
+    case 'handed_over': return 'success';
     case 'ready': return 'info';
-    case 'delayed': return 'error';
-    case 'not-ready': return 'warning';
+    case 'pending': return 'warning';
     default: return 'default';
   }
 };

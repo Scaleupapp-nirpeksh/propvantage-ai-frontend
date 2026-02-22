@@ -52,7 +52,7 @@ export const UNIT_STATUS = {
   blocked:   { label: 'Blocked',   color: 'error',   icon: Lock },
 };
 
-// Project statuses
+// Project statuses (backend uses hyphens)
 export const PROJECT_STATUS = {
   'planning':            { label: 'Planning',            color: 'default', icon: Description },
   'pre-launch':          { label: 'Pre-Launch',          color: 'info',    icon: Schedule },
@@ -60,6 +60,15 @@ export const PROJECT_STATUS = {
   'under-construction':  { label: 'Under Construction',  color: 'warning', icon: Construction },
   'completed':           { label: 'Completed',           color: 'success', icon: DoneAll },
   'on-hold':             { label: 'On Hold',             color: 'error',   icon: Pause },
+};
+
+// Tower statuses (backend uses underscores)
+export const TOWER_STATUS = {
+  'planning':            { label: 'Planning',            color: 'default', icon: Description },
+  'under_construction':  { label: 'Under Construction',  color: 'warning', icon: Construction },
+  'completed':           { label: 'Completed',           color: 'success', icon: DoneAll },
+  'on_hold':             { label: 'On Hold',             color: 'error',   icon: Pause },
+  'cancelled':           { label: 'Cancelled',           color: 'error',   icon: Cancel },
 };
 
 // Sale statuses
@@ -107,6 +116,7 @@ export const getStatusConfig = (type, status) => {
     lead: LEAD_STATUS,
     unit: UNIT_STATUS,
     project: PROJECT_STATUS,
+    tower: TOWER_STATUS,
     sale: SALE_STATUS,
     payment: PAYMENT_STATUS,
     task: TASK_STATUS,

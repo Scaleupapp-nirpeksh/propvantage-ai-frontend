@@ -12,7 +12,6 @@ const STATUS_COLORS = {
   available: 'success',
   sold: 'error',
   blocked: 'warning',
-  'on-hold': 'info',
   booked: 'primary',
 };
 

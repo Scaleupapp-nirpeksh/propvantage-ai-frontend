@@ -68,10 +68,11 @@ const PROJECT_TYPES = [
 
 const PROJECT_STATUSES = [
   { value: 'planning', label: 'Planning', color: 'info' },
-  { value: 'ongoing', label: 'Ongoing', color: 'warning' },
+  { value: 'pre-launch', label: 'Pre-Launch', color: 'info' },
+  { value: 'launched', label: 'Launched', color: 'primary' },
+  { value: 'under-construction', label: 'Under Construction', color: 'warning' },
   { value: 'completed', label: 'Completed', color: 'success' },
   { value: 'on-hold', label: 'On Hold', color: 'error' },
-  { value: 'cancelled', label: 'Cancelled', color: 'error' },
 ];
 
 // Utility function to extract ID safely

@@ -123,7 +123,7 @@ const getStatusColor = (status) => {
     case 'available': return 'success';
     case 'sold': return 'error';
     case 'blocked': return 'warning';
-    case 'on-hold': return 'info';
+    case 'booked': return 'primary';
     default: return 'default';
   }
 };

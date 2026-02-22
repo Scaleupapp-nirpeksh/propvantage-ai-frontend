@@ -265,12 +265,16 @@ const ProjectPerformanceTable = ({ projects, isLoading, navigate }) => {
 
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
-      case 'active':
+      case 'launched':
         return 'success';
       case 'planning':
         return 'warning';
-      case 'completed':
+      case 'pre-launch':
         return 'info';
+      case 'under-construction':
+        return 'primary';
+      case 'completed':
+        return 'success';
       case 'on-hold':
         return 'error';
       default:

@@ -67,21 +67,23 @@ import { projectAPI, towerAPI, unitAPI } from '../../services/api';
 const TOWER_TYPES = [
   { value: 'residential', label: 'Residential' },
   { value: 'commercial', label: 'Commercial' },
-  { value: 'mixed', label: 'Mixed Use' },
+  { value: 'mixed_use', label: 'Mixed Use' },
+  { value: 'parking', label: 'Parking' },
 ];
 
 const TOWER_STATUSES = [
-  { value: 'active', label: 'Active', color: 'success' },
-  { value: 'inactive', label: 'Inactive', color: 'error' },
-  { value: 'under-construction', label: 'Under Construction', color: 'warning' },
+  { value: 'planning', label: 'Planning', color: 'info' },
+  { value: 'under_construction', label: 'Under Construction', color: 'warning' },
   { value: 'completed', label: 'Completed', color: 'success' },
-  { value: 'on-hold', label: 'On Hold', color: 'error' },
+  { value: 'on_hold', label: 'On Hold', color: 'error' },
+  { value: 'cancelled', label: 'Cancelled', color: 'error' },
 ];
 
 const CONSTRUCTION_STATUSES = [
-  { value: 'not-started', label: 'Not Started' },
+  { value: 'not_started', label: 'Not Started' },
   { value: 'foundation', label: 'Foundation' },
   { value: 'structure', label: 'Structure' },
+  { value: 'mep', label: 'MEP' },
   { value: 'finishing', label: 'Finishing' },
   { value: 'completed', label: 'Completed' },
 ];
@@ -357,7 +359,7 @@ const EditTowerPage = () => {
     // Construction Details
     construction: {
       progressPercentage: 0,
-      constructionStatus: 'not-started',
+      constructionStatus: 'not_started',
       plannedCompletionDate: '',
       actualCompletionDate: '',
     },
@@ -494,7 +496,7 @@ const EditTowerPage = () => {
         // Construction Details
         construction: {
           progressPercentage: towerData?.construction?.progressPercentage || 0,
-          constructionStatus: towerData?.construction?.constructionStatus || 'not-started',
+          constructionStatus: towerData?.construction?.constructionStatus || 'not_started',
           plannedCompletionDate: towerData?.construction?.plannedCompletionDate ? 
             towerData.construction.plannedCompletionDate.split('T')[0] : '',
           actualCompletionDate: towerData?.construction?.actualCompletionDate ? 
