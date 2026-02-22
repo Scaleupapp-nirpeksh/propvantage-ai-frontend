@@ -57,6 +57,7 @@ const AIResearchPage = () => {
   const [researching, setResearching] = useState(false);
   const [result, setResult] = useState(null);
   const [showSources, setShowSources] = useState(false);
+  const [elapsedMs, setElapsedMs] = useState(0);
 
   const handleResearch = async () => {
     if (!city.trim() || !area.trim()) {
@@ -67,18 +68,36 @@ const AIResearchPage = () => {
     try {
       setResearching(true);
       setResult(null);
+      setElapsedMs(0);
       const payload = { city: city.trim(), area: area.trim() };
       if (projectType) payload.projectType = projectType;
       if (additionalContext.trim()) payload.additionalContext = additionalContext.trim();
 
-      const res = await competitiveAnalysisAPI.triggerResearch(payload);
-      setResult(res.data?.data || res.data);
-      enqueueSnackbar(res.data?.message || 'Research completed', { variant: 'success' });
+      const poll = async () => {
+        const res = await competitiveAnalysisAPI.triggerResearch(payload);
+
+        if (res.data?.status === 'processing') {
+          setElapsedMs(res.data.elapsedMs || 0);
+          if (res.data.elapsedMs > 120000) {
+            enqueueSnackbar('Research is taking longer than expected. Please try again.', { variant: 'error' });
+            return;
+          }
+          await new Promise(r => setTimeout(r, 5000));
+          return poll();
+        }
+
+        // status === 'completed' or legacy response
+        setResult(res.data?.data || res.data);
+        enqueueSnackbar(res.data?.message || 'Research completed', { variant: 'success' });
+      };
+
+      await poll();
     } catch (error) {
       const msg = error.response?.data?.message || 'AI Research failed';
       enqueueSnackbar(msg, { variant: 'error' });
     } finally {
       setResearching(false);
+      setElapsedMs(0);
     }
   };
 
@@ -187,7 +206,7 @@ const AIResearchPage = () => {
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <PsychologyAlt sx={{ color: 'primary.main', animation: 'pulse 1.5s infinite' }} />
                   <Typography variant="body2" color="text.secondary">
-                    Analyzing {area}, {city}... This may take up to 30 seconds.
+                    Analyzing {area}, {city}...{elapsedMs > 0 ? ` (${Math.round(elapsedMs / 1000)}s)` : ' This may take 30-60 seconds.'}
                   </Typography>
                 </Box>
                 <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }`}</style>

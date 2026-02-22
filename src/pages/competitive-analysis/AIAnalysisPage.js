@@ -802,6 +802,8 @@ const AIAnalysisPage = () => {
   const [loadingProjects, setLoadingProjects] = useState(true);
   const [analysis, setAnalysis] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [elapsedMs, setElapsedMs] = useState(0);
+  const pollAbortRef = React.useRef(false);
 
   // Fetch user's projects for the selector
   useEffect(() => {
@@ -827,22 +829,44 @@ const AIAnalysisPage = () => {
 
   const fetchAnalysis = useCallback(async (projId, type) => {
     if (!projId) return;
+    pollAbortRef.current = false;
     try {
       setLoading(true);
       setAnalysis(null);
+      setElapsedMs(0);
       const typeValue = ANALYSIS_TYPES[type]?.value || 'comprehensive';
-      const res = await competitiveAnalysisAPI.getAnalysis(projId, { type: typeValue });
-      setAnalysis(res.data?.data || res.data);
+
+      const poll = async () => {
+        if (pollAbortRef.current) return;
+        const res = await competitiveAnalysisAPI.getAnalysis(projId, { type: typeValue });
+
+        if (res.data?.status === 'processing') {
+          setElapsedMs(res.data.elapsedMs || 0);
+          if (res.data.elapsedMs > 120000) {
+            enqueueSnackbar('Analysis is taking longer than expected. Please try again.', { variant: 'error' });
+            return;
+          }
+          await new Promise(r => setTimeout(r, 3000));
+          return poll();
+        }
+
+        // status === 'completed' or legacy response
+        setAnalysis(res.data?.data || res.data);
+      };
+
+      await poll();
     } catch (error) {
       const msg = error.response?.data?.message || 'Failed to generate analysis';
       enqueueSnackbar(msg, { variant: 'error' });
     } finally {
       setLoading(false);
+      setElapsedMs(0);
     }
   }, [enqueueSnackbar]);
 
   const handleProjectChange = (e) => {
     const projId = e.target.value;
+    pollAbortRef.current = true;
     setSelectedProject(projId);
     setAnalysis(null);
     if (projId) {
@@ -852,6 +876,7 @@ const AIAnalysisPage = () => {
   };
 
   const handleTabChange = (_, newValue) => {
+    pollAbortRef.current = true;
     setAnalysisType(newValue);
     if (selectedProject) {
       fetchAnalysis(selectedProject, newValue);
@@ -863,8 +888,9 @@ const AIAnalysisPage = () => {
     try {
       setRefreshing(true);
       const typeValue = ANALYSIS_TYPES[analysisType]?.value || 'comprehensive';
-      const res = await competitiveAnalysisAPI.refreshAnalysis(selectedProject, { type: typeValue });
-      setAnalysis(res.data?.data || res.data);
+      // Trigger refresh (returns 202), then poll the GET endpoint
+      await competitiveAnalysisAPI.refreshAnalysis(selectedProject, { type: typeValue });
+      await fetchAnalysis(selectedProject, analysisType);
       enqueueSnackbar('Analysis refreshed', { variant: 'success' });
     } catch (error) {
       enqueueSnackbar(error.response?.data?.message || 'Refresh failed', { variant: 'error' });
@@ -943,7 +969,7 @@ const AIAnalysisPage = () => {
           <LinearProgress sx={{ mb: 2, maxWidth: 400, mx: 'auto', borderRadius: 1 }} />
           <AutoGraph sx={{ fontSize: 48, color: 'primary.main', mb: 1, animation: 'pulse 1.5s infinite' }} />
           <Typography variant="body1" color="text.secondary">
-            Generating AI analysis... This may take 10-20 seconds.
+            Analyzing market data...{elapsedMs > 0 ? ` (${Math.round(elapsedMs / 1000)}s)` : ' This may take 15-40 seconds.'}
           </Typography>
           <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }`}</style>
         </Box>
