@@ -140,6 +140,19 @@ const ApprovalsDashboardPage = React.lazy(() => import('./pages/approvals/Approv
 const ApprovalDetailPage = React.lazy(() => import('./pages/approvals/ApprovalDetailPage'));
 const ApprovalPoliciesPage = React.lazy(() => import('./pages/approvals/ApprovalPoliciesPage'));
 
+// Competitive Analysis Pages
+const CADashboardPage = React.lazy(() => import('./pages/competitive-analysis/CADashboardPage'));
+const CompetitorListPage = React.lazy(() => import('./pages/competitive-analysis/CompetitorListPage'));
+const CompetitorFormPage = React.lazy(() => import('./pages/competitive-analysis/CompetitorFormPage'));
+const CompetitorDetailPage = React.lazy(() => import('./pages/competitive-analysis/CompetitorDetailPage'));
+const AIResearchPage = React.lazy(() => import('./pages/competitive-analysis/AIResearchPage'));
+const CSVImportPage = React.lazy(() => import('./pages/competitive-analysis/CSVImportPage'));
+const MarketOverviewPage = React.lazy(() => import('./pages/competitive-analysis/MarketOverviewPage'));
+const MarketTrendsPage = React.lazy(() => import('./pages/competitive-analysis/MarketTrendsPage'));
+const DemandSupplyPage = React.lazy(() => import('./pages/competitive-analysis/DemandSupplyPage'));
+const AIAnalysisPage = React.lazy(() => import('./pages/competitive-analysis/AIAnalysisPage'));
+const DataProvidersPage = React.lazy(() => import('./pages/competitive-analysis/DataProvidersPage'));
+
 // Chat
 const ChatPage = React.lazy(() => import('./pages/chat/ChatPage'));
 
@@ -1291,6 +1304,119 @@ const AppRoutes = () => {
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback message="Loading chat..." />}>
               <ChatPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* ========================================= */}
+      {/* COMPETITIVE ANALYSIS ROUTES */}
+      {/* ========================================= */}
+
+      <Route path="/competitive-analysis" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.compAnalysisView()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading competitive analysis..." />}>
+              <CADashboardPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/competitive-analysis/competitors" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.compAnalysisView()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading competitors..." />}>
+              <CompetitorListPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/competitive-analysis/competitors/new" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.compAnalysisManageData()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading form..." />}>
+              <CompetitorFormPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/competitive-analysis/competitors/:id" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.compAnalysisView()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading competitor details..." />}>
+              <CompetitorDetailPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/competitive-analysis/research" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.compAnalysisAIResearch()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading AI Research..." />}>
+              <AIResearchPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/competitive-analysis/import" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.compAnalysisManageData()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading import..." />}>
+              <CSVImportPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/competitive-analysis/market/overview" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.compAnalysisView()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading market overview..." />}>
+              <MarketOverviewPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/competitive-analysis/market/trends" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.compAnalysisView()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading market trends..." />}>
+              <MarketTrendsPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/competitive-analysis/market/demand" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.compAnalysisView()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading demand-supply analysis..." />}>
+              <DemandSupplyPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/competitive-analysis/analysis" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.compAnalysisAIRecommendations()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading AI analysis..." />}>
+              <AIAnalysisPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/competitive-analysis/analysis/:projectId" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.compAnalysisAIRecommendations()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading AI analysis..." />}>
+              <AIAnalysisPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/competitive-analysis/settings/providers" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.compAnalysisManageProviders()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading data providers..." />}>
+              <DataProvidersPage />
             </Suspense>
           </DashboardLayout>
         </ProtectedRoute>

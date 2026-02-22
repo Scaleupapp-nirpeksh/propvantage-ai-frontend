@@ -747,6 +747,13 @@ export const AuthProvider = ({ children }) => {
     chatSend: () => _useNew ? checkPerm('chat:send') : true,
     chatCreateGroup: () => _useNew ? checkPerm('chat:create_group') : hasPermission('MANAGEMENT'),
     chatDeleteAny: () => _useNew ? checkPerm('chat:delete_any') : hasPermission('ADMIN'),
+
+    // Competitive Analysis
+    compAnalysisView: () => _useNew ? checkPerm('competitive_analysis:view') : hasPermission('MANAGEMENT'),
+    compAnalysisManageData: () => _useNew ? checkPerm('competitive_analysis:manage_data') : hasPermission('MANAGEMENT'),
+    compAnalysisAIResearch: () => _useNew ? checkPerm('competitive_analysis:ai_research') : hasPermission('MANAGEMENT'),
+    compAnalysisAIRecommendations: () => _useNew ? checkPerm('competitive_analysis:ai_recommendations') : hasPermission('MANAGEMENT'),
+    compAnalysisManageProviders: () => _useNew ? checkPerm('competitive_analysis:manage_providers') : hasPermission('ADMIN'),
   };
 
   // Context value

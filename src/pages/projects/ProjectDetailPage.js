@@ -57,6 +57,7 @@ import {
   NotificationsActive,
   AccountBalance,
   Chat as ChatIcon,
+  Insights,
 } from '@mui/icons-material';
 
 import { useAuth } from '../../context/AuthContext';
@@ -1414,6 +1415,59 @@ const ProjectDetailPage = () => {
         isLoading={false}
         budgetVarianceData={budgetVarianceData}
       />
+
+      {/* Market Position Card — only show if competitiveData exists */}
+      {project.competitiveData && (
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Insights sx={{ color: 'primary.main' }} />
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Market Position</Typography>
+              </Box>
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={() => navigate(`/competitive-analysis/analysis/${projectId}`)}
+              >
+                View Full Analysis
+              </Button>
+            </Box>
+            <Grid container spacing={2}>
+              <Grid item xs={6} sm={3}>
+                <Typography variant="caption" color="text.secondary">Competitors</Typography>
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                  {project.competitiveData.competitorCount || 0}
+                </Typography>
+              </Grid>
+              <Grid item xs={6} sm={3}>
+                <Typography variant="caption" color="text.secondary">Market Avg</Typography>
+                <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.main' }}>
+                  {project.competitiveData.marketAvgPricePerSqft
+                    ? `₹${project.competitiveData.marketAvgPricePerSqft.toLocaleString('en-IN')}/sqft`
+                    : '—'}
+                </Typography>
+              </Grid>
+              <Grid item xs={6} sm={3}>
+                <Typography variant="caption" color="text.secondary">Market Min</Typography>
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                  {project.competitiveData.marketMinPricePerSqft
+                    ? `₹${project.competitiveData.marketMinPricePerSqft.toLocaleString('en-IN')}`
+                    : '—'}
+                </Typography>
+              </Grid>
+              <Grid item xs={6} sm={3}>
+                <Typography variant="caption" color="text.secondary">Market Max</Typography>
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                  {project.competitiveData.marketMaxPricePerSqft
+                    ? `₹${project.competitiveData.marketMaxPricePerSqft.toLocaleString('en-IN')}`
+                    : '—'}
+                </Typography>
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Dynamic Tabs based on project type */}
       <Paper sx={{ mb: 3 }}>

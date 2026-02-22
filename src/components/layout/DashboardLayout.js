@@ -82,6 +82,7 @@ import {
   Chat as ChatIcon,
   VpnKey,
   RuleFolder,
+  Insights,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import { useChat } from '../../context/ChatContext';
@@ -235,6 +236,20 @@ const getNavigationItems = (userRole, canAccess) => {
           requiredAccess: () => canAccess.viewFinancials(),
           children: [
             { id: 'dynamic-pricing', title: 'Dynamic Pricing', icon: AutoGraph, path: '/pricing/dynamic', requiredAccess: () => canAccess.viewFinancials() },
+          ],
+        },
+        {
+          id: 'competitive-analysis',
+          title: 'Comp. Analysis',
+          icon: Insights,
+          path: '/competitive-analysis',
+          requiredAccess: () => canAccess.compAnalysisView(),
+          children: [
+            { id: 'ca-dashboard', title: 'Dashboard', icon: Dashboard, path: '/competitive-analysis' },
+            { id: 'ca-competitors', title: 'Competitors', icon: Business, path: '/competitive-analysis/competitors' },
+            { id: 'ca-research', title: 'AI Research', icon: PsychologyAlt, path: '/competitive-analysis/research', requiredAccess: () => canAccess.compAnalysisAIResearch() },
+            { id: 'ca-market', title: 'Market Intel', icon: TrendingUp, path: '/competitive-analysis/market/overview' },
+            { id: 'ca-analysis', title: 'AI Analysis', icon: AutoGraph, path: '/competitive-analysis/analysis', requiredAccess: () => canAccess.compAnalysisAIRecommendations() },
           ],
         },
       ],
@@ -416,6 +431,16 @@ const DashboardBreadcrumbs = () => {
     'notifications': 'Notifications',
     'leadership': 'Leadership Dashboard',
     'chat': 'Chat',
+    'competitive-analysis': 'Competitive Analysis',
+    'competitors': 'Competitors',
+    'market': 'Market',
+    'research': 'AI Research',
+    'import': 'Import CSV',
+    'overview': 'Overview',
+    'trends': 'Trends',
+    'demand': 'Demand & Supply',
+    'analysis': 'AI Analysis',
+    'providers': 'Data Providers',
   };
 
   const segments = location.pathname.split('/').filter(Boolean);

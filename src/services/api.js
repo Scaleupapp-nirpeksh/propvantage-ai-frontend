@@ -921,6 +921,39 @@ export const approvalsAPI = {
   updatePolicy: (id, data) => api.put(`/approvals/policies/${id}`, data),
 };
 
+// =============================================================================
+// COMPETITIVE ANALYSIS SERVICES
+// =============================================================================
+export const competitiveAnalysisAPI = {
+  // Dashboard
+  getDashboard: () => api.get('/competitive-analysis/dashboard'),
+  // Competitor CRUD
+  getCompetitors: (params = {}) => api.get('/competitive-analysis/competitors', { params }),
+  getCompetitor: (id) => api.get(`/competitive-analysis/competitors/${id}`),
+  createCompetitor: (data) => api.post('/competitive-analysis/competitors', data),
+  updateCompetitor: (id, data) => api.put(`/competitive-analysis/competitors/${id}`, data),
+  deleteCompetitor: (id) => api.delete(`/competitive-analysis/competitors/${id}`),
+  // AI Web Research (long-running 10-30s)
+  triggerResearch: (data) => api.post('/competitive-analysis/research', data, { timeout: 60000 }),
+  // CSV Import/Export
+  importCSV: (formData) => api.post('/competitive-analysis/import-csv', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }, timeout: 60000,
+  }),
+  exportCSV: (params = {}) => api.get('/competitive-analysis/export-csv', { params, responseType: 'blob' }),
+  downloadTemplate: () => api.get('/competitive-analysis/csv-template', { responseType: 'blob' }),
+  // Market Intelligence
+  getMarketOverview: (params) => api.get('/competitive-analysis/market-overview', { params }),
+  getMarketTrends: (params) => api.get('/competitive-analysis/market-trends', { params }),
+  getDemandSupply: (params) => api.get('/competitive-analysis/demand-supply', { params }),
+  // AI Analysis & Recommendations
+  getAnalysis: (projectId, params = {}) => api.get(`/competitive-analysis/analysis/${projectId}`, { params }),
+  refreshAnalysis: (projectId, data = {}) => api.post(`/competitive-analysis/analysis/${projectId}/refresh`, data),
+  // Provider Management
+  getProviders: () => api.get('/competitive-analysis/providers'),
+  updateProvider: (providerName, data) => api.put(`/competitive-analysis/providers/${providerName}`, data),
+  syncProvider: (providerName) => api.post(`/competitive-analysis/providers/${providerName}/sync`),
+};
+
 // Contractor services - UNCHANGED
 export const contractorAPI = {
   getContractors: (params = {}) => api.get('/contractors', { params }),
@@ -1459,7 +1492,10 @@ const apiServices = {
   // Chat & Messaging
   chat: chatAPI,
 
-  // NEW for Phase 1
+  // Competitive Analysis
+  competitiveAnalysis: competitiveAnalysisAPI,
+
+  // Real-time
   realTime: realTimeAPI,
 
   // Utilities (ENHANCED with new invitation utils)

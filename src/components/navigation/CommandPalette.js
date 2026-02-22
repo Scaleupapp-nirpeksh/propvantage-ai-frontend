@@ -9,6 +9,7 @@ import {
   MonetizationOn, Settings, Add, TrendingUp, Receipt, Payment,
   Assessment, PersonAdd, NoteAdd, Handshake, TaskAlt, ViewKanban,
   GroupWork, Assignment, Notifications, Leaderboard, Chat as ChatIcon,
+  Insights, AutoGraph, PsychologyAlt,
 } from '@mui/icons-material';
 
 // Static page list
@@ -43,6 +44,11 @@ const PAGES = [
   { label: 'Notifications', path: '/notifications', icon: Notifications, section: 'Pages' },
   { label: 'Notification Settings', path: '/settings/notifications', icon: Notifications, section: 'Pages' },
   { label: 'Chat', path: '/chat', icon: ChatIcon, section: 'Pages' },
+  { label: 'Competitive Analysis', path: '/competitive-analysis', icon: Insights, section: 'Pages' },
+  { label: 'Competitor List', path: '/competitive-analysis/competitors', icon: Business, section: 'Pages' },
+  { label: 'Market Overview', path: '/competitive-analysis/market/overview', icon: TrendingUp, section: 'Pages' },
+  { label: 'Market Trends', path: '/competitive-analysis/market/trends', icon: Analytics, section: 'Pages' },
+  { label: 'AI Analysis', path: '/competitive-analysis/analysis', icon: AutoGraph, section: 'Pages' },
 ];
 
 const ACTIONS = [
@@ -52,6 +58,9 @@ const ACTIONS = [
   { label: 'Record Payment', path: '/payments/record', icon: Payment, section: 'Actions' },
   { label: 'Generate Invoice', path: '/sales/invoices/generate', icon: Receipt, section: 'Actions' },
   { label: 'Create New Task', path: '/tasks/create', icon: TaskAlt, section: 'Actions' },
+  { label: 'Add Competitor', path: '/competitive-analysis/competitors/new', icon: Add, section: 'Actions' },
+  { label: 'Run AI Research', path: '/competitive-analysis/research', icon: PsychologyAlt, section: 'Actions' },
+  { label: 'Import Competitor CSV', path: '/competitive-analysis/import', icon: NoteAdd, section: 'Actions' },
 ];
 
 const RECENT_KEY = 'propvantage_recent_pages';
