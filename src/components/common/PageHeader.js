@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Typography, Skeleton, useTheme, useMediaQuery } from '@mui/material';
+import { Box, Typography, Skeleton, Chip, useTheme, useMediaQuery } from '@mui/material';
 
 /**
  * Consistent page header used across all pages.
@@ -12,7 +12,7 @@ import { Box, Typography, Skeleton, useTheme, useMediaQuery } from '@mui/materia
  * @param {boolean} [props.loading]
  * @param {React.ReactNode} [props.children] - content rendered below the header (filters, tabs, etc.)
  */
-const PageHeader = ({ title, subtitle, icon: Icon, actions, loading, children }) => {
+const PageHeader = ({ title, subtitle, icon: Icon, actions, loading, badge, children }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -41,12 +41,17 @@ const PageHeader = ({ title, subtitle, icon: Icon, actions, loading, children })
             <Icon sx={{ fontSize: 28, color: 'primary.main', flexShrink: 0 }} />
           )}
           <Box sx={{ minWidth: 0 }}>
-            <Typography
-              variant={isMobile ? 'h5' : 'h4'}
-              sx={{ fontWeight: 700, lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
-            >
-              {title}
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography
+                variant={isMobile ? 'h5' : 'h4'}
+                sx={{ fontWeight: 700, lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+              >
+                {title}
+              </Typography>
+              {badge && (
+                <Chip label={badge} size="small" sx={{ height: 20, fontSize: '0.65rem', fontWeight: 700, bgcolor: 'warning.main', color: '#fff' }} />
+              )}
+            </Box>
             {subtitle && (
               <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
                 {subtitle}

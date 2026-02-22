@@ -243,6 +243,7 @@ const getNavigationItems = (userRole, canAccess) => {
           title: 'Comp. Analysis',
           icon: Insights,
           path: '/competitive-analysis',
+          beta: true,
           requiredAccess: () => canAccess.compAnalysisView(),
           children: [
             { id: 'ca-dashboard', title: 'Dashboard', icon: Dashboard, path: '/competitive-analysis' },
@@ -378,6 +379,9 @@ const NavItem = ({ item, isActive, onNavigate, isOpen, onToggle, collapsed, leve
                   noWrap: true,
                 }}
               />
+              {item.beta && (
+                <Chip label="BETA" size="small" sx={{ height: 18, fontSize: '0.55rem', fontWeight: 700, bgcolor: 'warning.main', color: '#fff', mr: 0.5 }} />
+              )}
               {hasChildren && (isOpen ? <ExpandLess sx={{ fontSize: 18 }} /> : <ExpandMore sx={{ fontSize: 18 }} />)}
             </>
           )}

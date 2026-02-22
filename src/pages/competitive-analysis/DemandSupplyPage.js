@@ -164,7 +164,7 @@ const DemandSupplyPage = () => {
 
   return (
     <Box>
-      <PageHeader title="Demand & Supply" subtitle="Demand-supply gap analysis by locality" />
+      <PageHeader title="Demand & Supply" subtitle="Demand-supply gap analysis by locality" badge="BETA" />
 
       {/* Locality Selector */}
       <Card sx={{ mb: 3 }}>

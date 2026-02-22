@@ -44,11 +44,11 @@ const PAGES = [
   { label: 'Notifications', path: '/notifications', icon: Notifications, section: 'Pages' },
   { label: 'Notification Settings', path: '/settings/notifications', icon: Notifications, section: 'Pages' },
   { label: 'Chat', path: '/chat', icon: ChatIcon, section: 'Pages' },
-  { label: 'Competitive Analysis', path: '/competitive-analysis', icon: Insights, section: 'Pages' },
-  { label: 'Competitor List', path: '/competitive-analysis/competitors', icon: Business, section: 'Pages' },
-  { label: 'Market Overview', path: '/competitive-analysis/market/overview', icon: TrendingUp, section: 'Pages' },
-  { label: 'Market Trends', path: '/competitive-analysis/market/trends', icon: Analytics, section: 'Pages' },
-  { label: 'AI Analysis', path: '/competitive-analysis/analysis', icon: AutoGraph, section: 'Pages' },
+  { label: 'Competitive Analysis', path: '/competitive-analysis', icon: Insights, section: 'Pages', beta: true },
+  { label: 'Competitor List', path: '/competitive-analysis/competitors', icon: Business, section: 'Pages', beta: true },
+  { label: 'Market Overview', path: '/competitive-analysis/market/overview', icon: TrendingUp, section: 'Pages', beta: true },
+  { label: 'Market Trends', path: '/competitive-analysis/market/trends', icon: Analytics, section: 'Pages', beta: true },
+  { label: 'AI Analysis', path: '/competitive-analysis/analysis', icon: AutoGraph, section: 'Pages', beta: true },
 ];
 
 const ACTIONS = [
@@ -58,9 +58,9 @@ const ACTIONS = [
   { label: 'Record Payment', path: '/payments/record', icon: Payment, section: 'Actions' },
   { label: 'Generate Invoice', path: '/sales/invoices/generate', icon: Receipt, section: 'Actions' },
   { label: 'Create New Task', path: '/tasks/create', icon: TaskAlt, section: 'Actions' },
-  { label: 'Add Competitor', path: '/competitive-analysis/competitors/new', icon: Add, section: 'Actions' },
-  { label: 'Run AI Research', path: '/competitive-analysis/research', icon: PsychologyAlt, section: 'Actions' },
-  { label: 'Import Competitor CSV', path: '/competitive-analysis/import', icon: NoteAdd, section: 'Actions' },
+  { label: 'Add Competitor', path: '/competitive-analysis/competitors/new', icon: Add, section: 'Actions', beta: true },
+  { label: 'Run AI Research', path: '/competitive-analysis/research', icon: PsychologyAlt, section: 'Actions', beta: true },
+  { label: 'Import Competitor CSV', path: '/competitive-analysis/import', icon: NoteAdd, section: 'Actions', beta: true },
 ];
 
 const RECENT_KEY = 'propvantage_recent_pages';
@@ -232,6 +232,9 @@ const CommandPalette = ({ open, onClose }) => {
                           primary={item.label}
                           primaryTypographyProps={{ fontSize: '0.813rem', fontWeight: idx === selectedIndex ? 600 : 400 }}
                         />
+                        {item.beta && (
+                          <Chip label="BETA" size="small" sx={{ height: 18, fontSize: '0.55rem', fontWeight: 700, bgcolor: 'warning.main', color: '#fff', mr: 0.5 }} />
+                        )}
                         {item.section === 'Actions' && (
                           <Chip label="Action" size="small" color="primary" sx={{ height: 20, fontSize: '0.625rem' }} />
                         )}

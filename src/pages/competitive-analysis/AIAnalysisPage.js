@@ -887,6 +887,7 @@ const AIAnalysisPage = () => {
       <PageHeader
         title="AI Analysis"
         subtitle="AI-powered competitive analysis and recommendations"
+        badge="BETA"
         actions={
           <Button variant="outlined" startIcon={<ArrowBack />} onClick={() => navigate('/competitive-analysis')}>
             Back to Dashboard

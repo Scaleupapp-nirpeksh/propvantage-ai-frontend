@@ -109,6 +109,7 @@ const MarketOverviewPage = () => {
       <PageHeader
         title="Market Overview"
         subtitle="Aggregated market statistics for any locality"
+        badge="BETA"
       />
 
       {/* Locality Selector */}

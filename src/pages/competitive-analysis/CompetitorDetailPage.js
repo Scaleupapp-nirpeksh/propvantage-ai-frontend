@@ -241,6 +241,7 @@ const CompetitorDetailPage = () => {
       <PageHeader
         title={projectName || 'Competitor Project'}
         subtitle={`${developerName || ''}${location.area ? ` \u2022 ${location.area}` : ''}${location.city ? `, ${location.city}` : ''}`}
+        badge="BETA"
         actions={
           <>
             <Button

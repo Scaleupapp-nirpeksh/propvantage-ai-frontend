@@ -140,6 +140,7 @@ const DataProvidersPage = () => {
       <PageHeader
         title="Data Providers"
         subtitle="Configure competitive data sources and sync settings"
+        badge="BETA"
         actions={
           <Button variant="outlined" startIcon={<ArrowBack />} onClick={() => navigate('/competitive-analysis')}>
             Back to Dashboard

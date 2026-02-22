@@ -1223,6 +1223,7 @@ const CompetitorFormPage = () => {
       <PageHeader
         title={isEditMode ? 'Edit Competitor' : 'Add Competitor'}
         subtitle={isEditMode ? 'Update competitor project details' : 'Enter competitor project details'}
+        badge="BETA"
         actions={
           <Button
             variant="text"

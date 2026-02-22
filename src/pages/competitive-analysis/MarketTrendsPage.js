@@ -125,6 +125,7 @@ const MarketTrendsPage = () => {
       <PageHeader
         title="Market Trends"
         subtitle="Historical price and supply trends"
+        badge="BETA"
       />
 
       {/* ---- Locality selector ---- */}

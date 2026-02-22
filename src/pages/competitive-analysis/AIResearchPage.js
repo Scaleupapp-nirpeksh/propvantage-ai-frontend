@@ -95,6 +95,7 @@ const AIResearchPage = () => {
       <PageHeader
         title="AI Web Research"
         subtitle="Automatically research competitor data from property portals"
+        badge="BETA"
         actions={
           <Button variant="outlined" startIcon={<ArrowBack />} onClick={() => navigate('/competitive-analysis')}>
             Back to Dashboard

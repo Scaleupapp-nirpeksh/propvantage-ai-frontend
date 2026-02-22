@@ -124,6 +124,7 @@ const CSVImportPage = () => {
       <PageHeader
         title="Import Competitor Data"
         subtitle="Bulk import competitor data from CSV files"
+        badge="BETA"
         actions={
           <Button variant="outlined" startIcon={<ArrowBack />} onClick={() => navigate('/competitive-analysis/competitors')}>
             Back to Competitors

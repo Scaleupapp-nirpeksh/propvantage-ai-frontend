@@ -284,6 +284,7 @@ const CompetitorListPage = () => {
       <PageHeader
         title="Competitors"
         subtitle="Track and manage competitor projects"
+        badge="BETA"
         actions={
           <Button variant="contained" startIcon={<Add />} onClick={() => navigate('/competitive-analysis/competitors/new')}>
             Add Competitor

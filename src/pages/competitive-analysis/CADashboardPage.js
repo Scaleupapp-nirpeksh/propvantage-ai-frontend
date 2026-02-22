@@ -82,6 +82,7 @@ const CADashboardPage = () => {
         <PageHeader
           title="Competitive Analysis"
           subtitle="Market position and competitor insights"
+          badge="BETA"
         />
         <EmptyState
           icon={Business}
@@ -116,6 +117,7 @@ const CADashboardPage = () => {
       <PageHeader
         title="Competitive Analysis"
         subtitle="Market position and competitor insights"
+        badge="BETA"
         actions={
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
             <Button size="small" startIcon={<Refresh />} onClick={fetchDashboard}>Refresh</Button>
