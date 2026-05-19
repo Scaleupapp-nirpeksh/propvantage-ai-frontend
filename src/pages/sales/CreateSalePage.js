@@ -53,6 +53,10 @@ import {
   Tabs,
   Tab,
   alpha,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import {
   ArrowBack,
@@ -80,6 +84,7 @@ import {
   Assessment,
   Payment,
   Download,
+  DeleteOutline,
 } from '@mui/icons-material';
 
 import { useAuth } from '../../context/AuthContext';
@@ -1794,8 +1799,87 @@ const PaymentPlanSelection = ({
 }) => {
   const [paymentTemplates, setPaymentTemplates] = useState([]);
   const [templatesLoading, setTemplatesLoading] = useState(false);
-  // eslint-disable-next-line no-unused-vars
   const [showCustomPlan, setShowCustomPlan] = useState(false);
+  const [savingCustomPlan, setSavingCustomPlan] = useState(false);
+  const [customPlanError, setCustomPlanError] = useState('');
+  const [customForm, setCustomForm] = useState(() => ({
+    name: 'Construction-Linked Plan (10-20-70)',
+    description: '10% booking · 20% within 60 days · 70% across construction milestones',
+    planType: 'construction_linked',
+    gracePeriodDays: 7,
+    lateFeeRate: 0,
+    installments: [
+      { installmentNumber: 1, name: 'Booking',           percentage: 10, dueAfterDays: 0,   milestoneType: 'booking',      milestoneDescription: 'On booking' },
+      { installmentNumber: 2, name: 'Within 60 days',    percentage: 20, dueAfterDays: 60,  milestoneType: 'time_based',   milestoneDescription: '60 days from booking' },
+      { installmentNumber: 3, name: 'Slab — Floor 10',   percentage: 25, dueAfterDays: 180, milestoneType: 'construction', milestoneDescription: 'Slab casting — floor 10' },
+      { installmentNumber: 4, name: 'Slab — Floor 20',   percentage: 25, dueAfterDays: 360, milestoneType: 'construction', milestoneDescription: 'Slab casting — floor 20' },
+      { installmentNumber: 5, name: 'On Possession',     percentage: 20, dueAfterDays: 720, milestoneType: 'possession',   milestoneDescription: 'On possession' },
+    ],
+  }));
+
+  const totalCustomPct = customForm.installments.reduce((s, i) => s + (parseFloat(i.percentage) || 0), 0);
+  const canSaveCustom = customForm.name.trim() && Math.abs(totalCustomPct - 100) < 0.01 && !savingCustomPlan;
+
+  const updateInstallment = (idx, field, value) => {
+    setCustomForm((f) => ({
+      ...f,
+      installments: f.installments.map((inst, i) => (i === idx ? { ...inst, [field]: value } : inst)),
+    }));
+  };
+
+  const addInstallment = () => {
+    setCustomForm((f) => ({
+      ...f,
+      installments: [
+        ...f.installments,
+        {
+          installmentNumber: f.installments.length + 1,
+          name: `Installment ${f.installments.length + 1}`,
+          percentage: 0,
+          dueAfterDays: 0,
+          milestoneType: 'time_based',
+          milestoneDescription: '',
+        },
+      ],
+    }));
+  };
+
+  const removeInstallment = (idx) => {
+    setCustomForm((f) => ({
+      ...f,
+      installments: f.installments
+        .filter((_, i) => i !== idx)
+        .map((inst, i) => ({ ...inst, installmentNumber: i + 1 })),
+    }));
+  };
+
+  const handleSaveCustomPlan = async () => {
+    setCustomPlanError('');
+    const projectId = project?._id;
+    if (!projectId) {
+      setCustomPlanError('Cannot identify the project. Try selecting the unit again.');
+      return;
+    }
+    try {
+      setSavingCustomPlan(true);
+      await projectPaymentAPI.createPaymentPlanTemplate(projectId, customForm);
+      // Refresh templates from API
+      const resp = await projectPaymentAPI.getPaymentPlanTemplates(projectId);
+      const templates = (resp.data?.data || resp.data || []).filter((t) => t.isActive);
+      setPaymentTemplates(templates);
+      // Auto-select the newly created template (it'll be the most recently added active one)
+      const newest = templates.find((t) => t.name === customForm.name) || templates[templates.length - 1];
+      if (newest) onPaymentPlanSelect(newest);
+      setShowCustomPlan(false);
+    } catch (err) {
+      console.error('Failed to create custom payment plan:', err);
+      setCustomPlanError(
+        err.response?.data?.message || err.message || 'Failed to save the plan. Please try again.'
+      );
+    } finally {
+      setSavingCustomPlan(false);
+    }
+  };
 
   // FIXED: Get project using proper resolution
   const project = getUnitProject(selectedUnit, projects);
@@ -2286,6 +2370,210 @@ const PaymentPlanSelection = ({
           </Grid>
         )}
       </Grid>
+
+      {/* ────────────────────────────────────────────────────────────────
+          Custom Payment Plan dialog — wired to the previously dead
+          "Create Custom Plan" button. POSTs to
+          /api/projects/:id/payment-templates, refreshes the list,
+          auto-selects the new template.
+      ──────────────────────────────────────────────────────────────── */}
+      <Dialog open={showCustomPlan} onClose={() => setShowCustomPlan(false)} maxWidth="md" fullWidth>
+        <DialogTitle sx={{ pb: 1 }}>
+          Create Custom Payment Plan
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            For {project?.name || 'this project'}. Saved as a reusable template — you can edit it later in Payment Plan Management.
+          </Typography>
+        </DialogTitle>
+        <DialogContent dividers>
+          {customPlanError && (
+            <Alert severity="error" sx={{ mb: 2 }}>{customPlanError}</Alert>
+          )}
+
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={7}>
+              <TextField
+                label="Plan name"
+                fullWidth
+                size="small"
+                value={customForm.name}
+                onChange={(e) => setCustomForm((f) => ({ ...f, name: e.target.value }))}
+                required
+              />
+            </Grid>
+            <Grid item xs={12} md={5}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Plan type</InputLabel>
+                <Select
+                  label="Plan type"
+                  value={customForm.planType}
+                  onChange={(e) => setCustomForm((f) => ({ ...f, planType: e.target.value }))}
+                >
+                  <MenuItem value="construction_linked">Construction-Linked</MenuItem>
+                  <MenuItem value="time_based">Time-Based</MenuItem>
+                  <MenuItem value="milestone_based">Milestone-Based</MenuItem>
+                  <MenuItem value="custom">Custom</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                label="Description (optional)"
+                fullWidth
+                size="small"
+                value={customForm.description}
+                onChange={(e) => setCustomForm((f) => ({ ...f, description: e.target.value }))}
+              />
+            </Grid>
+            <Grid item xs={6} md={3}>
+              <TextField
+                label="Grace period (days)"
+                type="number"
+                fullWidth
+                size="small"
+                value={customForm.gracePeriodDays}
+                onChange={(e) =>
+                  setCustomForm((f) => ({ ...f, gracePeriodDays: parseInt(e.target.value, 10) || 0 }))
+                }
+              />
+            </Grid>
+            <Grid item xs={6} md={3}>
+              <TextField
+                label="Late fee (%/month)"
+                type="number"
+                fullWidth
+                size="small"
+                value={customForm.lateFeeRate}
+                onChange={(e) =>
+                  setCustomForm((f) => ({ ...f, lateFeeRate: parseFloat(e.target.value) || 0 }))
+                }
+              />
+            </Grid>
+
+            <Grid item xs={12}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  mt: 1,
+                  mb: 1.5,
+                }}
+              >
+                <Typography variant="subtitle1" fontWeight={600}>
+                  Installments
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <Chip
+                    label={`Total: ${totalCustomPct.toFixed(1)}%`}
+                    color={Math.abs(totalCustomPct - 100) < 0.01 ? 'success' : 'error'}
+                    size="small"
+                    variant={Math.abs(totalCustomPct - 100) < 0.01 ? 'filled' : 'outlined'}
+                  />
+                  <Button size="small" variant="outlined" startIcon={<Add />} onClick={addInstallment}>
+                    Add row
+                  </Button>
+                </Box>
+              </Box>
+              <TableContainer component={Paper} variant="outlined">
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell width={40}>#</TableCell>
+                      <TableCell>Name</TableCell>
+                      <TableCell width={90}>%</TableCell>
+                      <TableCell width={110}>Days after booking</TableCell>
+                      <TableCell width={170}>Type</TableCell>
+                      <TableCell width={40} />
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {customForm.installments.map((inst, idx) => (
+                      <TableRow key={idx}>
+                        <TableCell>{inst.installmentNumber}</TableCell>
+                        <TableCell>
+                          <TextField
+                            size="small"
+                            fullWidth
+                            value={inst.name}
+                            onChange={(e) => updateInstallment(idx, 'name', e.target.value)}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <TextField
+                            size="small"
+                            type="number"
+                            value={inst.percentage}
+                            onChange={(e) =>
+                              updateInstallment(idx, 'percentage', parseFloat(e.target.value) || 0)
+                            }
+                            inputProps={{ step: 0.5, min: 0, max: 100 }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <TextField
+                            size="small"
+                            type="number"
+                            value={inst.dueAfterDays}
+                            onChange={(e) =>
+                              updateInstallment(idx, 'dueAfterDays', parseInt(e.target.value, 10) || 0)
+                            }
+                            inputProps={{ step: 30, min: 0 }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <FormControl size="small" fullWidth>
+                            <Select
+                              value={inst.milestoneType}
+                              onChange={(e) => updateInstallment(idx, 'milestoneType', e.target.value)}
+                            >
+                              <MenuItem value="booking">Booking</MenuItem>
+                              <MenuItem value="time_based">Time-based</MenuItem>
+                              <MenuItem value="construction">Construction</MenuItem>
+                              <MenuItem value="possession">Possession</MenuItem>
+                              <MenuItem value="custom">Custom</MenuItem>
+                            </Select>
+                          </FormControl>
+                        </TableCell>
+                        <TableCell>
+                          <Tooltip title="Remove">
+                            <span>
+                              <IconButton
+                                size="small"
+                                onClick={() => removeInstallment(idx)}
+                                disabled={customForm.installments.length <= 1}
+                              >
+                                <DeleteOutline fontSize="small" />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              {Math.abs(totalCustomPct - 100) >= 0.01 && (
+                <Typography variant="caption" color="error" sx={{ mt: 1, display: 'block' }}>
+                  Adjust the percentages so they total exactly 100%.
+                </Typography>
+              )}
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button onClick={() => setShowCustomPlan(false)} disabled={savingCustomPlan}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleSaveCustomPlan}
+            disabled={!canSaveCustom}
+            startIcon={savingCustomPlan ? <CircularProgress size={16} color="inherit" /> : <Save />}
+          >
+            {savingCustomPlan ? 'Saving…' : 'Save & use this plan'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
