@@ -1,5 +1,5 @@
 // File: src/pages/pitch/PitchLandingPage.jsx
-// Description: HubTown / 25 South pitch landing.
+// Description: HubTown / 25 Downtown pitch landing.
 // Editorial design: one serif family (Spectral) for everything except the
 // monospace data labels. No emojis. No decorative icons. No glowy gradients.
 // Real data presented as data.
@@ -171,7 +171,7 @@ const Hero = () => {
               sx={{
                 fontFamily: SERIF,
                 fontWeight: 300,
-                fontSize: { xs: '5rem', sm: '8rem', md: '13rem', lg: '16rem' },
+                fontSize: { xs: '3.6rem', sm: '6rem', md: '11rem', lg: '14rem' },
                 lineHeight: 0.85,
                 letterSpacing: '-0.05em',
                 color: C.inkBright,
@@ -183,11 +183,11 @@ const Hero = () => {
               sx={{
                 fontFamily: SERIF,
                 fontWeight: 300,
-                fontSize: { xs: '1.5rem', sm: '2.5rem', md: '4rem', lg: '4.5rem' },
+                fontSize: { xs: '1.2rem', sm: '2rem', md: '3.5rem', lg: '4rem' },
                 lineHeight: 1,
                 color: C.gold,
                 fontStyle: 'italic',
-                mt: { xs: 2, md: 5 },
+                mt: { xs: 1.5, sm: 2.5, md: 4.5 },
               }}
             >
               Cr
@@ -201,7 +201,7 @@ const Hero = () => {
           transition={{ duration: 0.9, delay: 1.5 }}
         >
           <Display as="h1" sx={{ mb: 5, maxWidth: 1100 }}>
-            That's what <Box component="span" sx={{ fontStyle: 'italic', color: C.gold }}>25 South</Box> is leaving on the table every month.
+            That's what <Box component="span" sx={{ fontStyle: 'italic', color: C.gold }}>25 Downtown</Box> is leaving on the table every month.
           </Display>
           <Body lg dim sx={{ maxWidth: 720 }}>
             Not because the market is soft. Because the operations are leaky —
@@ -215,7 +215,7 @@ const Hero = () => {
 
 // ─── The breakdown — horizontal stacked bar ─────────────────────────
 //
-// Of 100 enquiries per month at 25 South, three things happen:
+// Of 100 enquiries per month at 25 Downtown, three things happen:
 //   60–70 lost to buyer reasons   (~65% of the bar — muted)
 //   20–30 lost to operational     (~25% of the bar — RED)
 //   10 booked                      (~10% of the bar — gold)
@@ -255,27 +255,31 @@ const StackedBar = ({ visible }) => {
 
   return (
     <Box sx={{ width: '100%' }}>
-      {/* The bar */}
+      {/* The bar — horizontal on md+, vertical stack on xs/sm so the 25% and
+          10% segments stay readable (≈40px wide is unreadable on a phone). */}
       <Box
         sx={{
           display: 'flex',
+          flexDirection: { xs: 'column', md: 'row' },
           gap: '4px',
-          height: { xs: 110, md: 170 },
-          mb: 2,
+          height: { xs: 'auto', md: 170 },
+          mb: { xs: 8, md: 2 },
         }}
       >
         {segments.map((s, idx) => (
-          <motion.div
+          <Box
             key={idx}
-            initial={{ scaleX: 0, transformOrigin: 'left center' }}
-            animate={visible ? { scaleX: 1 } : {}}
+            component={motion.div}
+            initial={{ opacity: 0, scaleX: 0, transformOrigin: 'left center' }}
+            animate={visible ? { opacity: 1, scaleX: 1 } : {}}
             transition={{ duration: 0.9, delay: 0.15 + idx * 0.25, ease: [0.16, 1, 0.3, 1] }}
-            style={{
-              flex: s.flex,
+            sx={{
+              flex: { xs: '0 0 auto', md: s.flex },
+              minHeight: { xs: 88, md: 'auto' },
               background: s.bg,
               display: 'flex',
               alignItems: 'flex-end',
-              padding: '20px 22px',
+              padding: { xs: '18px 18px', md: '20px 22px' },
               overflow: 'hidden',
               position: 'relative',
             }}
@@ -290,7 +294,7 @@ const StackedBar = ({ visible }) => {
                 sx={{
                   fontFamily: SERIF,
                   fontWeight: s.isLeak ? 500 : 400,
-                  fontSize: { xs: '1.8rem', md: idx === 2 ? '2.4rem' : '3.4rem' },
+                  fontSize: { xs: '1.9rem', sm: '2.2rem', md: idx === 2 ? '2.4rem' : '3.4rem' },
                   color: s.ink,
                   lineHeight: 1,
                   letterSpacing: '-0.03em',
@@ -302,7 +306,7 @@ const StackedBar = ({ visible }) => {
               <Typography
                 sx={{
                   fontFamily: MONO,
-                  fontSize: { xs: 9, md: 11 },
+                  fontSize: { xs: 10, md: 11 },
                   color: s.sub,
                   letterSpacing: '0.16em',
                   textTransform: 'uppercase',
@@ -316,12 +320,18 @@ const StackedBar = ({ visible }) => {
                 {s.label}
               </Typography>
             </motion.div>
-          </motion.div>
+          </Box>
         ))}
       </Box>
 
-      {/* Percentage row aligned to bar */}
-      <Box sx={{ display: 'flex', gap: '4px', mb: { xs: 7, md: 10 } }}>
+      {/* Percentage row — mirrors the bar's layout (horizontal on md+, hidden on xs/sm) */}
+      <Box
+        sx={{
+          display: { xs: 'none', md: 'flex' },
+          gap: '4px',
+          mb: { xs: 7, md: 10 },
+        }}
+      >
         {segments.map((s, idx) => (
           <motion.div
             key={idx}
@@ -396,7 +406,7 @@ const FunnelSection = () => {
         <Reveal>
           <Kicker>The math behind ₹1,000 crore</Kicker>
           <Display sx={{ mb: { xs: 3, md: 4 } }}>
-            Of 100 enquiries each month at 25 South, only 10 close.
+            Of 100 enquiries each month at 25 Downtown, only 10 close.
           </Display>
           <Body lg dim sx={{ maxWidth: 720, mb: { xs: 8, md: 12 } }}>
             The 90 that don't aren't all genuinely lost. Most of them are. But 20–30 of them are not — they're lost because nothing in the operation was tracking them.
@@ -436,12 +446,12 @@ const FunnelSection = () => {
               >
                 Operational opportunity loss
               </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, mb: 4 }}>
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: { xs: 1, md: 1.5 }, mb: 4, flexWrap: 'wrap' }}>
                 <Typography
                   sx={{
                     fontFamily: SERIF,
                     fontWeight: 300,
-                    fontSize: { xs: '5rem', sm: '7rem', md: '10rem', lg: '12rem' },
+                    fontSize: { xs: '3.4rem', sm: '5.5rem', md: '9rem', lg: '11rem' },
                     lineHeight: 0.9,
                     letterSpacing: '-0.05em',
                     color: C.red,
@@ -454,9 +464,9 @@ const FunnelSection = () => {
                     fontFamily: SERIF,
                     fontStyle: 'italic',
                     fontWeight: 300,
-                    fontSize: { xs: '1.4rem', md: '3rem' },
+                    fontSize: { xs: '1.1rem', sm: '1.6rem', md: '2.8rem' },
                     color: C.red,
-                    mt: { xs: 2, md: 5 },
+                    mt: { xs: 1.5, sm: 2.5, md: 4.5 },
                   }}
                 >
                   Cr
@@ -490,9 +500,6 @@ const FunnelSection = () => {
               >
                 A thousand crore. Every month. Not lost to the market — lost to how the operation runs.
               </Typography>
-              <Body dim sx={{ maxWidth: 480 }}>
-                These aren't deals that the buyer walked away from. They're deals where the team didn't get back on time, the documents weren't where they should be, the right person didn't see the right note.
-              </Body>
             </Box>
           </Box>
         </Reveal>
@@ -624,7 +631,7 @@ const FourThings = () => {
       desc: 'Every interaction logged. Every commitment recorded. Every follow-up scheduled. When a lead goes cold, you know exactly when, why, and who dropped the ball.',
       metricLabel: 'Recovery potential',
       metric: '₹300–500 Cr',
-      metricSub: 'per month — half of operationally-lost leads at 25 South',
+      metricSub: 'per month — half of operationally-lost leads at 25 Downtown',
     },
     {
       n: '02',
@@ -1411,7 +1418,7 @@ const Closing = () => (
             maxWidth: 900,
           }}
         >
-          25 South loses <Box component="span" sx={{ color: C.red }}>20–30 of them</Box> every month.
+          25 Downtown loses <Box component="span" sx={{ color: C.red }}>20–30 of them</Box> every month.
         </Typography>
       </Reveal>
     </Box>
