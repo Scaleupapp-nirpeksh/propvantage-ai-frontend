@@ -1808,12 +1808,13 @@ const PaymentPlanSelection = ({
     planType: 'construction_linked',
     gracePeriodDays: 7,
     lateFeeRate: 0,
+    // Note: backend installmentSchema requires `description` (not `name`).
     installments: [
-      { installmentNumber: 1, name: 'Booking',           percentage: 10, dueAfterDays: 0,   milestoneType: 'booking',      milestoneDescription: 'On booking' },
-      { installmentNumber: 2, name: 'Within 60 days',    percentage: 20, dueAfterDays: 60,  milestoneType: 'time_based',   milestoneDescription: '60 days from booking' },
-      { installmentNumber: 3, name: 'Slab — Floor 10',   percentage: 25, dueAfterDays: 180, milestoneType: 'construction', milestoneDescription: 'Slab casting — floor 10' },
-      { installmentNumber: 4, name: 'Slab — Floor 20',   percentage: 25, dueAfterDays: 360, milestoneType: 'construction', milestoneDescription: 'Slab casting — floor 20' },
-      { installmentNumber: 5, name: 'On Possession',     percentage: 20, dueAfterDays: 720, milestoneType: 'possession',   milestoneDescription: 'On possession' },
+      { installmentNumber: 1, description: 'Booking',           percentage: 10, dueAfterDays: 0,   milestoneType: 'booking',      milestoneDescription: 'On booking' },
+      { installmentNumber: 2, description: 'Within 60 days',    percentage: 20, dueAfterDays: 60,  milestoneType: 'time_based',   milestoneDescription: '60 days from booking' },
+      { installmentNumber: 3, description: 'Slab — Floor 10',   percentage: 25, dueAfterDays: 180, milestoneType: 'construction', milestoneDescription: 'Slab casting — floor 10' },
+      { installmentNumber: 4, description: 'Slab — Floor 20',   percentage: 25, dueAfterDays: 360, milestoneType: 'construction', milestoneDescription: 'Slab casting — floor 20' },
+      { installmentNumber: 5, description: 'On Possession',     percentage: 20, dueAfterDays: 720, milestoneType: 'possession',   milestoneDescription: 'On possession' },
     ],
   }));
 
@@ -1834,7 +1835,7 @@ const PaymentPlanSelection = ({
         ...f.installments,
         {
           installmentNumber: f.installments.length + 1,
-          name: `Installment ${f.installments.length + 1}`,
+          description: `Installment ${f.installments.length + 1}`,
           percentage: 0,
           dueAfterDays: 0,
           milestoneType: 'time_based',
@@ -2494,8 +2495,8 @@ const PaymentPlanSelection = ({
                           <TextField
                             size="small"
                             fullWidth
-                            value={inst.name}
-                            onChange={(e) => updateInstallment(idx, 'name', e.target.value)}
+                            value={inst.description}
+                            onChange={(e) => updateInstallment(idx, 'description', e.target.value)}
                           />
                         </TableCell>
                         <TableCell>
