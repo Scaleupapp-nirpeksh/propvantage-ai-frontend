@@ -27,6 +27,10 @@ import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 const InviteAcceptancePage = React.lazy(() => import('./pages/auth/InviteAcceptancePage'));
 
+// Pitch landing page — public, outside auth flow (in-person pitches only).
+// Not linked in navigation. Reachable only by direct URL.
+const PitchLandingPage = React.lazy(() => import('./pages/pitch/PitchLandingPage'));
+
 // Dashboard Pages (Lazy loaded for performance) - UNCHANGED
 const BusinessHeadDashboard = React.lazy(() => import('./pages/dashboard/BusinessHeadDashboard'));
 const SalesExecutiveDashboard = React.lazy(() => import('./pages/dashboard/SalesExecutiveDashboard'));
@@ -345,6 +349,16 @@ const PublicRoute = ({ children }) => {
 const AppRoutes = () => {
   return (
     <Routes>
+      {/* ========================================= */}
+      {/* PITCH LANDING PAGES — fully public, no PublicRoute wrapper        */}
+      {/* so they render regardless of auth state. Not linked anywhere.    */}
+      {/* ========================================= */}
+      <Route path="/pitch/hubtown" element={
+        <Suspense fallback={<LoadingFallback section="pitch" message="Loading..." />}>
+          <PitchLandingPage />
+        </Suspense>
+      } />
+
       {/* ========================================= */}
       {/* PUBLIC ROUTES - ENHANCED WITH INVITATION */}
       {/* ========================================= */}
