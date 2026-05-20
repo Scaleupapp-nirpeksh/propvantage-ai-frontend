@@ -1297,7 +1297,12 @@ const LeadDetailPage = () => {
     }
   }, [fetchLead, leadId]);
 
-  // Poll while AI enrichment is running
+  // Poll while AI enrichment is running.
+  // Depends on `lead` (not just the status string) on purpose: each silent
+  // refetch replaces the `lead` reference, re-running this effect to schedule
+  // the next poll. It self-terminates once the status becomes terminal.
+  // Depending only on the status would stop polling whenever the status is
+  // unchanged between two ticks — i.e. the entire time it stays "researching".
   useEffect(() => {
     const status = lead?.enrichment?.status;
     if (status === 'pending' || status === 'researching') {
@@ -1401,7 +1406,7 @@ const LeadDetailPage = () => {
       </Paper>
 
       {/* Tab Content */}
-      {activeTab === 0 && <LeadOverview lead={lead} onRefresh={fetchLead} />}
+      {activeTab === 0 && <LeadOverview lead={lead} onRefresh={() => fetchLead({ silent: true })} />}
       {activeTab === 1 && <AIInsights lead={lead} />}
       {activeTab === 2 && <Interactions lead={lead} />}
       {activeTab === 3 && <FollowUpManagement lead={lead} onRefresh={fetchLead} />}

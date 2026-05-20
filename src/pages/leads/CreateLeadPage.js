@@ -507,6 +507,21 @@ const CreateLeadPage = () => {
     setErrors({});
 
     try {
+      // AI enrichment research sources — only attached when at least one URL is given
+      const enrichmentArticleUrls = formData.researchSources.articleUrls
+        .map((u) => u.trim())
+        .filter(Boolean);
+      const enrichmentSources = {
+        linkedinUrl: formData.researchSources.linkedinUrl.trim(),
+        companyWebsite: formData.researchSources.companyWebsite.trim(),
+        articleUrls: enrichmentArticleUrls,
+      };
+      const hasResearchSources = Boolean(
+        enrichmentSources.linkedinUrl ||
+        enrichmentSources.companyWebsite ||
+        enrichmentArticleUrls.length
+      );
+
       // Prepare lead data matching model structure exactly
       const leadData = {
         // Required fields
@@ -553,16 +568,8 @@ const CreateLeadPage = () => {
         // Additional notes
         notes: formData.notes.trim() || undefined,
 
-        // AI enrichment research sources (optional)
-        enrichment: {
-          sources: {
-            linkedinUrl: formData.researchSources.linkedinUrl.trim(),
-            companyWebsite: formData.researchSources.companyWebsite.trim(),
-            articleUrls: formData.researchSources.articleUrls
-              .map((u) => u.trim())
-              .filter(Boolean),
-          },
-        },
+        // AI enrichment research sources (only sent when at least one URL is provided)
+        ...(hasResearchSources ? { enrichment: { sources: enrichmentSources } } : {}),
 
         // FIXED: Follow-up with correct Interaction model enum values (Capitalized)
         followUpSchedule: formData.scheduleFollowUp ? {
