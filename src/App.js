@@ -71,12 +71,6 @@ const SalesReportsPage = React.lazy(() => import('./pages/sales/SalesReportsPage
 const SalesPipelinePage = React.lazy(() => import('./pages/sales/SalesPipelinePage'));
 
 // Commission Management Pages - UNCHANGED
-const CommissionDashboardPage = React.lazy(() => import('./pages/sales/CommissionDashboardPage'));
-const CommissionListPage = React.lazy(() => import('./pages/sales/CommissionListPage'));
-const CommissionDetailPage = React.lazy(() => import('./pages/sales/CommissionDetailPage'));
-const CommissionStructurePage = React.lazy(() => import('./pages/sales/CommissionStructurePage'));
-const CommissionPaymentsPage = React.lazy(() => import('./pages/sales/CommissionPaymentsPage'));
-const CommissionReportsPage = React.lazy(() => import('./pages/sales/CommissionReportsPage'));
 
 // Payment Management Pages - UNCHANGED
 const PaymentDashboardPage = React.lazy(() => import('./pages/payments/PaymentDashboardPage'));
@@ -163,6 +157,7 @@ const ChannelPartnerListPage = React.lazy(() => import('./pages/channel-partners
 const ChannelPartnerFormPage = React.lazy(() => import('./pages/channel-partners/ChannelPartnerFormPage'));
 const CommissionRuleListPage = React.lazy(() => import('./pages/channel-partners/CommissionRuleListPage'));
 const CommissionRuleFormPage = React.lazy(() => import('./pages/channel-partners/CommissionRuleFormPage'));
+const CommissionRecordListPage = React.lazy(() => import('./pages/channel-partners/CommissionRecordListPage'));
 
 // Chat
 const ChatPage = React.lazy(() => import('./pages/chat/ChatPage'));
@@ -740,90 +735,6 @@ const AppRoutes = () => {
       } />
 
       {/* ========================================= */}
-      {/* COMMISSION MANAGEMENT ROUTES - UNCHANGED */}
-      {/* ========================================= */}
-
-      <Route path="/sales/commissions" element={
-        <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesPipeline()}>
-          <DashboardLayout>
-            <Suspense fallback={<LoadingFallback message="Loading commission dashboard..." />}>
-              <CommissionDashboardPage />
-            </Suspense>
-          </DashboardLayout>
-        </ProtectedRoute>
-      } />
-
-      <Route path="/sales/commissions/list" element={
-        <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesPipeline()}>
-          <DashboardLayout>
-            <Suspense fallback={<LoadingFallback message="Loading commission list..." />}>
-              <CommissionListPage />
-            </Suspense>
-          </DashboardLayout>
-        </ProtectedRoute>
-      } />
-
-      <Route path="/sales/commissions/list/:commissionId" element={
-        <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesPipeline()}>
-          <DashboardLayout>
-            <Suspense fallback={<LoadingFallback message="Loading commission details..." />}>
-              <CommissionDetailPage />
-            </Suspense>
-          </DashboardLayout>
-        </ProtectedRoute>
-      } />
-
-      <Route path="/sales/commissions/list/:commissionId/edit" element={
-        <ProtectedRoute requiredPermission={(canAccess) => canAccess.projectManagement()}>
-          <DashboardLayout>
-            <Suspense fallback={<LoadingFallback message="Loading commission editor..." />}>
-              <CommissionDetailPage />
-            </Suspense>
-          </DashboardLayout>
-        </ProtectedRoute>
-      } />
-
-      <Route path="/sales/commissions/structures" element={
-        <ProtectedRoute requiredPermission={(canAccess) => canAccess.projectManagement()}>
-          <DashboardLayout>
-            <Suspense fallback={<LoadingFallback message="Loading commission structures..." />}>
-              <CommissionStructurePage />
-            </Suspense>
-          </DashboardLayout>
-        </ProtectedRoute>
-      } />
-
-      <Route path="/sales/commissions/payments" element={
-        <ProtectedRoute requiredPermission={(canAccess) => canAccess.viewFinancials()}>
-          <DashboardLayout>
-            <Suspense fallback={<LoadingFallback message="Loading commission payments..." />}>
-              <CommissionPaymentsPage />
-            </Suspense>
-          </DashboardLayout>
-        </ProtectedRoute>
-      } />
-
-      <Route path="/sales/commissions/payments/:commissionId" element={
-        <ProtectedRoute requiredPermission={(canAccess) => canAccess.viewFinancials()}>
-          <DashboardLayout>
-            <Suspense fallback={<LoadingFallback message="Loading commission payment..." />}>
-              <CommissionPaymentsPage />
-            </Suspense>
-          </DashboardLayout>
-        </ProtectedRoute>
-      } />
-
-      <Route path="/sales/commissions/reports" element={
-        <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesReports()}>
-          <DashboardLayout>
-            <Suspense fallback={<LoadingFallback message="Loading commission reports..." />}>
-              <CommissionReportsPage />
-            </Suspense>
-          </DashboardLayout>
-        </ProtectedRoute>
-      } />
-
-      {/* ========================================= */}
       {/* PAYMENT MANAGEMENT ROUTES - UNCHANGED */}
       {/* ========================================= */}
 
@@ -1374,6 +1285,15 @@ const AppRoutes = () => {
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback message="Loading rule..." />}>
               <CommissionRuleFormPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/channel-partners/commission-records" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.channelPartners()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading commission records..." />}>
+              <CommissionRecordListPage />
             </Suspense>
           </DashboardLayout>
         </ProtectedRoute>

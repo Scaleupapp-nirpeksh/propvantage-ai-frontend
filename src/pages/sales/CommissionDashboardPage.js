@@ -1,3 +1,4 @@
+// DEPRECATED (2026-05-20): superseded by the Channel Partners module. No longer routed. Pending removal.
 // File: src/pages/sales/CommissionDashboardPage.js
 // Description: Main commission management dashboard with overview metrics, recent commissions, and quick actions
 // Version: 1.0 - Complete commission dashboard with backend integration

@@ -1,3 +1,4 @@
+// DEPRECATED (2026-05-20): superseded by the Channel Partners module. No longer routed. Pending removal.
 // File: src/pages/sales/CommissionStructurePage.js
 // Description: Commission structure management page for creating and managing commission rules and calculation methods
 // Version: 1.0 - Complete commission structure management with backend integration

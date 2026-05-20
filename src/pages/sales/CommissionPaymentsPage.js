@@ -1,3 +1,4 @@
+// DEPRECATED (2026-05-20): superseded by the Channel Partners module. No longer routed. Pending removal.
 // File: src/pages/sales/CommissionPaymentsPage.js
 // Description: Commission payment processing page for recording and managing commission payments
 // Version: 1.0 - Complete commission payment management with backend integration

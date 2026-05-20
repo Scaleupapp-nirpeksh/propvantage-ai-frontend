@@ -152,7 +152,6 @@ const getNavigationItems = (userRole, canAccess) => {
             { id: 'sales-pipeline', title: 'Pipeline', icon: Timeline, path: '/sales/pipeline', requiredAccess: () => canAccess.salesPipeline() },
             { id: 'sales-reports', title: 'Sales Reports', icon: BarChart, path: '/sales/reports', requiredAccess: () => canAccess.salesReports() },
             { id: 'invoices', title: 'Invoices', icon: Receipt, path: '/sales/invoices', requiredAccess: () => canAccess.salesReports() },
-            { id: 'commissions', title: 'Commissions', icon: Handshake, path: '/sales/commissions', requiredAccess: () => canAccess.salesPipeline() || canAccess.viewFinancials() },
           ],
         },
         {
@@ -207,6 +206,7 @@ const getNavigationItems = (userRole, canAccess) => {
           children: [
             { id: 'cp-list', title: 'All Partners', path: '/channel-partners' },
             { id: 'cp-rules', title: 'Commission Rules', path: '/channel-partners/commission-rules' },
+            { id: 'cp-records', title: 'Commission Records', path: '/channel-partners/commission-records' },
           ],
         },
       ],

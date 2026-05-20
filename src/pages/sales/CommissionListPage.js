@@ -1,3 +1,4 @@
+// DEPRECATED (2026-05-20): superseded by the Channel Partners module. No longer routed. Pending removal.
 // File: src/pages/sales/CommissionListPage.js
 // Description: Comprehensive commission list page with filtering, sorting, pagination, and bulk actions
 // Version: 1.0 - Complete commission management with backend integration

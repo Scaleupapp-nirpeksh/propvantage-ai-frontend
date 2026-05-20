@@ -1,3 +1,4 @@
+// DEPRECATED (2026-05-20): superseded by the Channel Partners module. No longer routed. Pending removal.
 // File: src/pages/sales/CommissionDetailPage.js
 // Description: Detailed commission view page with comprehensive information, actions, and status management
 // Version: 1.0 - Complete commission detail page with backend integration

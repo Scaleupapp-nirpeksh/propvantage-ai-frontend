@@ -1,3 +1,4 @@
+// DEPRECATED (2026-05-20): superseded by the Channel Partners module. No longer routed. Pending removal.
 // File: src/pages/sales/CommissionReportsPage.js
 // Description: Comprehensive commission reporting and analytics page with data visualization and export capabilities
 // Version: 1.0 - Complete commission reporting system with backend integration
