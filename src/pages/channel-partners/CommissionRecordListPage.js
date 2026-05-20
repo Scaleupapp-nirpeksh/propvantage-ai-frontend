@@ -6,10 +6,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Typography, Table, TableBody, TableCell, TableHead, TableRow, Chip,
   CircularProgress, Alert, Button, MenuItem, TextField, Stack, Collapse,
-  IconButton,
+  IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
 } from '@mui/material';
 import { KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material';
 import { channelPartnerAPI } from '../../services/api';
+import ChannelPartnerAttributionFields from '../../components/channel-partners/ChannelPartnerAttributionFields';
 
 const STATUS_COLOR = {
   accrued: 'default',
@@ -21,7 +22,7 @@ const STATUS_COLOR = {
 const inr = (n) =>
   n === null || n === undefined ? '—' : `₹${Math.round(n).toLocaleString('en-IN')}`;
 
-const RecordRow = ({ record, onPay, payingKey }) => {
+const RecordRow = ({ record, onPay, payingKey, onEditAttribution }) => {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -80,6 +81,18 @@ const RecordRow = ({ record, onPay, payingKey }) => {
                   ))}
                 </TableBody>
               </Table>
+              {record.status !== 'cancelled' && (
+                <Box sx={{ mt: 1 }}>
+                  <Button
+                    size="small"
+                    onClick={() =>
+                      onEditAttribution(record.sale?._id || record.sale, record.sale?.project?.name)
+                    }
+                  >
+                    Edit booking attribution
+                  </Button>
+                </Box>
+              )}
             </Box>
           </Collapse>
         </TableCell>
@@ -94,6 +107,24 @@ const CommissionRecordListPage = () => {
   const [error, setError] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [payingKey, setPayingKey] = useState(null);
+
+  const [editSale, setEditSale] = useState(null); // { saleId, projectName }
+  const [editValue, setEditValue] = useState({ viaChannelPartner: false, partners: [] });
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  // Open the edit dialog for a booking — prefill from all of that sale's records.
+  const openEditDialog = (saleId, projectName) => {
+    const saleRecords = records.filter((r) => (r.sale?._id || r.sale) === saleId);
+    setEditSale({ saleId, projectName });
+    setEditValue({
+      viaChannelPartner: true,
+      partners: saleRecords.map((r) => ({
+        channelPartner: r.channelPartner?._id || r.channelPartner,
+        agent: r.agent?._id || r.agent || null,
+        sharePct: r.sharePct,
+      })),
+    });
+  };
 
   const fetchRecords = useCallback(async () => {
     setLoading(true);
@@ -113,6 +144,34 @@ const CommissionRecordListPage = () => {
   useEffect(() => {
     fetchRecords();
   }, [fetchRecords]);
+
+  const saveEdit = async () => {
+    const validPartners = (editValue.partners || []).filter(
+      (p) => p.channelPartner && Number(p.sharePct) > 0
+    );
+    const sum = validPartners.reduce((a, p) => a + Number(p.sharePct), 0);
+    if (editValue.viaChannelPartner && (validPartners.length === 0 || Math.abs(sum - 100) > 0.01)) {
+      setError('Commission split must total 100% across selected partners.');
+      return;
+    }
+    setSavingEdit(true);
+    try {
+      await channelPartnerAPI.editSaleAttribution(editSale.saleId, {
+        viaChannelPartner: editValue.viaChannelPartner,
+        partners: validPartners.map((p) => ({
+          channelPartner: p.channelPartner,
+          agent: p.agent || null,
+          sharePct: Number(p.sharePct) || 0,
+        })),
+      });
+      setEditSale(null);
+      await fetchRecords();
+    } catch (e) {
+      setError(e.response?.data?.message || 'Failed to update attribution.');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
 
   const handlePay = async (recordId, index) => {
     setPayingKey(`${recordId}-${index}`);
@@ -175,11 +234,34 @@ const CommissionRecordListPage = () => {
           </TableHead>
           <TableBody>
             {records.map((r) => (
-              <RecordRow key={r._id} record={r} onPay={handlePay} payingKey={payingKey} />
+              <RecordRow
+                key={r._id}
+                record={r}
+                onPay={handlePay}
+                payingKey={payingKey}
+                onEditAttribution={openEditDialog}
+              />
             ))}
           </TableBody>
         </Table>
       )}
+
+      <Dialog open={Boolean(editSale)} onClose={() => setEditSale(null)} fullWidth maxWidth="sm">
+        <DialogTitle>
+          Edit attribution{editSale?.projectName ? ` — ${editSale.projectName}` : ''}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 1 }}>
+            <ChannelPartnerAttributionFields value={editValue} onChange={setEditValue} />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditSale(null)} disabled={savingEdit}>Cancel</Button>
+          <Button variant="contained" onClick={saveEdit} disabled={savingEdit}>
+            {savingEdit ? 'Saving…' : 'Save'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
