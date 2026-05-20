@@ -33,6 +33,9 @@ import {
   Avatar,
   Breadcrumbs,
   Link,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
 } from '@mui/material';
 import {
   ArrowBack,
@@ -48,6 +51,7 @@ import {
   Home,
   Assignment,
   ContactPhone,
+  ExpandMore,
 } from '@mui/icons-material';
 import { useSnackbar } from 'notistack';
 
@@ -357,6 +361,13 @@ const CreateLeadPage = () => {
     followUpDate: null,
     followUpType: 'Call', // FIXED: Changed from 'call' to 'Call' to match Interaction model
     followUpNotes: '',
+
+    // AI enrichment research sources (optional)
+    researchSources: {
+      linkedinUrl: '',
+      companyWebsite: '',
+      articleUrls: [''],
+    },
   });
 
   // Load initial data
@@ -426,13 +437,42 @@ const CreateLeadPage = () => {
       ...prev,
       [field]: values,
     }));
-    
+
     if (errors[field]) {
       setErrors(prev => ({
         ...prev,
         [field]: '',
       }));
     }
+  };
+
+  // Handle research source field changes (nested under researchSources)
+  const handleResearchSourceChange = (key, value) => {
+    setFormData(prev => ({
+      ...prev,
+      researchSources: { ...prev.researchSources, [key]: value },
+    }));
+  };
+
+  const handleArticleUrlChange = (index, value) => {
+    setFormData(prev => {
+      const next = [...prev.researchSources.articleUrls];
+      next[index] = value;
+      return {
+        ...prev,
+        researchSources: { ...prev.researchSources, articleUrls: next },
+      };
+    });
+  };
+
+  const addArticleUrlField = () => {
+    setFormData(prev => ({
+      ...prev,
+      researchSources: {
+        ...prev.researchSources,
+        articleUrls: [...prev.researchSources.articleUrls, ''],
+      },
+    }));
   };
 
   // Navigation handlers
@@ -512,7 +552,18 @@ const CreateLeadPage = () => {
         
         // Additional notes
         notes: formData.notes.trim() || undefined,
-        
+
+        // AI enrichment research sources (optional)
+        enrichment: {
+          sources: {
+            linkedinUrl: formData.researchSources.linkedinUrl.trim(),
+            companyWebsite: formData.researchSources.companyWebsite.trim(),
+            articleUrls: formData.researchSources.articleUrls
+              .map((u) => u.trim())
+              .filter(Boolean),
+          },
+        },
+
         // FIXED: Follow-up with correct Interaction model enum values (Capitalized)
         followUpSchedule: formData.scheduleFollowUp ? {
           nextFollowUpDate: formData.followUpDate,
@@ -1241,6 +1292,62 @@ const CreateLeadPage = () => {
           rows={4}
           helperText="Include any relevant information about the lead's preferences, conversation details, etc."
         />
+      </Grid>
+
+      <Grid item xs={12}>
+        <Accordion>
+          <AccordionSummary expandIcon={<ExpandMore />}>
+            <Box>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                Research sources (optional)
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Add public links and the AI will build a short brief on this lead in the background.
+              </Typography>
+            </Box>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="LinkedIn profile URL"
+                  placeholder="https://www.linkedin.com/in/..."
+                  value={formData.researchSources.linkedinUrl}
+                  onChange={(e) => handleResearchSourceChange('linkedinUrl', e.target.value)}
+                  disabled={isLoading}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Company website URL"
+                  placeholder="https://company.com"
+                  value={formData.researchSources.companyWebsite}
+                  onChange={(e) => handleResearchSourceChange('companyWebsite', e.target.value)}
+                  disabled={isLoading}
+                />
+              </Grid>
+              {formData.researchSources.articleUrls.map((url, index) => (
+                <Grid item xs={12} key={index}>
+                  <TextField
+                    fullWidth
+                    label={`News article URL ${index + 1}`}
+                    placeholder="https://..."
+                    value={url}
+                    onChange={(e) => handleArticleUrlChange(index, e.target.value)}
+                    disabled={isLoading}
+                  />
+                </Grid>
+              ))}
+              <Grid item xs={12}>
+                <Button size="small" onClick={addArticleUrlField} disabled={isLoading}>
+                  + Add another article
+                </Button>
+              </Grid>
+            </Grid>
+          </AccordionDetails>
+        </Accordion>
       </Grid>
     </Grid>
   );
