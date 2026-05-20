@@ -75,10 +75,12 @@ const ChannelPartnerFormPage = () => {
         navigate(`/channel-partners/${id}`);
       } else {
         const res = await channelPartnerAPI.createChannelPartner(form);
-        navigate(`/channel-partners/${res.data.data._id}`);
+        const created = res.data?.data;
+        navigate(created?._id ? `/channel-partners/${created._id}` : '/channel-partners');
       }
     } catch (e) {
       setError(e.response?.data?.message || 'Failed to save partner.');
+    } finally {
       setSaving(false);
     }
   };
@@ -225,7 +227,7 @@ const ChannelPartnerFormPage = () => {
                       <TableCell>{a.phone || '—'}</TableCell>
                       <TableCell>{a.email || '—'}</TableCell>
                       <TableCell>{a.reraAgentNumber || '—'}</TableCell>
-                      <TableCell>{a.status}</TableCell>
+                      <TableCell>{a.status || '—'}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

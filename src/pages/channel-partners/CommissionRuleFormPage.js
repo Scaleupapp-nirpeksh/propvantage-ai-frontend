@@ -51,7 +51,10 @@ const CommissionRuleFormPage = () => {
         ...emptyForm, ...d,
         appliesToProject: d.appliesToProject?._id || d.appliesToProject || null,
         rate: { ...emptyForm.rate, ...d.rate },
-        payout: { schedule: d.payout?.schedule || 'lump_sum', tranches: d.payout?.tranches || [] },
+        payout: {
+          schedule: d.payout?.schedule || 'lump_sum',
+          tranches: (d.payout?.tranches || []).map((t, i) => ({ ...t, _key: `t${i}` })),
+        },
       });
     } catch (e) {
       setError(e.response?.data?.message || 'Failed to load rule.');
@@ -71,7 +74,14 @@ const CommissionRuleFormPage = () => {
     return { ...p, payout: { ...p.payout, tranches } };
   });
   const addTranche = () => setForm((p) => ({
-    ...p, payout: { ...p.payout, tranches: [...p.payout.tranches, { label: '', percentage: 0, trigger: 'on_booking' }] },
+    ...p,
+    payout: {
+      ...p.payout,
+      tranches: [
+        ...p.payout.tranches,
+        { label: '', percentage: 0, trigger: 'on_booking', _key: `t${Date.now()}${Math.random()}` },
+      ],
+    },
   }));
   const removeTranche = (i) => setForm((p) => ({
     ...p, payout: { ...p.payout, tranches: p.payout.tranches.filter((_, idx) => idx !== i) },
@@ -92,11 +102,20 @@ const CommissionRuleFormPage = () => {
     setError('');
     const payload = {
       ...form,
-      tranches: undefined,
+      rate: {
+        ...form.rate,
+        percentage: Number(form.rate.percentage) || 0,
+        flatAmount: Number(form.rate.flatAmount) || 0,
+      },
+      tdsPercent: Number(form.tdsPercent) || 0,
       payout: {
         schedule: form.payout.schedule,
         tranches: form.payout.schedule === 'tranches'
-          ? form.payout.tranches.map((t) => ({ ...t, percentage: Number(t.percentage) || 0 }))
+          ? form.payout.tranches.map((t) => ({
+              label: t.label,
+              percentage: Number(t.percentage) || 0,
+              trigger: t.trigger,
+            }))
           : [],
       },
     };
@@ -109,6 +128,7 @@ const CommissionRuleFormPage = () => {
       navigate('/channel-partners/commission-rules');
     } catch (e) {
       setError(e.response?.data?.message || 'Failed to save rule.');
+    } finally {
       setSaving(false);
     }
   };
@@ -208,7 +228,7 @@ const CommissionRuleFormPage = () => {
           {form.payout.schedule === 'tranches' && (
             <Box>
               {form.payout.tranches.map((t, i) => (
-                <Stack key={i} direction="row" spacing={1} sx={{ mb: 1 }} alignItems="center">
+                <Stack key={t._key || i} direction="row" spacing={1} sx={{ mb: 1 }} alignItems="center">
                   <TextField label="Label" value={t.label} sx={{ flex: 2 }}
                     onChange={(e) => setTranche(i, 'label', e.target.value)} />
                   <TextField label="%" type="number" value={t.percentage} sx={{ flex: 1 }}
