@@ -85,7 +85,7 @@ const LeadEnrichmentCard = ({ lead, onRefresh }) => {
             sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}
           >
             <AutoAwesome color="primary" />
-            AI Enrichment
+            Lead Profile Summary
           </Typography>
           {status === 'completed' && (
             <Button size="small" startIcon={<Refresh />} onClick={openDialog}>
