@@ -107,11 +107,18 @@ const LeadEnrichmentCard = ({ lead, onRefresh }) => {
         )}
 
         {(status === 'pending' || status === 'researching') && (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 2 }}>
-            <CircularProgress size={22} />
-            <Typography variant="body2" color="text.secondary">
-              Researching… this usually takes about 30 seconds.
-            </Typography>
+          <Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 2 }}>
+              <CircularProgress size={22} />
+              <Typography variant="body2" color="text.secondary">
+                Researching… this usually takes about 30 seconds.
+              </Typography>
+            </Box>
+            {/* Recovery affordance: if a job is stuck (e.g. the server restarted
+                mid-research), the user can still re-trigger it from here. */}
+            <Button size="small" startIcon={<Refresh />} onClick={openDialog}>
+              Taking too long? Re-run research
+            </Button>
           </Box>
         )}
 
