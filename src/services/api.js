@@ -840,6 +840,26 @@ export const commissionAPI = {
 };
 
 // =============================================================================
+// CHANNEL PARTNER SERVICES (/api/channel-partners)
+// =============================================================================
+export const channelPartnerAPI = {
+  // Firms
+  getChannelPartners: (params = {}) => api.get('/channel-partners', { params }),
+  getChannelPartner: (id) => api.get(`/channel-partners/${id}`),
+  createChannelPartner: (data) => api.post('/channel-partners', data),
+  updateChannelPartner: (id, data) => api.put(`/channel-partners/${id}`, data),
+  // Agents
+  getAgents: (partnerId) => api.get(`/channel-partners/${partnerId}/agents`),
+  createAgent: (partnerId, data) => api.post(`/channel-partners/${partnerId}/agents`, data),
+  updateAgent: (agentId, data) => api.put(`/channel-partners/agents/${agentId}`, data),
+  // Commission rules
+  getCommissionRules: (params = {}) => api.get('/channel-partners/commission-rules', { params }),
+  getCommissionRule: (id) => api.get(`/channel-partners/commission-rules/${id}`),
+  createCommissionRule: (data) => api.post('/channel-partners/commission-rules', data),
+  updateCommissionRule: (id, data) => api.put(`/channel-partners/commission-rules/${id}`, data),
+};
+
+// =============================================================================
 // 18-22. ALL OTHER SERVICES REMAIN UNCHANGED
 // =============================================================================
 
@@ -1480,6 +1500,7 @@ const apiServices = {
   predictive: predictiveAPI,
   payment: paymentAPI,
   commission: commissionAPI,
+  channelPartner: channelPartnerAPI,
   document: documentAPI,
   construction: constructionAPI,
   contractor: contractorAPI,
