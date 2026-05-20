@@ -16,7 +16,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
 import { useAuth } from '../../context/AuthContext';
-import { salesAPI, projectAPI, userAPI } from '../../services/api';
+import { salesAPI, projectAPI, userAPI, channelPartnerAPI } from '../../services/api';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { PageHeader, KPICard, FilterBar, DataTable } from '../../components/common';
 import { useProjectContext } from '../../context/ProjectContext';
@@ -159,6 +159,7 @@ const SalesListPage = () => {
   const [sales, setSales] = useState([]);
   const [projects, setProjects] = useState([]);
   const [users, setUsers] = useState([]);
+  const [channelPartners, setChannelPartners] = useState([]);
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -177,6 +178,7 @@ const SalesListPage = () => {
     paymentStatus: searchParams.get('paymentStatus') || '',
     project: searchParams.get('project') || activeProjectId || '',
     salesperson: searchParams.get('salesperson') || '',
+    channelPartner: searchParams.get('channelPartner') || '',
     sortBy: searchParams.get('sortBy') || 'bookingDate',
     sortOrder: searchParams.get('sortOrder') || 'desc',
   });
@@ -210,6 +212,7 @@ const SalesListPage = () => {
         paymentStatus: filters.paymentStatus || undefined,
         project: filters.project || undefined,
         salesperson: filters.salesperson || undefined,
+        channelPartner: filters.channelPartner || undefined,
         sortBy: filters.sortBy, sortOrder: filters.sortOrder,
       };
       Object.keys(queryParams).forEach(k => queryParams[k] === undefined && delete queryParams[k]);
@@ -257,6 +260,13 @@ const SalesListPage = () => {
 
   useEffect(() => { fetchAllData(); }, [fetchAllData]);
 
+  useEffect(() => {
+    channelPartnerAPI
+      .getChannelPartners({ status: 'active' })
+      .then((res) => setChannelPartners(res.data?.data || []))
+      .catch(() => setChannelPartners([]));
+  }, []);
+
   // Sync filters → URL
   useEffect(() => {
     const params = new URLSearchParams();
@@ -275,7 +285,7 @@ const SalesListPage = () => {
   };
 
   const clearFilters = () => {
-    setFilters({ search: '', status: '', paymentStatus: '', project: '', salesperson: '', sortBy: 'bookingDate', sortOrder: 'desc' });
+    setFilters({ search: '', status: '', paymentStatus: '', project: '', salesperson: '', channelPartner: '', sortBy: 'bookingDate', sortOrder: 'desc' });
     setSearchInput('');
     setPagination(prev => ({ ...prev, page: 1 }));
   };
@@ -310,6 +320,7 @@ const SalesListPage = () => {
     { key: 'paymentStatus', type: 'select', label: 'Payment', options: PAYMENT_STATUSES.map(s => ({ value: s.value, label: s.label })) },
     { key: 'project', type: 'select', label: 'Project', options: projects.map(p => ({ value: p._id, label: p.name })) },
     { key: 'salesperson', type: 'select', label: 'Salesperson', options: users.filter(u => u.role?.includes('Sales')).map(u => ({ value: u._id, label: `${u.firstName} ${u.lastName}` })) },
+    { key: 'channelPartner', type: 'select', label: 'Channel Partner', options: channelPartners.map(cp => ({ value: cp._id, label: cp.firmName })) },
   ];
 
   // Table columns
@@ -374,6 +385,18 @@ const SalesListPage = () => {
             <Typography variant="body2" noWrap>{name}</Typography>
           </Box>
         );
+      },
+    },
+    {
+      id: 'channelPartner', label: 'Channel Partner', sortable: false, hideOnMobile: true,
+      render: (_, row) => {
+        const a = row.channelPartnerAttribution;
+        if (!a || !a.viaChannelPartner || !(a.partners || []).length) {
+          return <Typography variant="body2" color="text.secondary">—</Typography>;
+        }
+        const first = (a.partners[0]?.channelPartner?.firmName) || 'Channel partner';
+        const extra = a.partners.length > 1 ? ` +${a.partners.length - 1}` : '';
+        return <Chip size="small" label={`${first}${extra}`} />;
       },
     },
     {
