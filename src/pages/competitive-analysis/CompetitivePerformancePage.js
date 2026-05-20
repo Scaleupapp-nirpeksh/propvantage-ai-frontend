@@ -26,6 +26,8 @@ const pct = (n) => (n === null || n === undefined ? '—' : `${n}%`);
 
 const CONFIDENCE_COLOR = { High: 'success', Medium: 'warning', Low: 'error' };
 
+const AI_POLL_INTERVAL_MS = 4000;
+
 const SectionCard = ({ icon, title, children }) => (
   <Card sx={{ height: '100%' }}>
     <CardContent>
@@ -96,7 +98,7 @@ const CompetitivePerformancePage = () => {
           setAiState('done');
         } else {
           setAiState('loading');
-          timer = setTimeout(poll, 4000);
+          timer = setTimeout(poll, AI_POLL_INTERVAL_MS);
         }
       } catch (e) {
         if (!cancelled) setAiState('failed');
@@ -183,10 +185,10 @@ const CompetitivePerformancePage = () => {
             </CardContent>
           </Card>
 
-          {!scorecard.meta.hasCompetitorData && (
+          {scorecard.meta && !scorecard.meta.hasCompetitorData && (
             <Alert severity="warning" sx={{ mb: 3 }}>
-              No competitors are tracked in {scorecard.meta.locality}. Pricing, inventory and
-              positioning comparisons will be limited — add competitors or run AI research.
+              No competitors are tracked in {scorecard.meta.locality || 'this locality'}. Pricing,
+              inventory and positioning comparisons will be limited — add competitors or run AI research.
             </Alert>
           )}
 
@@ -217,11 +219,11 @@ const CompetitivePerformancePage = () => {
                   </Box>
                 )}
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-                  Market ₹/sqft — min {scorecard.pricing.market.min ?? '—'} · median{' '}
-                  {scorecard.pricing.market.median ?? '—'} · max {scorecard.pricing.market.max ?? '—'}
+                  Market ₹/sqft — min {scorecard.pricing.market?.min ?? '—'} · median{' '}
+                  {scorecard.pricing.market?.median ?? '—'} · max {scorecard.pricing.market?.max ?? '—'}
                   {' '}({scorecard.pricing.competitorCount} competitors)
                 </Typography>
-                {scorecard.pricing.byUnitType.length > 0 && (
+                {(scorecard.pricing.byUnitType?.length ?? 0) > 0 && (
                   <Table size="small" sx={{ mt: 1 }}>
                     <TableHead>
                       <TableRow>
@@ -236,8 +238,8 @@ const CompetitivePerformancePage = () => {
                         <TableRow key={r.unitType}>
                           <TableCell>{r.unitType}</TableCell>
                           <TableCell align="right">{r.yourPsf ?? '—'}</TableCell>
-                          <TableCell align="right">{r.marketPsf.avg ?? '—'}</TableCell>
-                          <TableCell align="right">{r.deltaPct !== null ? pct(r.deltaPct) : '—'}</TableCell>
+                          <TableCell align="right">{r.marketPsf?.avg ?? '—'}</TableCell>
+                          <TableCell align="right">{pct(r.deltaPct)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -299,15 +301,17 @@ const CompetitivePerformancePage = () => {
                   </TableHead>
                   <TableBody>
                     {(() => {
+                      const yourUnsold = scorecard.inventory.yourUnsoldByType ?? [];
+                      const competingSupply = scorecard.inventory.competingSupplyByType ?? [];
                       const types = [
                         ...new Set([
-                          ...scorecard.inventory.yourUnsoldByType.map((r) => r.unitType),
-                          ...scorecard.inventory.competingSupplyByType.map((r) => r.unitType),
+                          ...yourUnsold.map((r) => r.unitType),
+                          ...competingSupply.map((r) => r.unitType),
                         ]),
                       ];
                       return types.map((t) => {
-                        const yours = scorecard.inventory.yourUnsoldByType.find((r) => r.unitType === t);
-                        const mkt = scorecard.inventory.competingSupplyByType.find((r) => r.unitType === t);
+                        const yours = yourUnsold.find((r) => r.unitType === t);
+                        const mkt = competingSupply.find((r) => r.unitType === t);
                         return (
                           <TableRow key={t}>
                             <TableCell>{t}</TableCell>
@@ -345,7 +349,7 @@ const CompetitivePerformancePage = () => {
                     </TableHead>
                     <TableBody>
                       {scorecard.positioning.competitors.map((c, i) => (
-                        <TableRow key={i}>
+                        <TableRow key={c.name || i}>
                           <TableCell>{c.name}</TableCell>
                           <TableCell>{c.projectStatus || '—'}</TableCell>
                           <TableCell>{c.possession || '—'}</TableCell>
@@ -368,7 +372,7 @@ const CompetitivePerformancePage = () => {
                       {scorecard.demand.yourLeads.last30d} in the last 30 days
                     </Typography>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
-                      {scorecard.demand.yourLeads.qualityMix.map((q) => (
+                      {(scorecard.demand.yourLeads.qualityMix ?? []).map((q) => (
                         <Chip key={q.grade} size="small" label={`${q.grade}: ${q.count}`} />
                       ))}
                     </Box>
@@ -407,7 +411,7 @@ const CompetitivePerformancePage = () => {
                             </Typography>
                             {ai.marketDemand.sources.map((s, i) => (
                               <Link
-                                key={i}
+                                key={s.url || i}
                                 href={s.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
@@ -461,9 +465,7 @@ const CompetitivePerformancePage = () => {
                           </TableCell>
                           <TableCell>{c.developer}</TableCell>
                           <TableCell align="right">{c.avgPsf ?? '—'}</TableCell>
-                          <TableCell align="right">
-                            {c.deltaPsfPct !== null ? pct(c.deltaPsfPct) : '—'}
-                          </TableCell>
+                          <TableCell align="right">{pct(c.deltaPsfPct)}</TableCell>
                           <TableCell>{c.projectStatus || '—'}</TableCell>
                         </TableRow>
                       ))}
