@@ -77,6 +77,7 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { useAuth } from '../../context/AuthContext';
 import { useChat } from '../../context/ChatContext';
 import { leadAPI, aiAPI } from '../../services/api';
+import LeadEnrichmentCard from '../../components/leads/LeadEnrichmentCard';
 
 // =============================================================================
 // UTILITY FUNCTIONS
@@ -374,9 +375,14 @@ const LeadHeader = ({ lead, onEdit, onRefresh, isLoading }) => {
 // LEAD OVERVIEW COMPONENT
 // =============================================================================
 
-const LeadOverview = ({ lead }) => {
+const LeadOverview = ({ lead, onRefresh }) => {
   return (
     <Grid container spacing={3}>
+      {/* AI Enrichment */}
+      <Grid item xs={12}>
+        <LeadEnrichmentCard lead={lead} onRefresh={onRefresh} />
+      </Grid>
+
       {/* Contact Information */}
       <Grid item xs={12} md={6}>
         <Card>
@@ -1251,16 +1257,15 @@ const LeadDetailPage = () => {
   const [activeTab, setActiveTab] = useState(0);
 
   // Fetch lead data
-  const fetchLead = useCallback(async () => {
+  const fetchLead = useCallback(async (opts = {}) => {
+    const { silent = false } = opts;
     try {
-      setLoading(true);
-      setError(null);
-
-      console.log('🔄 Fetching lead data for ID:', leadId);
+      if (!silent) {
+        setLoading(true);
+        setError(null);
+      }
 
       const response = await leadAPI.getLead(leadId);
-      
-      console.log('✅ Lead API response:', response.data);
 
       let leadData;
       if (response.data.data) {
@@ -1275,9 +1280,13 @@ const LeadDetailPage = () => {
 
     } catch (error) {
       console.error('❌ Error fetching lead:', error);
-      setError('Failed to load lead details. Please try again.');
+      if (!silent) {
+        setError('Failed to load lead details. Please try again.');
+      }
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   }, [leadId]);
 
@@ -1287,6 +1296,15 @@ const LeadDetailPage = () => {
       fetchLead();
     }
   }, [fetchLead, leadId]);
+
+  // Poll while AI enrichment is running
+  useEffect(() => {
+    const status = lead?.enrichment?.status;
+    if (status === 'pending' || status === 'researching') {
+      const timer = setTimeout(() => fetchLead({ silent: true }), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [lead, fetchLead]);
 
   const handleEdit = () => {
     navigate(`/leads/${leadId}/edit`);
@@ -1383,7 +1401,7 @@ const LeadDetailPage = () => {
       </Paper>
 
       {/* Tab Content */}
-      {activeTab === 0 && <LeadOverview lead={lead} />}
+      {activeTab === 0 && <LeadOverview lead={lead} onRefresh={fetchLead} />}
       {activeTab === 1 && <AIInsights lead={lead} />}
       {activeTab === 2 && <Interactions lead={lead} />}
       {activeTab === 3 && <FollowUpManagement lead={lead} onRefresh={fetchLead} />}
