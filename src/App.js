@@ -158,6 +158,12 @@ const AIAnalysisPage = React.lazy(() => import('./pages/competitive-analysis/AIA
 const DataProvidersPage = React.lazy(() => import('./pages/competitive-analysis/DataProvidersPage'));
 const CompetitivePerformancePage = React.lazy(() => import('./pages/competitive-analysis/CompetitivePerformancePage'));
 
+// Channel Partners
+const ChannelPartnerListPage = React.lazy(() => import('./pages/channel-partners/ChannelPartnerListPage'));
+const ChannelPartnerFormPage = React.lazy(() => import('./pages/channel-partners/ChannelPartnerFormPage'));
+const CommissionRuleListPage = React.lazy(() => import('./pages/channel-partners/CommissionRuleListPage'));
+const CommissionRuleFormPage = React.lazy(() => import('./pages/channel-partners/CommissionRuleFormPage'));
+
 // Chat
 const ChatPage = React.lazy(() => import('./pages/chat/ChatPage'));
 
@@ -1319,6 +1325,64 @@ const AppRoutes = () => {
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback message="Loading chat..." />}>
               <ChatPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* ========================================= */}
+      {/* CHANNEL PARTNER ROUTES */}
+      {/* ========================================= */}
+      <Route path="/channel-partners" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.channelPartners()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading channel partners..." />}>
+              <ChannelPartnerListPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/channel-partners/create" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.channelPartners()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading form..." />}>
+              <ChannelPartnerFormPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/channel-partners/commission-rules" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.channelPartners()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading commission rules..." />}>
+              <CommissionRuleListPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/channel-partners/commission-rules/create" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.channelPartners()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading form..." />}>
+              <CommissionRuleFormPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/channel-partners/commission-rules/:id" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.channelPartners()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading rule..." />}>
+              <CommissionRuleFormPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/channel-partners/:id" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.channelPartners()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading partner..." />}>
+              <ChannelPartnerFormPage />
             </Suspense>
           </DashboardLayout>
         </ProtectedRoute>

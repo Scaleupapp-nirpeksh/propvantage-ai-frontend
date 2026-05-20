@@ -754,6 +754,9 @@ export const AuthProvider = ({ children }) => {
     compAnalysisAIResearch: () => _useNew ? checkPerm('competitive_analysis:ai_research') : hasPermission('MANAGEMENT'),
     compAnalysisAIRecommendations: () => _useNew ? checkPerm('competitive_analysis:ai_recommendations') : hasPermission('MANAGEMENT'),
     compAnalysisManageProviders: () => _useNew ? checkPerm('competitive_analysis:manage_providers') : hasPermission('ADMIN'),
+
+    // Channel Partners
+    channelPartners: () => _useNew ? checkPerm('channel_partners:view') : hasPermission('MANAGEMENT'),
   };
 
   // Context value

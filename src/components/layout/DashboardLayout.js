@@ -198,6 +198,17 @@ const getNavigationItems = (userRole, canAccess) => {
           path: '/chat',
           requiredAccess: () => canAccess.chatAccess(),
         },
+        {
+          id: 'channel-partners',
+          title: 'Channel Partners',
+          icon: Handshake,
+          path: '/channel-partners',
+          requiredAccess: () => canAccess.channelPartners(),
+          children: [
+            { id: 'cp-list', title: 'All Partners', path: '/channel-partners' },
+            { id: 'cp-rules', title: 'Commission Rules', path: '/channel-partners/commission-rules' },
+          ],
+        },
       ],
     },
     // INTELLIGENCE
@@ -436,6 +447,8 @@ const DashboardBreadcrumbs = () => {
     'leadership': 'Leadership Dashboard',
     'chat': 'Chat',
     'competitive-analysis': 'Competitive Analysis',
+    'channel-partners': 'Channel Partners',
+    'commission-rules': 'Commission Rules',
     'competitors': 'Competitors',
     'market': 'Market',
     'research': 'AI Research',
