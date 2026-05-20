@@ -11,7 +11,7 @@ import {
 } from '@mui/icons-material';
 
 import { useAuth } from '../../context/AuthContext';
-import { leadAPI, projectAPI } from '../../services/api';
+import { leadAPI, projectAPI, channelPartnerAPI } from '../../services/api';
 import { PageHeader, KPICard, FilterBar, DataTable, StatusChip } from '../../components/common';
 import { LEAD_STATUS } from '../../constants/statusConfig';
 
@@ -152,6 +152,7 @@ const LeadsListPage = () => {
   // State
   const [leads, setLeads] = useState([]);
   const [projects, setProjects] = useState([]);
+  const [channelPartners, setChannelPartners] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [totalCount, setTotalCount] = useState(0);
@@ -165,6 +166,7 @@ const LeadsListPage = () => {
     source: searchParams.get('source') || '',
     priority: searchParams.get('priority') || '',
     project: searchParams.get('project') || '',
+    channelPartner: searchParams.get('channelPartner') || '',
     sortBy: searchParams.get('sortBy') || 'score',
     sortOrder: searchParams.get('sortOrder') || 'desc',
   });
@@ -201,6 +203,13 @@ const LeadsListPage = () => {
   useEffect(() => { fetchLeads(); }, [fetchLeads]);
   useEffect(() => { fetchProjects(); }, [fetchProjects]);
 
+  useEffect(() => {
+    channelPartnerAPI
+      .getChannelPartners({ status: 'active' })
+      .then((res) => setChannelPartners(res.data?.data || []))
+      .catch(() => setChannelPartners([]));
+  }, []);
+
   // Sync filters → URL
   useEffect(() => {
     const params = new URLSearchParams();
@@ -215,7 +224,7 @@ const LeadsListPage = () => {
   };
 
   const clearFilters = () => {
-    setFilters({ search: '', status: '', source: '', priority: '', project: '', sortBy: 'score', sortOrder: 'desc' });
+    setFilters({ search: '', status: '', source: '', priority: '', project: '', channelPartner: '', sortBy: 'score', sortOrder: 'desc' });
     setPage(0);
   };
 
@@ -245,6 +254,7 @@ const LeadsListPage = () => {
     { key: 'priority', type: 'select', label: 'Priority', options: PRIORITIES.map(p => ({ value: p, label: p })) },
     { key: 'source', type: 'select', label: 'Source', options: LEAD_SOURCES.map(s => ({ value: s, label: s })) },
     { key: 'project', type: 'select', label: 'Project', options: projects.map(p => ({ value: p._id, label: p.name })) },
+    { key: 'channelPartner', type: 'select', label: 'Channel Partner', options: channelPartners.map(cp => ({ value: cp._id, label: cp.firmName })) },
   ];
 
   // DataTable columns
@@ -297,6 +307,18 @@ const LeadsListPage = () => {
           )}
         </Box>
       ),
+    },
+    {
+      id: 'channelPartner', label: 'Channel Partner', sortable: false, hideOnMobile: true,
+      render: (_, row) => {
+        const a = row.channelPartnerAttribution;
+        if (!a || !a.viaChannelPartner || !(a.partners || []).length) {
+          return <Typography variant="body2" color="text.secondary">—</Typography>;
+        }
+        const first = (a.partners[0]?.channelPartner?.firmName) || 'Channel partner';
+        const extra = a.partners.length > 1 ? ` +${a.partners.length - 1}` : '';
+        return <Chip size="small" label={`${first}${extra}`} />;
+      },
     },
     {
       id: 'assignedTo', label: 'Assigned', sortable: false, hideOnMobile: true, width: 140,
