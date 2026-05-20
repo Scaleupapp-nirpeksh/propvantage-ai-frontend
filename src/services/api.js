@@ -951,6 +951,9 @@ export const competitiveAnalysisAPI = {
   // AI Analysis & Recommendations
   getAnalysis: (projectId, params = {}) => api.get(`/competitive-analysis/analysis/${projectId}`, { params }),
   refreshAnalysis: (projectId, data = {}) => api.post(`/competitive-analysis/analysis/${projectId}/refresh`, data),
+  // Competitive Performance Scorecard
+  getScorecard: (projectId) => api.get(`/competitive-analysis/scorecard/${projectId}`),
+  getScorecardAnalysis: (projectId) => api.get(`/competitive-analysis/scorecard/${projectId}/analysis`),
   // Provider Management
   getProviders: () => api.get('/competitive-analysis/providers'),
   updateProvider: (providerName, data) => api.put(`/competitive-analysis/providers/${providerName}`, data),
