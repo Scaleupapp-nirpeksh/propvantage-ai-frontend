@@ -864,6 +864,8 @@ export const channelPartnerAPI = {
   // Booking attribution edit (UI wired in Plan 3 — see channel-partner spec)
   editSaleAttribution: (saleId, data) =>
     api.put(`/channel-partners/sales/${saleId}/attribution`, data),
+  // Performance dashboard
+  getDashboard: (params = {}) => api.get('/channel-partners/dashboard', { params }),
 };
 
 // =============================================================================
