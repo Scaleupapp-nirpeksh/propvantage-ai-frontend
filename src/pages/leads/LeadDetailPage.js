@@ -984,11 +984,11 @@ const Interactions = ({ lead }) => {
                     onChange={(e) => setNewInteraction(prev => ({ ...prev, type: e.target.value }))}
                     label="Type"
                   >
-<MenuItem value="call">Phone Call</MenuItem>
-<MenuItem value="email">Email</MenuItem>
-<MenuItem value="whatsapp">WhatsApp</MenuItem>
-<MenuItem value="site_visit">Site Visit</MenuItem>
-<MenuItem value="meeting">In-person Meeting</MenuItem>
+<MenuItem value="Call">Phone Call</MenuItem>
+<MenuItem value="Email">Email</MenuItem>
+<MenuItem value="WhatsApp">WhatsApp</MenuItem>
+<MenuItem value="Site Visit">Site Visit</MenuItem>
+<MenuItem value="Meeting">In-person Meeting</MenuItem>
                   </Select>
                 </FormControl>
               </Grid>
