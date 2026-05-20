@@ -69,6 +69,7 @@ import {
   ContactPhone,
   InsertComment,
   Refresh,
+  Handshake,
   Chat as ChatIcon,
 } from '@mui/icons-material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
@@ -78,6 +79,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useChat } from '../../context/ChatContext';
 import { leadAPI, aiAPI } from '../../services/api';
 import LeadEnrichmentCard from '../../components/leads/LeadEnrichmentCard';
+import ChannelPartnerAttributionSummary from '../../components/channel-partners/ChannelPartnerAttributionSummary';
 
 // =============================================================================
 // UTILITY FUNCTIONS
@@ -483,6 +485,22 @@ const LeadOverview = ({ lead, onRefresh }) => {
                 </Box>
               </Box>
             </Stack>
+          </CardContent>
+        </Card>
+      </Grid>
+
+      {/* Channel Partner */}
+      <Grid item xs={12} md={6}>
+        <Card>
+          <CardContent>
+            <Typography
+              variant="h6"
+              sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}
+            >
+              <Handshake color="primary" />
+              Channel Partner
+            </Typography>
+            <ChannelPartnerAttributionSummary attribution={lead.channelPartnerAttribution} />
           </CardContent>
         </Card>
       </Grid>
