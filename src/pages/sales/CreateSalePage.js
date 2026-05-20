@@ -90,6 +90,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { projectAPI, unitAPI, leadAPI, salesAPI, projectPaymentAPI } from '../../services/api';
 import { formatCurrency, formatDate, formatPhoneNumber, formatPercentage } from '../../utils/formatters';
+import ChannelPartnerAttributionFields from '../../components/channel-partners/ChannelPartnerAttributionFields';
 
 // ============================================================================
 // CONSTANTS AND CONFIGURATION
@@ -3148,6 +3149,10 @@ const CreateSalePage = () => {
   const [selectedPaymentPlan, setSelectedPaymentPlan] = useState(null);
   const [paymentSchedule, setPaymentSchedule] = useState([]);
   const [discount, setDiscount] = useState({ type: 'percentage', value: 0 });
+  const [channelPartnerAttribution, setChannelPartnerAttribution] = useState({
+    viaChannelPartner: false,
+    partners: [],
+  });
   
   // Data states
   const [projects, setProjects] = useState([]);
@@ -3432,6 +3437,20 @@ const CreateSalePage = () => {
         saleData.discountAmount = discount.value;
       }
 
+      const cpaPartners = (channelPartnerAttribution.partners || []).filter(
+        (p) => p.channelPartner && Number(p.sharePct) > 0
+      );
+      if (channelPartnerAttribution.viaChannelPartner && cpaPartners.length > 0) {
+        saleData.channelPartnerAttribution = {
+          viaChannelPartner: true,
+          partners: cpaPartners.map((p) => ({
+            channelPartner: p.channelPartner,
+            agent: p.agent || null,
+            sharePct: Number(p.sharePct) || 0,
+          })),
+        };
+      }
+
       const response = await salesAPI.createSale(saleData);
       const responseData = response.data;
       const createdSale = responseData.data || responseData;
@@ -3475,14 +3494,25 @@ const CreateSalePage = () => {
         );
       case 1:
         return (
-          <CustomerSelection
-            selectedCustomer={selectedCustomer}
-            onCustomerSelect={handleCustomerSelect}
-            leads={leads}
-            loading={loading.leads}
-            onRefresh={fetchAllData}
-            projects={projects}
-          />
+          <>
+            <CustomerSelection
+              selectedCustomer={selectedCustomer}
+              onCustomerSelect={handleCustomerSelect}
+              leads={leads}
+              loading={loading.leads}
+              onRefresh={fetchAllData}
+              projects={projects}
+            />
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+                Channel partner
+              </Typography>
+              <ChannelPartnerAttributionFields
+                value={channelPartnerAttribution}
+                onChange={setChannelPartnerAttribution}
+              />
+            </Box>
+          </>
         );
       case 2:
         return (
