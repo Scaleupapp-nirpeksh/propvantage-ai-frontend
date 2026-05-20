@@ -83,6 +83,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useChat } from '../../context/ChatContext';
 import { formatCurrency, formatDate, formatDateTime, formatPhoneNumber } from '../../utils/formatters';
+import ChannelPartnerAttributionSummary from '../../components/channel-partners/ChannelPartnerAttributionSummary';
 
 // ============================================================================
 // SAFE API IMPORT
@@ -1222,7 +1223,14 @@ const SaleDetailPage = () => {
           <Stack spacing={3}>
             <PaymentBreakdownCard sale={sale} />
             <SalesPersonCard sale={sale} />
-            
+
+            <Card>
+              <CardHeader title="Channel Partner" />
+              <CardContent>
+                <ChannelPartnerAttributionSummary attribution={sale.channelPartnerAttribution} />
+              </CardContent>
+            </Card>
+
             {/* Quick Actions */}
             <Card>
               <CardHeader title="Quick Actions" />
