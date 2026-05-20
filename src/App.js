@@ -158,6 +158,7 @@ const ChannelPartnerFormPage = React.lazy(() => import('./pages/channel-partners
 const CommissionRuleListPage = React.lazy(() => import('./pages/channel-partners/CommissionRuleListPage'));
 const CommissionRuleFormPage = React.lazy(() => import('./pages/channel-partners/CommissionRuleFormPage'));
 const CommissionRecordListPage = React.lazy(() => import('./pages/channel-partners/CommissionRecordListPage'));
+const ChannelPartnerDashboardPage = React.lazy(() => import('./pages/channel-partners/ChannelPartnerDashboardPage'));
 
 // Chat
 const ChatPage = React.lazy(() => import('./pages/chat/ChatPage'));
@@ -1294,6 +1295,15 @@ const AppRoutes = () => {
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback message="Loading commission records..." />}>
               <CommissionRecordListPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/channel-partners/dashboard" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.channelPartners()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading dashboard..." />}>
+              <ChannelPartnerDashboardPage />
             </Suspense>
           </DashboardLayout>
         </ProtectedRoute>
