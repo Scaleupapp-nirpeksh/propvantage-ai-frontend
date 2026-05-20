@@ -94,7 +94,7 @@ const CommissionRuleFormPage = () => {
       setError('Rule name is required.');
       return;
     }
-    if (form.payout.schedule === 'tranches' && Math.round(trancheSum) !== 100) {
+    if (form.payout.schedule === 'tranches' && Math.abs(trancheSum - 100) > 0.01) {
       setError(`Tranche percentages must sum to 100 (currently ${trancheSum}).`);
       return;
     }

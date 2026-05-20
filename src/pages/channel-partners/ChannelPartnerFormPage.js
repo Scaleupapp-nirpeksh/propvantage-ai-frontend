@@ -6,14 +6,15 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box, Typography, TextField, MenuItem, Button, Grid, Card, CardContent,
   Stack, Divider, Table, TableBody, TableCell, TableHead, TableRow, Alert,
-  CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions,
+  CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions, Autocomplete,
 } from '@mui/material';
-import { channelPartnerAPI } from '../../services/api';
+import { channelPartnerAPI, projectAPI } from '../../services/api';
 
 const emptyForm = {
   firmName: '', reraRegistrationNumber: '', pan: '', gstin: '',
   primaryContact: { name: '', email: '', phone: '' },
   address: '', status: 'active',
+  approvedProjects: [],
   bankDetails: { accountName: '', accountNumber: '', ifsc: '', bankName: '' },
   agreementNotes: '',
 };
@@ -31,6 +32,13 @@ const ChannelPartnerFormPage = () => {
 
   const [agentDialog, setAgentDialog] = useState(false);
   const [agentForm, setAgentForm] = useState({ name: '', email: '', phone: '', reraAgentNumber: '' });
+  const [projects, setProjects] = useState([]);
+
+  useEffect(() => {
+    projectAPI.getProjects()
+      .then((res) => setProjects(res.data?.data || res.data || []))
+      .catch(() => setProjects([]));
+  }, []);
 
   const load = useCallback(async () => {
     if (!isEdit) return;
@@ -38,8 +46,12 @@ const ChannelPartnerFormPage = () => {
     try {
       const res = await channelPartnerAPI.getChannelPartner(id);
       const d = res.data.data;
-      setForm({ ...emptyForm, ...d, primaryContact: { ...emptyForm.primaryContact, ...d.primaryContact },
-        bankDetails: { ...emptyForm.bankDetails, ...d.bankDetails } });
+      setForm({
+        ...emptyForm, ...d,
+        primaryContact: { ...emptyForm.primaryContact, ...d.primaryContact },
+        bankDetails: { ...emptyForm.bankDetails, ...d.bankDetails },
+        approvedProjects: (d.approvedProjects || []).map((p) => p._id || p),
+      });
       setAgents(d.agents || []);
     } catch (e) {
       setError(e.response?.data?.message || 'Failed to load partner.');
@@ -144,6 +156,20 @@ const ChannelPartnerFormPage = () => {
             <Grid item xs={12}>
               <TextField fullWidth label="Address" value={form.address}
                 onChange={(e) => setField('address', e.target.value)} />
+            </Grid>
+            <Grid item xs={12}>
+              <Autocomplete
+                multiple
+                options={projects}
+                value={projects.filter((p) => form.approvedProjects.includes(p._id))}
+                getOptionLabel={(o) => o.name || ''}
+                isOptionEqualToValue={(o, v) => o._id === v._id}
+                onChange={(e, vals) => setField('approvedProjects', vals.map((v) => v._id))}
+                renderInput={(params) => (
+                  <TextField {...params} label="Approved projects"
+                    placeholder="Projects this partner may sell" />
+                )}
+              />
             </Grid>
           </Grid>
 
