@@ -507,6 +507,22 @@ const CreateLeadPage = () => {
 
   // Form submission - ALIGNED WITH LEAD MODEL
   const handleSubmit = async () => {
+    // Validate the channel-partner commission split before submitting.
+    const cpa = formData.channelPartnerAttribution;
+    if (cpa?.viaChannelPartner) {
+      const cpaValid = (cpa.partners || []).filter(
+        (p) => p.channelPartner && Number(p.sharePct) > 0
+      );
+      const cpaSum = cpaValid.reduce((a, p) => a + Number(p.sharePct), 0);
+      if (cpaValid.length === 0 || Math.abs(cpaSum - 100) > 0.01) {
+        enqueueSnackbar(
+          'Channel partner commission split must total 100% across selected partners.',
+          { variant: 'error' }
+        );
+        return;
+      }
+    }
+
     setIsLoading(true);
     setErrors({});
 

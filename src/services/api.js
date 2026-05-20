@@ -861,7 +861,7 @@ export const channelPartnerAPI = {
   getCommissionRecords: (params = {}) => api.get('/channel-partners/commission-records', { params }),
   markPayoutPaid: (recordId, index) =>
     api.put(`/channel-partners/commission-records/${recordId}/payouts/${index}/pay`),
-  // Booking attribution edit
+  // Booking attribution edit (UI wired in Plan 3 — see channel-partner spec)
   editSaleAttribution: (saleId, data) =>
     api.put(`/channel-partners/sales/${saleId}/attribution`, data),
 };

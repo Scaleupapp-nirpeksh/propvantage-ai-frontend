@@ -3417,6 +3417,18 @@ const CreateSalePage = () => {
   const handleCreateSale = async () => {
     if (!selectedUnit || !selectedCustomer || !costSheet || !selectedPaymentPlan) return;
 
+    // Validate the channel-partner commission split before submitting.
+    if (channelPartnerAttribution.viaChannelPartner) {
+      const cpaValidPartners = (channelPartnerAttribution.partners || []).filter(
+        (p) => p.channelPartner && Number(p.sharePct) > 0
+      );
+      const cpaShareSum = cpaValidPartners.reduce((a, p) => a + Number(p.sharePct), 0);
+      if (cpaValidPartners.length === 0 || Math.abs(cpaShareSum - 100) > 0.01) {
+        setError('Channel partner commission split must total 100% across selected partners.');
+        return;
+      }
+    }
+
     try {
       setSubmitting(true);
       

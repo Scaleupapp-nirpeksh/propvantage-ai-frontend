@@ -21,7 +21,7 @@ const STATUS_COLOR = {
 const inr = (n) =>
   n === null || n === undefined ? '—' : `₹${Math.round(n).toLocaleString('en-IN')}`;
 
-const RecordRow = ({ record, onPay }) => {
+const RecordRow = ({ record, onPay, payingKey }) => {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -67,7 +67,11 @@ const RecordRow = ({ record, onPay }) => {
                       </TableCell>
                       <TableCell align="right">
                         {p.status === 'pending' && record.status !== 'cancelled' && (
-                          <Button size="small" onClick={() => onPay(record._id, i)}>
+                          <Button
+                            size="small"
+                            disabled={payingKey === `${record._id}-${i}`}
+                            onClick={() => onPay(record._id, i)}
+                          >
                             Mark paid
                           </Button>
                         )}
@@ -89,6 +93,7 @@ const CommissionRecordListPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [payingKey, setPayingKey] = useState(null);
 
   const fetchRecords = useCallback(async () => {
     setLoading(true);
@@ -110,11 +115,14 @@ const CommissionRecordListPage = () => {
   }, [fetchRecords]);
 
   const handlePay = async (recordId, index) => {
+    setPayingKey(`${recordId}-${index}`);
     try {
       await channelPartnerAPI.markPayoutPaid(recordId, index);
-      fetchRecords();
+      await fetchRecords();
     } catch (e) {
       setError(e.response?.data?.message || 'Failed to mark payout paid.');
+    } finally {
+      setPayingKey(null);
     }
   };
 
@@ -167,7 +175,7 @@ const CommissionRecordListPage = () => {
           </TableHead>
           <TableBody>
             {records.map((r) => (
-              <RecordRow key={r._id} record={r} onPay={handlePay} />
+              <RecordRow key={r._id} record={r} onPay={handlePay} payingKey={payingKey} />
             ))}
           </TableBody>
         </Table>
