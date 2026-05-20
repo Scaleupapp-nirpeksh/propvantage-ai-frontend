@@ -857,6 +857,13 @@ export const channelPartnerAPI = {
   getCommissionRule: (id) => api.get(`/channel-partners/commission-rules/${id}`),
   createCommissionRule: (data) => api.post('/channel-partners/commission-rules', data),
   updateCommissionRule: (id, data) => api.put(`/channel-partners/commission-rules/${id}`, data),
+  // Commission records
+  getCommissionRecords: (params = {}) => api.get('/channel-partners/commission-records', { params }),
+  markPayoutPaid: (recordId, index) =>
+    api.put(`/channel-partners/commission-records/${recordId}/payouts/${index}/pay`),
+  // Booking attribution edit
+  editSaleAttribution: (saleId, data) =>
+    api.put(`/channel-partners/sales/${saleId}/attribution`, data),
 };
 
 // =============================================================================
