@@ -780,8 +780,8 @@ const PricingMockup = () => (
           letterSpacing: '-0.01em',
         }}
       >
-        Marquis Sea Face is underpriced by{' '}
-        <Box component="span" sx={{ color: C.red, fontStyle: 'italic' }}>₹6,000–10,000 per sqft</Box>. You sit at the{' '}
+        25 Downtown is underpriced by{' '}
+        <Box component="span" sx={{ color: C.red, fontStyle: 'italic' }}>₹10,000–15,000 per sqft</Box>. You sit at the{' '}
         <Box component="span" sx={{ color: C.red, fontStyle: 'italic' }}>35th percentile</Box> against Lodha Sea Face and Oberoi 360 West.
       </Typography>
       <Box
