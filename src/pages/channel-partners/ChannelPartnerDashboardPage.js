@@ -13,7 +13,7 @@ import { channelPartnerAPI } from '../../services/api';
 const STATUS_COLOR = { active: 'success', suspended: 'warning', blacklisted: 'error' };
 
 const inr = (n) => {
-  if (n === null || n === undefined) return '—';
+  if (n === null || n === undefined || Number.isNaN(Number(n))) return '—';
   if (n >= 1e7) return `₹${(n / 1e7).toFixed(2)} Cr`;
   if (n >= 1e5) return `₹${(n / 1e5).toFixed(1)} L`;
   return `₹${Math.round(n).toLocaleString('en-IN')}`;

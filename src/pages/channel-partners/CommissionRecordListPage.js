@@ -89,7 +89,7 @@ const RecordRow = ({ record, onPay, payingKey, onEditAttribution }) => {
                       onEditAttribution(record.sale?._id || record.sale, record.sale?.project?.name)
                     }
                   >
-                    Edit booking attribution
+                    Edit this booking's channel partners
                   </Button>
                 </Box>
               )}
@@ -111,10 +111,12 @@ const CommissionRecordListPage = () => {
   const [editSale, setEditSale] = useState(null); // { saleId, projectName }
   const [editValue, setEditValue] = useState({ viaChannelPartner: false, partners: [] });
   const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState('');
 
   // Open the edit dialog for a booking — prefill from all of that sale's records.
   const openEditDialog = (saleId, projectName) => {
     const saleRecords = records.filter((r) => (r.sale?._id || r.sale) === saleId);
+    setEditError('');
     setEditSale({ saleId, projectName });
     setEditValue({
       viaChannelPartner: true,
@@ -122,6 +124,7 @@ const CommissionRecordListPage = () => {
         channelPartner: r.channelPartner?._id || r.channelPartner,
         agent: r.agent?._id || r.agent || null,
         sharePct: r.sharePct,
+        _rowKey: `prefill-${r._id}`,
       })),
     });
   };
@@ -151,10 +154,11 @@ const CommissionRecordListPage = () => {
     );
     const sum = validPartners.reduce((a, p) => a + Number(p.sharePct), 0);
     if (editValue.viaChannelPartner && (validPartners.length === 0 || Math.abs(sum - 100) > 0.01)) {
-      setError('Commission split must total 100% across selected partners.');
+      setEditError('Commission split must total 100% across selected partners.');
       return;
     }
     setSavingEdit(true);
+    setEditError('');
     try {
       await channelPartnerAPI.editSaleAttribution(editSale.saleId, {
         viaChannelPartner: editValue.viaChannelPartner,
@@ -164,10 +168,10 @@ const CommissionRecordListPage = () => {
           sharePct: Number(p.sharePct) || 0,
         })),
       });
-      setEditSale(null);
       await fetchRecords();
+      setEditSale(null);
     } catch (e) {
-      setError(e.response?.data?.message || 'Failed to update attribution.');
+      setEditError(e.response?.data?.message || 'Failed to update attribution.');
     } finally {
       setSavingEdit(false);
     }
@@ -252,6 +256,7 @@ const CommissionRecordListPage = () => {
         </DialogTitle>
         <DialogContent>
           <Box sx={{ mt: 1 }}>
+            {editError && <Alert severity="error" sx={{ mb: 1 }}>{editError}</Alert>}
             <ChannelPartnerAttributionFields value={editValue} onChange={setEditValue} />
           </Box>
         </DialogContent>
