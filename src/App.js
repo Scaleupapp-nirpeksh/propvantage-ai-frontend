@@ -156,6 +156,7 @@ const MarketTrendsPage = React.lazy(() => import('./pages/competitive-analysis/M
 const DemandSupplyPage = React.lazy(() => import('./pages/competitive-analysis/DemandSupplyPage'));
 const AIAnalysisPage = React.lazy(() => import('./pages/competitive-analysis/AIAnalysisPage'));
 const DataProvidersPage = React.lazy(() => import('./pages/competitive-analysis/DataProvidersPage'));
+const CompetitivePerformancePage = React.lazy(() => import('./pages/competitive-analysis/CompetitivePerformancePage'));
 
 // Chat
 const ChatPage = React.lazy(() => import('./pages/chat/ChatPage'));
@@ -1332,6 +1333,24 @@ const AppRoutes = () => {
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback message="Loading competitive analysis..." />}>
               <CADashboardPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/competitive-analysis/scorecard" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.compAnalysisView()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading competitive performance..." />}>
+              <CompetitivePerformancePage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/competitive-analysis/scorecard/:projectId" element={
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.compAnalysisView()}>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading competitive performance..." />}>
+              <CompetitivePerformancePage />
             </Suspense>
           </DashboardLayout>
         </ProtectedRoute>

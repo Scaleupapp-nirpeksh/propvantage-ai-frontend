@@ -23,6 +23,7 @@ import {
   LocationOn,
   TrendingUp,
   Refresh,
+  Leaderboard,
 } from '@mui/icons-material';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 import { useSnackbar } from 'notistack';
@@ -121,6 +122,9 @@ const CADashboardPage = () => {
         actions={
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
             <Button size="small" startIcon={<Refresh />} onClick={fetchDashboard}>Refresh</Button>
+            <Button size="small" variant="outlined" startIcon={<Leaderboard />} onClick={() => navigate('/competitive-analysis/scorecard')}>
+              Competitive Performance
+            </Button>
             <Button size="small" variant="outlined" startIcon={<Add />} onClick={() => navigate('/competitive-analysis/competitors/new')}>
               Add Competitor
             </Button>
