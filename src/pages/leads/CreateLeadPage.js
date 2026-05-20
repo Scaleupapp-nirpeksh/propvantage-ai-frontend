@@ -57,6 +57,7 @@ import { useSnackbar } from 'notistack';
 
 import { useAuth } from '../../context/AuthContext';
 import { leadAPI, projectAPI } from '../../services/api';
+import ChannelPartnerAttributionFields from '../../components/channel-partners/ChannelPartnerAttributionFields';
 
 // =============================================================================
 // CONSTANTS - ALIGNED WITH LEAD MODEL
@@ -368,6 +369,9 @@ const CreateLeadPage = () => {
       companyWebsite: '',
       articleUrls: [''],
     },
+
+    // Channel partner attribution (optional)
+    channelPartnerAttribution: { viaChannelPartner: false, partners: [] },
   });
 
   // Load initial data
@@ -567,6 +571,26 @@ const CreateLeadPage = () => {
         
         // Additional notes
         notes: formData.notes.trim() || undefined,
+
+        // Channel partner attribution (only when provided)
+        ...((() => {
+          const cpa = formData.channelPartnerAttribution;
+          const validPartners = (cpa?.partners || []).filter(
+            (p) => p.channelPartner && Number(p.sharePct) > 0
+          );
+          return cpa?.viaChannelPartner && validPartners.length > 0
+            ? {
+                channelPartnerAttribution: {
+                  viaChannelPartner: true,
+                  partners: validPartners.map((p) => ({
+                    channelPartner: p.channelPartner,
+                    agent: p.agent || null,
+                    sharePct: Number(p.sharePct) || 0,
+                  })),
+                },
+              }
+            : {};
+        })()),
 
         // AI enrichment research sources (only sent when at least one URL is provided)
         ...(hasResearchSources ? { enrichment: { sources: enrichmentSources } } : {}),
@@ -1355,6 +1379,18 @@ const CreateLeadPage = () => {
             </Grid>
           </AccordionDetails>
         </Accordion>
+      </Grid>
+
+      <Grid item xs={12}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+          Channel partner
+        </Typography>
+        <ChannelPartnerAttributionFields
+          value={formData.channelPartnerAttribution}
+          onChange={(val) =>
+            setFormData((prev) => ({ ...prev, channelPartnerAttribution: val }))
+          }
+        />
       </Grid>
     </Grid>
   );
