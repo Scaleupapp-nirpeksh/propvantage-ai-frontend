@@ -217,10 +217,11 @@ const SalesListPage = () => {
       };
       Object.keys(queryParams).forEach(k => queryParams[k] === undefined && delete queryParams[k]);
 
-      const [salesResult, projectsResult, usersResult] = await Promise.allSettled([
+      const [salesResult, projectsResult, usersResult, channelPartnersResult] = await Promise.allSettled([
         salesAPI.getSales(queryParams),
         projectAPI.getProjects(),
         canAccess.userManagement() ? userAPI.getUsers() : Promise.resolve({ data: { data: [] } }),
+        channelPartnerAPI.getChannelPartners({ status: 'active' }),
       ]);
 
       if (salesResult.status === 'fulfilled') {
@@ -248,6 +249,11 @@ const SalesListPage = () => {
         setUsers(Array.isArray(data) ? data : []);
       }
 
+      if (channelPartnersResult.status === 'fulfilled') {
+        const data = channelPartnersResult.value.data.data || channelPartnersResult.value.data || [];
+        setChannelPartners(Array.isArray(data) ? data : []);
+      }
+
       setLoading(false);
     } catch (err) {
       setError('Failed to load sales data.');
@@ -259,13 +265,6 @@ const SalesListPage = () => {
   }, [pagination.page, pagination.limit, filters, canAccess]);
 
   useEffect(() => { fetchAllData(); }, [fetchAllData]);
-
-  useEffect(() => {
-    channelPartnerAPI
-      .getChannelPartners({ status: 'active' })
-      .then((res) => setChannelPartners(res.data?.data || []))
-      .catch(() => setChannelPartners([]));
-  }, []);
 
   // Sync filters → URL
   useEffect(() => {

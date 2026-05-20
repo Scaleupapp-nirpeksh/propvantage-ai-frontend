@@ -200,15 +200,17 @@ const LeadsListPage = () => {
     } catch (err) { /* silent */ }
   }, []);
 
+  // Fetch channel partners for filter dropdown
+  const fetchChannelPartners = useCallback(async () => {
+    try {
+      const response = await channelPartnerAPI.getChannelPartners({ status: 'active' });
+      setChannelPartners(response.data?.data || []);
+    } catch (err) { /* silent */ }
+  }, []);
+
   useEffect(() => { fetchLeads(); }, [fetchLeads]);
   useEffect(() => { fetchProjects(); }, [fetchProjects]);
-
-  useEffect(() => {
-    channelPartnerAPI
-      .getChannelPartners({ status: 'active' })
-      .then((res) => setChannelPartners(res.data?.data || []))
-      .catch(() => setChannelPartners([]));
-  }, []);
+  useEffect(() => { fetchChannelPartners(); }, [fetchChannelPartners]);
 
   // Sync filters → URL
   useEffect(() => {
