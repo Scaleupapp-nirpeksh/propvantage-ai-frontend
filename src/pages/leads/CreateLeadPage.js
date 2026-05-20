@@ -788,6 +788,18 @@ const CreateLeadPage = () => {
           helperText="e.g., 'From John's referral' or 'Facebook ad campaign'"
         />
       </Grid>
+
+      <Grid item xs={12}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+          Channel partner
+        </Typography>
+        <ChannelPartnerAttributionFields
+          value={formData.channelPartnerAttribution}
+          onChange={(val) =>
+            setFormData((prev) => ({ ...prev, channelPartnerAttribution: val }))
+          }
+        />
+      </Grid>
     </Grid>
   );
 
@@ -1397,17 +1409,6 @@ const CreateLeadPage = () => {
         </Accordion>
       </Grid>
 
-      <Grid item xs={12}>
-        <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-          Channel partner
-        </Typography>
-        <ChannelPartnerAttributionFields
-          value={formData.channelPartnerAttribution}
-          onChange={(val) =>
-            setFormData((prev) => ({ ...prev, channelPartnerAttribution: val }))
-          }
-        />
-      </Grid>
     </Grid>
   );
 
