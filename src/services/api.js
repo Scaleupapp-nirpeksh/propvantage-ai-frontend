@@ -523,7 +523,10 @@ export const leadAPI = {
   createLead: (leadData) => api.post('/leads', leadData),
   updateLead: (id, leadData) => api.put(`/leads/${id}`, leadData),
   deleteLead: (id) => api.delete(`/leads/${id}`),
-  
+
+  // Re-run AI enrichment for a lead. `sources` is { linkedinUrl, companyWebsite, articleUrls[] }
+  enrichLead: (id, sources) => api.post(`/leads/${id}/enrich`, { sources }),
+
   // Lead interactions (confirmed in backend)
   addInteraction: (leadId, interactionData) => api.post(`/leads/${leadId}/interactions`, interactionData),
   getInteractions: (leadId) => api.get(`/leads/${leadId}/interactions`),
