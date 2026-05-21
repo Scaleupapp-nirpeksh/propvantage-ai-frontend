@@ -26,7 +26,7 @@ const ChannelPartnerLayout = ({ children }) => {
       <Toolbar>
         <Typography variant="h6" sx={{ fontWeight: 700 }}>PropVantage</Typography>
       </Toolbar>
-      <Typography variant="caption" sx={{ px: 2, color: 'text.secondary' }}>
+      <Typography variant="caption" sx={{ px: 2, color: 'text.secondary', mt: 1 }}>
         {organization?.name}
       </Typography>
       <List sx={{ mt: 1 }}>

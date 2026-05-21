@@ -106,7 +106,7 @@ const LoginPage = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, isAuthenticated, error: authError, clearError } = useAuth();
+  const { login, isAuthenticated, isChannelPartnerOrg, error: authError, clearError } = useAuth();
   const { enqueueSnackbar } = useSnackbar();
 
   // Form state
@@ -129,10 +129,16 @@ const LoginPage = () => {
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      const from = location.state?.from?.pathname || '/dashboard';
-      navigate(from, { replace: true });
+      const defaultDest = isChannelPartnerOrg ? '/partner/dashboard' : '/dashboard';
+      const candidate = location.state?.from?.pathname;
+      const goodCandidate =
+        candidate &&
+        (isChannelPartnerOrg
+          ? candidate.startsWith('/partner')
+          : !candidate.startsWith('/partner'));
+      navigate(goodCandidate ? candidate : defaultDest, { replace: true });
     }
-  }, [isAuthenticated, navigate, location]);
+  }, [isAuthenticated, isChannelPartnerOrg, navigate, location]);
 
   // Countdown timer for rate limit
   useEffect(() => {
@@ -199,11 +205,14 @@ const LoginPage = () => {
 
       if (result.success) {
         enqueueSnackbar(`Welcome back, ${result.user.firstName}!`, { variant: 'success' });
-        const defaultDest = result.organization?.type === 'channel_partner'
-          ? '/partner/dashboard'
-          : '/dashboard';
-        const from = location.state?.from?.pathname || result.redirectTo || defaultDest;
-        setTimeout(() => navigate(from, { replace: true }), 100);
+        const isCp = result.organization?.type === 'channel_partner';
+        const defaultDest = isCp ? '/partner/dashboard' : '/dashboard';
+        const candidate = location.state?.from?.pathname || result.redirectTo;
+        const goodCandidate =
+          candidate &&
+          (isCp ? candidate.startsWith('/partner') : !candidate.startsWith('/partner'));
+        const dest = goodCandidate ? candidate : defaultDest;
+        setTimeout(() => navigate(dest, { replace: true }), 100);
       } else if (result.status === 429) {
         // Rate limited
         setRateLimitSeconds(60);
