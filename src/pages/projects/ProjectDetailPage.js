@@ -1203,6 +1203,17 @@ const PortfolioCard = ({ project }) => {
   });
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
+  const [isError, setIsError] = useState(false);
+
+  useEffect(() => {
+    setSettings({
+      isPublished: project.portfolio?.isPublished || false,
+      showPriceRange: project.portfolio?.showPriceRange ?? true,
+      showConfigurations: project.portfolio?.showConfigurations ?? true,
+      coverImageUrl: project.portfolio?.coverImageUrl || '',
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [project._id]);
 
   const save = async (next) => {
     setSaving(true); setMsg('');
@@ -1210,8 +1221,10 @@ const PortfolioCard = ({ project }) => {
       await portfolioAPI.updateProjectPortfolio(project._id, next);
       setSettings(next);
       setMsg('Saved.');
+      setIsError(false);
     } catch (e) {
       setMsg(e.response?.data?.message || 'Could not save.');
+      setIsError(true);
     } finally {
       setSaving(false);
     }
@@ -1251,7 +1264,7 @@ const PortfolioCard = ({ project }) => {
             sx={{ mt: 1, maxHeight: 120, borderRadius: 1 }}
             onError={(e) => { e.target.style.display = 'none'; }} />
         ) : null}
-        {msg && <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>{msg}</Typography>}
+        {msg && <Typography variant="caption" color={isError ? 'error' : 'text.secondary'} sx={{ display: 'block', mt: 1 }}>{msg}</Typography>}
       </CardContent>
     </Card>
   );
