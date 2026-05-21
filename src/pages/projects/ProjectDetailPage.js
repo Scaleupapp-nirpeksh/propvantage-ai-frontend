@@ -4,7 +4,7 @@
 // Location: src/pages/projects/ProjectDetailPage.js
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
   Box,
   Grid,
@@ -30,6 +30,9 @@ import {
   Breadcrumbs,
   Link,
   Fade,
+  Switch,
+  FormControlLabel,
+  TextField,
 } from '@mui/material';
 import {
   ArrowBack,
@@ -62,7 +65,7 @@ import {
 
 import { useAuth } from '../../context/AuthContext';
 import { useChat } from '../../context/ChatContext';
-import { projectAPI, towerAPI, unitAPI } from '../../services/api';
+import { projectAPI, towerAPI, unitAPI, portfolioAPI } from '../../services/api';
 import { budgetVarianceAPI } from '../../services/budgetAPI';
 import MiniTowerSilhouette from '../../components/projects/MiniTowerSilhouette';
 import ProjectTeamPanel from '../../components/projects/ProjectTeamPanel';
@@ -1188,6 +1191,73 @@ const IntegratedBudgetVarianceDashboard = ({
 };
 
 // ============================================================================
+// PORTFOLIO CURATION CARD COMPONENT
+// ============================================================================
+
+const PortfolioCard = ({ project }) => {
+  const [settings, setSettings] = useState({
+    isPublished: project.portfolio?.isPublished || false,
+    showPriceRange: project.portfolio?.showPriceRange ?? true,
+    showConfigurations: project.portfolio?.showConfigurations ?? true,
+    coverImageUrl: project.portfolio?.coverImageUrl || '',
+  });
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState('');
+
+  const save = async (next) => {
+    setSaving(true); setMsg('');
+    try {
+      await portfolioAPI.updateProjectPortfolio(project._id, next);
+      setSettings(next);
+      setMsg('Saved.');
+    } catch (e) {
+      setMsg(e.response?.data?.message || 'Could not save.');
+    } finally {
+      setSaving(false);
+    }
+  };
+  const toggle = (key) => () => save({ ...settings, [key]: !settings[key] });
+  const saveCover = () => save({ ...settings });
+
+  return (
+    <Card variant="outlined" sx={{ mt: 2 }}>
+      <CardContent>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h6">Portfolio</Typography>
+          <Button size="small" component={RouterLink} to="/portfolio/preview">Preview portfolio</Button>
+        </Box>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+          Control whether this project appears in your channel-partner-facing portfolio.
+        </Typography>
+        <FormControlLabel
+          control={<Switch checked={settings.isPublished} onChange={toggle('isPublished')} disabled={saving} />}
+          label="Published to portfolio" />
+        <Box sx={{ pl: 2 }}>
+          <FormControlLabel
+            control={<Switch checked={settings.showPriceRange} onChange={toggle('showPriceRange')} disabled={saving || !settings.isPublished} />}
+            label="Show price range" />
+          <FormControlLabel
+            control={<Switch checked={settings.showConfigurations} onChange={toggle('showConfigurations')} disabled={saving || !settings.isPublished} />}
+            label="Show available configurations" />
+        </Box>
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', mt: 1 }}>
+          <TextField size="small" fullWidth label="Cover image URL"
+            value={settings.coverImageUrl}
+            onChange={(e) => setSettings((s) => ({ ...s, coverImageUrl: e.target.value }))} />
+          <Button variant="outlined" onClick={saveCover} disabled={saving}>Save</Button>
+        </Box>
+        {settings.coverImageUrl ? (
+          <Box component="img" src={settings.coverImageUrl} alt="cover"
+            sx={{ mt: 1, maxHeight: 120, borderRadius: 1 }}
+            onError={(e) => { e.target.style.display = 'none'; }} />
+        ) : null}
+        {msg && <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>{msg}</Typography>}
+      </CardContent>
+    </Card>
+  );
+};
+
+// ============================================================================
 // MAIN PROJECT DETAIL PAGE COMPONENT
 // ============================================================================
 
@@ -1595,6 +1665,9 @@ const ProjectDetailPage = () => {
           )}
         </>
       )}
+
+      {/* Portfolio Curation Card */}
+      <PortfolioCard project={project} />
     </Box>
   );
 };
