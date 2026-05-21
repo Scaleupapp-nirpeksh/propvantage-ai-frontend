@@ -5,6 +5,7 @@ import {
   IconButton, Alert, Stack, Tabs, Tab, Tooltip, LinearProgress,
   Skeleton, ToggleButton, ToggleButtonGroup, Avatar,
   useTheme, useMediaQuery, alpha,
+  CircularProgress, Table, TableHead, TableBody, TableRow, TableCell,
 } from '@mui/material';
 import {
   TrendingUp, Refresh, People, ShowChart, BarChart,
@@ -19,7 +20,7 @@ import {
 } from 'recharts';
 
 import { useAuth } from '../../context/AuthContext';
-import { leadAPI, projectAPI, userAPI } from '../../services/api';
+import { leadAPI, projectAPI, userAPI, analyticsAPI } from '../../services/api';
 import { PageHeader, KPICard, FilterBar } from '../../components/common';
 import { CHART_COLORS } from '../../constants/statusConfig';
 
@@ -440,6 +441,137 @@ const TeamProjectTab = ({ leads, loading }) => {
 };
 
 // ---------------------------------------------------------------------------
+// Channel Partner Tab
+// ---------------------------------------------------------------------------
+
+function ChannelPartnerLeadTab({ period, project }) {
+  const theme = useTheme();
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(false);
+    const params = {};
+    if (period && period !== 'all') {
+      const days = parseInt(period, 10);
+      if (!isNaN(days)) {
+        const to = new Date();
+        const from = new Date();
+        from.setDate(to.getDate() - days);
+        params.dateFrom = from.toISOString();
+        params.dateTo = to.toISOString();
+      }
+    }
+    if (project) params.project = project;
+    analyticsAPI
+      .getChannelPartnerVolume(params)
+      .then((res) => { if (!cancelled) setData(res.data?.data || null); })
+      .catch(() => { if (!cancelled) { setData(null); setError(true); } })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [period, project]);
+
+  if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}><CircularProgress /></Box>;
+
+  if (error) {
+    return <Alert severity="error" sx={{ mt: 1 }}>Could not load channel-partner analytics. Please try again.</Alert>;
+  }
+
+  const hasCP = data?.leads?.channelPartner?.count > 0;
+  if (!hasCP) {
+    return <Alert severity="info" sx={{ mt: 1 }}>No channel-partner lead activity in the selected period.</Alert>;
+  }
+
+  const CATEGORY_LABELS = {
+    broker_firm: 'Broker Firm',
+    individual_agent: 'Individual Agent',
+    corporate: 'Corporate',
+    digital_aggregator: 'Digital Aggregator',
+  };
+  const splitData = [
+    { name: 'Direct', value: data.leads?.direct?.count || 0, fill: theme.palette.grey[500] },
+    { name: 'Channel Partner', value: data.leads?.channelPartner?.count || 0, fill: theme.palette.primary.main },
+  ];
+  const categoryData = (data.byCategory || []).map((c) => ({
+    name: CATEGORY_LABELS[c.category] || c.category,
+    leads: c.leads,
+  }));
+
+  return (
+    <Grid container spacing={2}>
+      <Grid item xs={12} md={4}>
+        <Card variant="outlined"><CardContent>
+          <Typography variant="subtitle2" color="text.secondary">Direct vs Channel Partner — Leads</Typography>
+          <ResponsiveContainer width="100%" height={240}>
+            <RechartsPieChart>
+              <Pie data={splitData} cx="50%" cy="50%" outerRadius={80} dataKey="value"
+                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
+                {splitData.map((e) => <Cell key={e.name} fill={e.fill} />)}
+              </Pie>
+              <RechartsTooltip />
+            </RechartsPieChart>
+          </ResponsiveContainer>
+        </CardContent></Card>
+      </Grid>
+      <Grid item xs={12} md={4}>
+        <Card variant="outlined"><CardContent>
+          <Typography variant="subtitle2" color="text.secondary">Channel Partner Leads</Typography>
+          <Typography variant="h4" sx={{ mt: 1 }}>{data.leads?.channelPartner?.count || 0}</Typography>
+          <Typography variant="body2" color="text.secondary">{data.leads?.cpSharePct || 0}% of total leads</Typography>
+        </CardContent></Card>
+      </Grid>
+      <Grid item xs={12} md={4}>
+        <Card variant="outlined"><CardContent>
+          <Typography variant="subtitle2" color="text.secondary">Conversion Rate</Typography>
+          <Typography variant="body2" sx={{ mt: 1 }}>Direct: {data.conversion?.direct || 0}%</Typography>
+          <Typography variant="body2">Channel Partner: {data.conversion?.channelPartner || 0}%</Typography>
+        </CardContent></Card>
+      </Grid>
+      <Grid item xs={12} md={6}>
+        <Card variant="outlined"><CardContent>
+          <Typography variant="subtitle2" color="text.secondary" gutterBottom>Leads by Partner Category</Typography>
+          <ResponsiveContainer width="100%" height={260}>
+            <RechartsBarChart data={categoryData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 11 }} />
+              <RechartsTooltip />
+              <Bar dataKey="leads" fill={theme.palette.primary.main} radius={[4, 4, 0, 0]} />
+            </RechartsBarChart>
+          </ResponsiveContainer>
+        </CardContent></Card>
+      </Grid>
+      <Grid item xs={12} md={6}>
+        <Card variant="outlined"><CardContent>
+          <Typography variant="subtitle2" color="text.secondary" gutterBottom>By Partner Firm</Typography>
+          <Table size="small">
+            <TableHead><TableRow>
+              <TableCell>Firm</TableCell><TableCell>Category</TableCell>
+              <TableCell align="right">Leads</TableCell><TableCell align="right">Bookings</TableCell>
+              <TableCell align="right">Conv %</TableCell>
+            </TableRow></TableHead>
+            <TableBody>
+              {(data.byFirm || []).map((r) => (
+                <TableRow key={r.channelPartnerId}>
+                  <TableCell>{r.firmName}</TableCell>
+                  <TableCell>{CATEGORY_LABELS[r.category] || r.category}</TableCell>
+                  <TableCell align="right">{r.leads}</TableCell>
+                  <TableCell align="right">{r.sales}</TableCell>
+                  <TableCell align="right">{r.conversionPct}%</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent></Card>
+      </Grid>
+    </Grid>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Main Page
 // ---------------------------------------------------------------------------
 
@@ -649,6 +781,7 @@ const LeadAnalytics = () => {
           <Tab label="Overview" sx={{ textTransform: 'none', fontWeight: 600 }} />
           <Tab label="Funnel & Sources" sx={{ textTransform: 'none', fontWeight: 600 }} />
           <Tab label="Team & Projects" sx={{ textTransform: 'none', fontWeight: 600 }} />
+          <Tab label="Channel Partners" sx={{ textTransform: 'none', fontWeight: 600 }} />
         </Tabs>
 
         <Box sx={{ p: { xs: 2, md: 3 } }}>
@@ -660,6 +793,9 @@ const LeadAnalytics = () => {
           )}
           {activeTab === 2 && (
             <TeamProjectTab leads={filteredLeads} loading={loading} />
+          )}
+          {activeTab === 3 && (
+            <ChannelPartnerLeadTab period={filters.period} project={filters.project} />
           )}
         </Box>
       </Card>
