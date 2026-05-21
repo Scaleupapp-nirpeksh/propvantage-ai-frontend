@@ -195,6 +195,10 @@ const AnalyticsDashboard = () => {
   const [cpVolume, setCpVolume] = useState(null);
   const [cpCommission, setCpCommission] = useState(null);
 
+  // Stable boolean derived from canAccess to avoid re-running the CP effect
+  // on every AuthContext render (canAccess is a plain object rebuilt each time).
+  const canViewCommission = canAccess?.channelPartners?.() || false;
+
   // ── Fetch ──
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -277,22 +281,25 @@ const AnalyticsDashboard = () => {
   }, [fetchData]);
 
   useEffect(() => {
+    let cancelled = false;
     const range = periodToRange(period);
     const params = { ...range };
     if (projectFilter !== 'all') params.project = projectFilter;
 
     analyticsAPI.getChannelPartnerVolume(params)
-      .then((res) => setCpVolume(res.data?.data || null))
-      .catch(() => setCpVolume(null));
+      .then((res) => { if (!cancelled) setCpVolume(res.data?.data || null); })
+      .catch(() => { if (!cancelled) setCpVolume(null); });
 
-    if (canAccess?.channelPartners?.()) {
+    if (canViewCommission) {
       analyticsAPI.getChannelPartnerCommission(params)
-        .then((res) => setCpCommission(res.data?.data || null))
-        .catch(() => setCpCommission(null));
+        .then((res) => { if (!cancelled) setCpCommission(res.data?.data || null); })
+        .catch(() => { if (!cancelled) setCpCommission(null); });
     } else {
       setCpCommission(null);
     }
-  }, [period, projectFilter, canAccess]);
+
+    return () => { cancelled = true; };
+  }, [period, projectFilter, canViewCommission]);
 
   // ── Derived KPIs ──
   const kpis = useMemo(() => {
@@ -679,11 +686,11 @@ const AnalyticsDashboard = () => {
                       <TableCell align="right">Commission</TableCell>
                     </TableRow></TableHead>
                     <TableBody>
-                      {(cpCommission.topPerformers || []).slice(0, 5).map((r) => (
-                        <TableRow key={r.channelPartnerId}>
-                          <TableCell>{r.firmName}</TableCell>
-                          <TableCell align="right">{fmtCurrency(r.bookedRevenue)}</TableCell>
-                          <TableCell align="right">{fmtCurrency(r.netCommission)}</TableCell>
+                      {(cpCommission.topPerformers || []).slice(0, 5).map((partner) => (
+                        <TableRow key={partner.channelPartnerId}>
+                          <TableCell>{partner.firmName}</TableCell>
+                          <TableCell align="right">{fmtCurrency(partner.bookedRevenue)}</TableCell>
+                          <TableCell align="right">{fmtCurrency(partner.netCommission)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
