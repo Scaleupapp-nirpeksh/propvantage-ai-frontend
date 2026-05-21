@@ -757,6 +757,7 @@ export const AuthProvider = ({ children }) => {
 
     // Channel Partners
     channelPartners: () => _useNew ? checkPerm('channel_partners:view') : hasPermission('MANAGEMENT'),
+    portfolioManage: () => _useNew ? checkPerm('portfolio:manage') : hasPermission('MANAGEMENT'),
   };
 
   // Context value

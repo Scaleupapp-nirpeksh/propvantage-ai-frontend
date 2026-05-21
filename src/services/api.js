@@ -895,6 +895,16 @@ export const channelPartnerAPI = {
 };
 
 // =============================================================================
+// PORTFOLIO SERVICES (/api/portfolio)
+// =============================================================================
+export const portfolioAPI = {
+  getProfile: () => api.get('/portfolio/profile'),
+  updateProfile: (data) => api.put('/portfolio/profile', data),
+  updateProjectPortfolio: (projectId, data) => api.put(`/portfolio/projects/${projectId}`, data),
+  getPortfolio: (organizationId) => api.get(`/portfolio/view/${organizationId}`),
+};
+
+// =============================================================================
 // 18-22. ALL OTHER SERVICES REMAIN UNCHANGED
 // =============================================================================
 
@@ -1537,6 +1547,7 @@ const apiServices = {
   payment: paymentAPI,
   commission: commissionAPI,
   channelPartner: channelPartnerAPI,
+  portfolio: portfolioAPI,
   document: documentAPI,
   construction: constructionAPI,
   contractor: contractorAPI,
