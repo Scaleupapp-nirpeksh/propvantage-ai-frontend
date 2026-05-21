@@ -4,13 +4,7 @@ import {
   Box, TextField, MenuItem, Button, Typography, Alert, CircularProgress, Grid,
 } from '@mui/material';
 import { useAuth } from '../../context/AuthContext';
-
-const CATEGORIES = [
-  { value: 'individual_agent', label: 'Individual Agent' },
-  { value: 'broker_firm', label: 'Broker Firm' },
-  { value: 'corporate', label: 'Corporate' },
-  { value: 'digital_aggregator', label: 'Digital Aggregator' },
-];
+import { CP_CATEGORY_OPTIONS } from '../../constants/channelPartnerCategories';
 
 const ChannelPartnerRegisterPage = () => {
   const navigate = useNavigate();
@@ -51,34 +45,34 @@ const ChannelPartnerRegisterPage = () => {
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       <Grid container spacing={2}>
         <Grid item xs={12}>
-          <TextField fullWidth label="Firm name" value={form.orgName} onChange={set('orgName')} />
+          <TextField fullWidth label="Firm name" value={form.orgName} onChange={set('orgName')} disabled={loading} />
         </Grid>
         <Grid item xs={12} sm={6}>
-          <TextField fullWidth select label="Category" value={form.category} onChange={set('category')}>
-            {CATEGORIES.map((c) => <MenuItem key={c.value} value={c.value}>{c.label}</MenuItem>)}
+          <TextField fullWidth select label="Category" value={form.category} onChange={set('category')} disabled={loading}>
+            {CP_CATEGORY_OPTIONS.map((c) => <MenuItem key={c.value} value={c.value}>{c.label}</MenuItem>)}
           </TextField>
         </Grid>
         <Grid item xs={12} sm={6}>
           <TextField fullWidth label="RERA registration number"
-            value={form.reraRegistrationNumber} onChange={set('reraRegistrationNumber')} />
+            value={form.reraRegistrationNumber} onChange={set('reraRegistrationNumber')} disabled={loading} />
         </Grid>
         <Grid item xs={12} sm={6}>
-          <TextField fullWidth label="Country" value={form.country} onChange={set('country')} />
+          <TextField fullWidth label="Country" value={form.country} onChange={set('country')} disabled={loading} />
         </Grid>
         <Grid item xs={12} sm={6}>
-          <TextField fullWidth label="City" value={form.city} onChange={set('city')} />
+          <TextField fullWidth label="City" value={form.city} onChange={set('city')} disabled={loading} />
         </Grid>
         <Grid item xs={12} sm={6}>
-          <TextField fullWidth label="Your first name" value={form.firstName} onChange={set('firstName')} />
+          <TextField fullWidth label="Your first name" value={form.firstName} onChange={set('firstName')} disabled={loading} />
         </Grid>
         <Grid item xs={12} sm={6}>
-          <TextField fullWidth label="Your last name" value={form.lastName} onChange={set('lastName')} />
+          <TextField fullWidth label="Your last name" value={form.lastName} onChange={set('lastName')} disabled={loading} />
         </Grid>
         <Grid item xs={12}>
-          <TextField fullWidth label="Email" type="email" value={form.email} onChange={set('email')} />
+          <TextField fullWidth label="Email" type="email" value={form.email} onChange={set('email')} disabled={loading} autoComplete="email" />
         </Grid>
         <Grid item xs={12}>
-          <TextField fullWidth label="Password" type="password" value={form.password} onChange={set('password')} />
+          <TextField fullWidth label="Password" type="password" value={form.password} onChange={set('password')} disabled={loading} autoComplete="new-password" />
         </Grid>
       </Grid>
       <Button type="submit" fullWidth variant="contained" size="large" disabled={loading}

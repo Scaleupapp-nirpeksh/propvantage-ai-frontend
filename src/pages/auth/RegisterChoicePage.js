@@ -1,6 +1,6 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Box, Card, CardActionArea, CardContent, Typography, Stack } from '@mui/material';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { Box, Card, CardActionArea, CardContent, Typography, Stack, Link } from '@mui/material';
 import { Business, Handshake } from '@mui/icons-material';
 
 const RegisterChoicePage = () => {
@@ -35,7 +35,7 @@ const RegisterChoicePage = () => {
         ))}
       </Stack>
       <Typography variant="body2" sx={{ mt: 3, textAlign: 'center' }}>
-        Already have an account? <a href="/login">Sign in</a>
+        Already have an account? <Link component={RouterLink} to="/login">Sign in</Link>
       </Typography>
     </Box>
   );
