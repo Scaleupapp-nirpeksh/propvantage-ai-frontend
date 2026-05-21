@@ -13,7 +13,7 @@ import { channelPartnerAPI, projectAPI } from '../../services/api';
 const emptyForm = {
   firmName: '', reraRegistrationNumber: '', pan: '', gstin: '',
   primaryContact: { name: '', email: '', phone: '' },
-  address: '', status: 'active',
+  address: '', status: 'active', category: 'broker_firm',
   approvedProjects: [],
   bankDetails: { accountName: '', accountNumber: '', ifsc: '', bankName: '' },
   agreementNotes: '',
@@ -139,6 +139,15 @@ const ChannelPartnerFormPage = () => {
                 <MenuItem value="active">Active</MenuItem>
                 <MenuItem value="suspended">Suspended</MenuItem>
                 <MenuItem value="blacklisted">Blacklisted</MenuItem>
+              </TextField>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField fullWidth select label="Category" value={form.category}
+                onChange={(e) => setField('category', e.target.value)}>
+                <MenuItem value="broker_firm">Broker Firm</MenuItem>
+                <MenuItem value="individual_agent">Individual Agent</MenuItem>
+                <MenuItem value="corporate">Corporate</MenuItem>
+                <MenuItem value="digital_aggregator">Digital Aggregator</MenuItem>
               </TextField>
             </Grid>
             <Grid item xs={12} sm={4}>

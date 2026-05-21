@@ -652,10 +652,24 @@ export const analyticsAPI = {
    * NEW: Get dashboard summary with key metrics
    * Uses existing dashboard endpoint with format parameter
    */
-  getDashboardSummary: (params = {}) => api.get('/analytics/dashboard', { 
-    params: { ...params, format: 'summary' } 
+  getDashboardSummary: (params = {}) => api.get('/analytics/dashboard', {
+    params: { ...params, format: 'summary' }
   }),
-  
+
+  /**
+   * Channel Partner volume analytics — direct-vs-CP, by category, by firm.
+   * Params: { dateFrom, dateTo, project }
+   */
+  getChannelPartnerVolume: (params = {}) =>
+    api.get('/analytics/channel-partners/volume', { params }),
+
+  /**
+   * Channel Partner commission analytics — gated by channel_partners:view.
+   * Params: { dateFrom, dateTo, project }
+   */
+  getChannelPartnerCommission: (params = {}) =>
+    api.get('/analytics/channel-partners/commission', { params }),
+
   /**
    * NEW: Get sales performance trends over time
    * Uses existing sales-report endpoint with include parameter
