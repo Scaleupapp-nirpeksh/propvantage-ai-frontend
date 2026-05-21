@@ -793,6 +793,7 @@ export const AuthProvider = ({ children }) => {
     permissions: state.permissions,
     isOwner: state.isOwner,
     roleLevel: state.roleLevel,
+    isChannelPartnerOrg: state.organization?.type === 'channel_partner',
 
     // Constants
     ROLE_HIERARCHY,

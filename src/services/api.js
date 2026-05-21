@@ -402,6 +402,18 @@ export const invitationAPI = {
 };
 
 // =============================================================================
+// 3a. CHANNEL PARTNER PORTAL SERVICES (/api/cp)
+// =============================================================================
+export const cpPortalAPI = {
+  getOrgProfile: () => api.get('/cp/org'),
+  updateOrgProfile: (data) => api.put('/cp/org', data),
+  getTeam: () => api.get('/cp/team'),
+  inviteMember: (data) => api.post('/cp/team/invite', data),
+  changeMemberRole: (userId, roleId) => api.put(`/cp/team/${userId}/role`, { roleId }),
+  deactivateMember: (userId) => api.put(`/cp/team/${userId}/deactivate`),
+};
+
+// =============================================================================
 // 3b. ROLE MANAGEMENT SERVICES (/api/roles)
 // =============================================================================
 export const rolesAPI = {
@@ -1507,6 +1519,7 @@ const apiServices = {
   auth: authAPI,
   user: userAPI, // ENHANCED with new endpoints
   invitation: invitationAPI, // NEW section
+  cpPortal: cpPortalAPI,
   roles: rolesAPI,
   project: projectAPI,
   projectPayment: projectPaymentAPI,
