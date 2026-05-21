@@ -662,7 +662,7 @@ const AnalyticsDashboard = () => {
           {cpCommission && (
             <>
               <Grid item xs={12} md={4}>
-                <ChartCard title="Commission & Payouts" loading={false} minHeight={160}>
+                <ChartCard title="Commission & Payouts" loading={false} minHeight={300}>
                   <Box sx={{ p: 1 }}>
                     <Typography variant="body2" color="text.secondary">Net commission accrued</Typography>
                     <Typography variant="h5">{fmtCurrency(cpCommission.summary?.netAccrued || 0)}</Typography>
@@ -674,6 +674,23 @@ const AnalyticsDashboard = () => {
                       Effective commission rate
                     </Typography>
                     <Typography variant="h6">{cpCommission.effectiveCommissionRate || 0}%</Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
+                      Payment status (₹ net)
+                    </Typography>
+                    <ResponsiveContainer width="100%" height={120}>
+                      <BarChart
+                        data={(cpCommission.paymentStatus || []).map((p) => ({
+                          name: { accrued: 'Accrued', partially_paid: 'Partially Paid', paid: 'Paid' }[p.status] || p.status,
+                          amount: p.netAmount || 0,
+                        }))}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                        <YAxis tickFormatter={(v) => fmtCurrency(v)} tick={{ fontSize: 10 }} width={55} />
+                        <RechartsTooltip formatter={(v) => fmtCurrency(v)} />
+                        <Bar dataKey="amount" fill="#1976d2" radius={[3, 3, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
                   </Box>
                 </ChartCard>
               </Grid>
