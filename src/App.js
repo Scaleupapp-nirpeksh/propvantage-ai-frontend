@@ -26,6 +26,8 @@ import RegisterPage from './pages/auth/RegisterPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 const InviteAcceptancePage = React.lazy(() => import('./pages/auth/InviteAcceptancePage'));
+const RegisterChoicePage = React.lazy(() => import('./pages/auth/RegisterChoicePage'));
+const ChannelPartnerRegisterPage = React.lazy(() => import('./pages/auth/ChannelPartnerRegisterPage'));
 
 // Pitch landing page — public, outside auth flow (in-person pitches only).
 // Not linked in navigation. Reachable only by direct URL.
@@ -377,7 +379,27 @@ const AppRoutes = () => {
       <Route path="/register" element={
         <PublicRoute>
           <AuthLayout>
+            <Suspense fallback={<LoadingFallback message="Loading..." />}>
+              <RegisterChoicePage />
+            </Suspense>
+          </AuthLayout>
+        </PublicRoute>
+      } />
+
+      <Route path="/register/developer" element={
+        <PublicRoute>
+          <AuthLayout>
             <RegisterPage />
+          </AuthLayout>
+        </PublicRoute>
+      } />
+
+      <Route path="/register/channel-partner" element={
+        <PublicRoute>
+          <AuthLayout>
+            <Suspense fallback={<LoadingFallback message="Loading..." />}>
+              <ChannelPartnerRegisterPage />
+            </Suspense>
           </AuthLayout>
         </PublicRoute>
       } />
