@@ -17,7 +17,8 @@ const PortfolioPreviewPage = () => {
     portfolioAPI.getPortfolio(organization._id)
       .then((res) => setData(res.data?.data || null))
       .catch(() => setError('Could not load your portfolio.'));
-  }, [organization]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [organization?._id]);
 
   if (error) return <Box sx={{ py: 6 }}><Alert severity="error">{error}</Alert></Box>;
   if (!data) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}><CircularProgress /></Box>;
@@ -88,7 +89,7 @@ const PortfolioPreviewPage = () => {
                         <Typography variant="caption" color="text.secondary">No current availability</Typography>
                       ) : p.configurationSummary.map((c) => (
                         <Typography variant="body2" key={c.type}>
-                          {c.type}: {c.availableCount} available · {c.sizeRange.min}–{c.sizeRange.max} sqft · {fmt(c.priceRange.min)}–{fmt(c.priceRange.max)}
+                          {c.type}: {c.availableCount} available · {c.sizeRange?.min ?? '—'}–{c.sizeRange?.max ?? '—'} sqft · {fmt(c.priceRange?.min)}–{fmt(c.priceRange?.max)}
                         </Typography>
                       ))}
                     </Box>
