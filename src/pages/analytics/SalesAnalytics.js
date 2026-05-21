@@ -5,6 +5,7 @@ import {
   IconButton, Avatar, Alert, Stack, Tabs, Tab, Tooltip,
   LinearProgress, Skeleton, ToggleButton, ToggleButtonGroup,
   useTheme, useMediaQuery, alpha,
+  CircularProgress, Table, TableHead, TableBody, TableRow, TableCell,
 } from '@mui/material';
 import {
   TrendingUp, Refresh, MonetizationOn, CheckCircle, Assessment,
@@ -19,7 +20,7 @@ import {
 } from 'recharts';
 
 import { useAuth } from '../../context/AuthContext';
-import { salesAPI, projectAPI, userAPI } from '../../services/api';
+import { salesAPI, projectAPI, userAPI, analyticsAPI } from '../../services/api';
 import { formatCurrency, fmtCurrency } from '../../utils/formatters';
 import { PageHeader, KPICard, FilterBar } from '../../components/common';
 import { useProjectContext } from '../../context/ProjectContext';
@@ -415,6 +416,128 @@ const ProjectBreakdownTab = ({ salesData, loading }) => {
 };
 
 // ---------------------------------------------------------------------------
+// Channel Partner Tab
+// ---------------------------------------------------------------------------
+
+function ChannelPartnerTab({ period, project }) {
+  const theme = useTheme();
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    const range = generateDateRange(period);
+    const params = {};
+    if (range.startDate && range.endDate) {
+      params.dateFrom = range.startDate.toISOString();
+      params.dateTo = range.endDate.toISOString();
+    }
+    if (project) params.project = project;
+    analyticsAPI
+      .getChannelPartnerVolume(params)
+      .then((res) => { if (!cancelled) setData(res.data?.data || null); })
+      .catch(() => { if (!cancelled) setData(null); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [period, project]);
+
+  if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}><CircularProgress /></Box>;
+
+  const hasCP = data && data.sales && data.sales.channelPartner.count > 0;
+  if (!hasCP) {
+    return <Alert severity="info" sx={{ mt: 1 }}>No channel-partner sales activity in the selected period.</Alert>;
+  }
+
+  const CATEGORY_LABELS = {
+    broker_firm: 'Broker Firm',
+    individual_agent: 'Individual Agent',
+    corporate: 'Corporate',
+    digital_aggregator: 'Digital Aggregator',
+  };
+  const fmtCr = (n) => `₹${(Number(n || 0) / 10000000).toFixed(2)} Cr`;
+  const splitData = [
+    { name: 'Direct', value: data.sales.direct.revenue, fill: theme.palette.grey[500] },
+    { name: 'Channel Partner', value: data.sales.channelPartner.revenue, fill: theme.palette.primary.main },
+  ];
+  const categoryData = data.byCategory.map((c) => ({
+    name: CATEGORY_LABELS[c.category] || c.category,
+    revenue: c.revenue,
+  }));
+
+  return (
+    <Grid container spacing={2}>
+      <Grid item xs={12} md={4}>
+        <Card variant="outlined"><CardContent>
+          <Typography variant="subtitle2" color="text.secondary">Direct vs Channel Partner — Revenue</Typography>
+          <ResponsiveContainer width="100%" height={240}>
+            <RechartsPieChart>
+              <Pie data={splitData} cx="50%" cy="50%" outerRadius={80} dataKey="value"
+                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
+                {splitData.map((e, i) => <Cell key={i} fill={e.fill} />)}
+              </Pie>
+              <RechartsTooltip formatter={(v) => fmtCr(v)} />
+            </RechartsPieChart>
+          </ResponsiveContainer>
+        </CardContent></Card>
+      </Grid>
+      <Grid item xs={12} md={4}>
+        <Card variant="outlined"><CardContent>
+          <Typography variant="subtitle2" color="text.secondary">Channel Partner Sales</Typography>
+          <Typography variant="h4" sx={{ mt: 1 }}>{data.sales.channelPartner.count}</Typography>
+          <Typography variant="body2" color="text.secondary">{fmtCr(data.sales.channelPartner.revenue)} revenue</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            {data.sales.cpSharePct}% of total revenue
+          </Typography>
+        </CardContent></Card>
+      </Grid>
+      <Grid item xs={12} md={4}>
+        <Card variant="outlined"><CardContent>
+          <Typography variant="subtitle2" color="text.secondary">Avg Deal Size</Typography>
+          <Typography variant="body2" sx={{ mt: 1 }}>Direct: {fmtCr(data.avgDealSize.direct)}</Typography>
+          <Typography variant="body2">Channel Partner: {fmtCr(data.avgDealSize.channelPartner)}</Typography>
+        </CardContent></Card>
+      </Grid>
+      <Grid item xs={12} md={6}>
+        <Card variant="outlined"><CardContent>
+          <Typography variant="subtitle2" color="text.secondary" gutterBottom>Revenue by Partner Category</Typography>
+          <ResponsiveContainer width="100%" height={260}>
+            <RechartsBarChart data={categoryData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+              <YAxis tickFormatter={(v) => `${(v / 10000000).toFixed(0)}Cr`} tick={{ fontSize: 11 }} />
+              <RechartsTooltip formatter={(v) => fmtCr(v)} />
+              <Bar dataKey="revenue" fill={theme.palette.primary.main} radius={[4, 4, 0, 0]} />
+            </RechartsBarChart>
+          </ResponsiveContainer>
+        </CardContent></Card>
+      </Grid>
+      <Grid item xs={12} md={6}>
+        <Card variant="outlined"><CardContent>
+          <Typography variant="subtitle2" color="text.secondary" gutterBottom>By Partner Firm</Typography>
+          <Table size="small">
+            <TableHead><TableRow>
+              <TableCell>Firm</TableCell><TableCell>Category</TableCell>
+              <TableCell align="right">Bookings</TableCell><TableCell align="right">Revenue</TableCell>
+            </TableRow></TableHead>
+            <TableBody>
+              {data.byFirm.map((r) => (
+                <TableRow key={r.channelPartnerId}>
+                  <TableCell>{r.firmName}</TableCell>
+                  <TableCell>{CATEGORY_LABELS[r.category] || r.category}</TableCell>
+                  <TableCell align="right">{r.sales}</TableCell>
+                  <TableCell align="right">{fmtCr(r.revenue)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent></Card>
+      </Grid>
+    </Grid>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Main Page
 // ---------------------------------------------------------------------------
 
@@ -648,6 +771,7 @@ const SalesAnalytics = () => {
           <Tab label="Overview" sx={{ textTransform: 'none', fontWeight: 600 }} />
           <Tab label="Team Performance" sx={{ textTransform: 'none', fontWeight: 600 }} />
           <Tab label="Projects" sx={{ textTransform: 'none', fontWeight: 600 }} />
+          <Tab label="Channel Partners" sx={{ textTransform: 'none', fontWeight: 600 }} />
         </Tabs>
 
         <Box sx={{ p: { xs: 2, md: 3 } }}>
@@ -659,6 +783,9 @@ const SalesAnalytics = () => {
           )}
           {activeTab === 2 && (
             <ProjectBreakdownTab salesData={filteredSales} loading={loading} />
+          )}
+          {activeTab === 3 && (
+            <ChannelPartnerTab period={filters.period} project={filters.project} />
           )}
         </Box>
       </Card>
