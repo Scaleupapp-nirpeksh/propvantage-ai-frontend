@@ -423,10 +423,12 @@ function ChannelPartnerTab({ period, project }) {
   const theme = useTheme();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setError(false);
     const range = generateDateRange(period);
     const params = {};
     if (range.startDate && range.endDate) {
@@ -437,14 +439,18 @@ function ChannelPartnerTab({ period, project }) {
     analyticsAPI
       .getChannelPartnerVolume(params)
       .then((res) => { if (!cancelled) setData(res.data?.data || null); })
-      .catch(() => { if (!cancelled) setData(null); })
+      .catch(() => { if (!cancelled) { setData(null); setError(true); } })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [period, project]);
 
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}><CircularProgress /></Box>;
 
-  const hasCP = data && data.sales && data.sales.channelPartner.count > 0;
+  if (error) {
+    return <Alert severity="error" sx={{ mt: 1 }}>Could not load channel-partner analytics. Please try again.</Alert>;
+  }
+
+  const hasCP = data?.sales?.channelPartner?.count > 0;
   if (!hasCP) {
     return <Alert severity="info" sx={{ mt: 1 }}>No channel-partner sales activity in the selected period.</Alert>;
   }
@@ -457,10 +463,10 @@ function ChannelPartnerTab({ period, project }) {
   };
   const fmtCr = (n) => `₹${(Number(n || 0) / 10000000).toFixed(2)} Cr`;
   const splitData = [
-    { name: 'Direct', value: data.sales.direct.revenue, fill: theme.palette.grey[500] },
-    { name: 'Channel Partner', value: data.sales.channelPartner.revenue, fill: theme.palette.primary.main },
+    { name: 'Direct', value: data.sales?.direct?.revenue, fill: theme.palette.grey[500] },
+    { name: 'Channel Partner', value: data.sales?.channelPartner?.revenue, fill: theme.palette.primary.main },
   ];
-  const categoryData = data.byCategory.map((c) => ({
+  const categoryData = (data.byCategory || []).map((c) => ({
     name: CATEGORY_LABELS[c.category] || c.category,
     revenue: c.revenue,
   }));
@@ -474,7 +480,7 @@ function ChannelPartnerTab({ period, project }) {
             <RechartsPieChart>
               <Pie data={splitData} cx="50%" cy="50%" outerRadius={80} dataKey="value"
                 label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
-                {splitData.map((e, i) => <Cell key={i} fill={e.fill} />)}
+                {splitData.map((e) => <Cell key={e.name} fill={e.fill} />)}
               </Pie>
               <RechartsTooltip formatter={(v) => fmtCr(v)} />
             </RechartsPieChart>
@@ -484,18 +490,18 @@ function ChannelPartnerTab({ period, project }) {
       <Grid item xs={12} md={4}>
         <Card variant="outlined"><CardContent>
           <Typography variant="subtitle2" color="text.secondary">Channel Partner Sales</Typography>
-          <Typography variant="h4" sx={{ mt: 1 }}>{data.sales.channelPartner.count}</Typography>
-          <Typography variant="body2" color="text.secondary">{fmtCr(data.sales.channelPartner.revenue)} revenue</Typography>
+          <Typography variant="h4" sx={{ mt: 1 }}>{data.sales?.channelPartner?.count}</Typography>
+          <Typography variant="body2" color="text.secondary">{fmtCr(data.sales?.channelPartner?.revenue)} revenue</Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            {data.sales.cpSharePct}% of total revenue
+            {data.sales?.cpSharePct}% of total revenue
           </Typography>
         </CardContent></Card>
       </Grid>
       <Grid item xs={12} md={4}>
         <Card variant="outlined"><CardContent>
           <Typography variant="subtitle2" color="text.secondary">Avg Deal Size</Typography>
-          <Typography variant="body2" sx={{ mt: 1 }}>Direct: {fmtCr(data.avgDealSize.direct)}</Typography>
-          <Typography variant="body2">Channel Partner: {fmtCr(data.avgDealSize.channelPartner)}</Typography>
+          <Typography variant="body2" sx={{ mt: 1 }}>Direct: {fmtCr(data.avgDealSize?.direct)}</Typography>
+          <Typography variant="body2">Channel Partner: {fmtCr(data.avgDealSize?.channelPartner)}</Typography>
         </CardContent></Card>
       </Grid>
       <Grid item xs={12} md={6}>
@@ -521,7 +527,7 @@ function ChannelPartnerTab({ period, project }) {
               <TableCell align="right">Bookings</TableCell><TableCell align="right">Revenue</TableCell>
             </TableRow></TableHead>
             <TableBody>
-              {data.byFirm.map((r) => (
+              {(data.byFirm || []).map((r) => (
                 <TableRow key={r.channelPartnerId}>
                   <TableCell>{r.firmName}</TableCell>
                   <TableCell>{CATEGORY_LABELS[r.category] || r.category}</TableCell>
