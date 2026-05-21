@@ -24,6 +24,11 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Table,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableCell,
 } from '@mui/material';
 import {
   Refresh,
@@ -53,6 +58,7 @@ import {
 } from 'recharts';
 import { analyticsAPI, projectAPI } from '../../services/api';
 import { useProjectContext } from '../../context/ProjectContext';
+import { useAuth } from '../../context/AuthContext';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const TIME_PERIODS = [
@@ -62,6 +68,16 @@ const TIME_PERIODS = [
 ];
 
 const CHART_COLORS = ['#1976d2', '#2e7d32', '#ed6c02', '#d32f2f', '#9c27b0', '#0288d1'];
+
+// Convert the dashboard's named period into an ISO date range for CP analytics.
+const periodToRange = (period) => {
+  const now = new Date();
+  let start;
+  if (period === 'month') start = new Date(now.getFullYear(), now.getMonth(), 1);
+  else if (period === 'quarter') start = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
+  else start = new Date(now.getFullYear(), 0, 1); // 'year'
+  return { dateFrom: start.toISOString(), dateTo: now.toISOString() };
+};
 
 // ─── Utility ─────────────────────────────────────────────────────────────────
 const fmtCurrency = (amount) => {
@@ -160,6 +176,7 @@ const AnalyticsDashboard = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { activeProjectId } = useProjectContext();
+  const { canAccess } = useAuth();
 
   // ── State ──
   const [loading, setLoading] = useState(true);
@@ -175,6 +192,8 @@ const AnalyticsDashboard = () => {
     teamPerformance: [],
   });
   const [recentSales, setRecentSales] = useState([]);
+  const [cpVolume, setCpVolume] = useState(null);
+  const [cpCommission, setCpCommission] = useState(null);
 
   // ── Fetch ──
   const fetchData = useCallback(async () => {
@@ -256,6 +275,24 @@ const AnalyticsDashboard = () => {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  useEffect(() => {
+    const range = periodToRange(period);
+    const params = { ...range };
+    if (projectFilter !== 'all') params.project = projectFilter;
+
+    analyticsAPI.getChannelPartnerVolume(params)
+      .then((res) => setCpVolume(res.data?.data || null))
+      .catch(() => setCpVolume(null));
+
+    if (canAccess?.channelPartners?.()) {
+      analyticsAPI.getChannelPartnerCommission(params)
+        .then((res) => setCpCommission(res.data?.data || null))
+        .catch(() => setCpCommission(null));
+    } else {
+      setCpCommission(null);
+    }
+  }, [period, projectFilter, canAccess]);
 
   // ── Derived KPIs ──
   const kpis = useMemo(() => {
@@ -597,6 +634,65 @@ const AnalyticsDashboard = () => {
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>
+      )}
+
+      {/* ─── Channel Partner Contribution ─────────────────────────────────────── */}
+      {cpVolume && cpVolume.sales && cpVolume.sales.channelPartner?.count > 0 && (
+        <Grid container spacing={{ xs: 1.5, sm: 2 }} sx={{ mb: { xs: 2, sm: 3 } }}>
+          <Grid item xs={12} md={cpCommission ? 4 : 12}>
+            <ChartCard title="Channel Partner Contribution" loading={false} minHeight={160}>
+              <Box sx={{ p: 1 }}>
+                <Typography variant="body2" color="text.secondary">Share of revenue via channel partners</Typography>
+                <Typography variant="h4">{cpVolume.sales.cpSharePct || 0}%</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                  Share of leads via channel partners
+                </Typography>
+                <Typography variant="h5">{cpVolume.leads?.cpSharePct || 0}%</Typography>
+              </Box>
+            </ChartCard>
+          </Grid>
+
+          {cpCommission && (
+            <>
+              <Grid item xs={12} md={4}>
+                <ChartCard title="Commission & Payouts" loading={false} minHeight={160}>
+                  <Box sx={{ p: 1 }}>
+                    <Typography variant="body2" color="text.secondary">Net commission accrued</Typography>
+                    <Typography variant="h5">{fmtCurrency(cpCommission.summary?.netAccrued || 0)}</Typography>
+                    <Typography variant="body2" sx={{ mt: 1 }}>
+                      Paid: {fmtCurrency(cpCommission.summary?.paid || 0)} &nbsp;•&nbsp;
+                      Pending: {fmtCurrency(cpCommission.summary?.pending || 0)}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                      Effective commission rate
+                    </Typography>
+                    <Typography variant="h6">{cpCommission.effectiveCommissionRate || 0}%</Typography>
+                  </Box>
+                </ChartCard>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <ChartCard title="Top Channel Partners" loading={false} minHeight={160}>
+                  <Table size="small">
+                    <TableHead><TableRow>
+                      <TableCell>Firm</TableCell>
+                      <TableCell align="right">Booked</TableCell>
+                      <TableCell align="right">Commission</TableCell>
+                    </TableRow></TableHead>
+                    <TableBody>
+                      {(cpCommission.topPerformers || []).slice(0, 5).map((r) => (
+                        <TableRow key={r.channelPartnerId}>
+                          <TableCell>{r.firmName}</TableCell>
+                          <TableCell align="right">{fmtCurrency(r.bookedRevenue)}</TableCell>
+                          <TableCell align="right">{fmtCurrency(r.netCommission)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </ChartCard>
+              </Grid>
+            </>
+          )}
+        </Grid>
       )}
     </Box>
   );
