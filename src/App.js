@@ -19,6 +19,7 @@ import { ProjectProvider } from './context/ProjectContext';
 // Layout Components
 import AuthLayout from './components/layout/AuthLayout';
 import DashboardLayout from './components/layout/DashboardLayout';
+import ChannelPartnerLayout from './components/layout/ChannelPartnerLayout';
 
 // Auth Pages - UNCHANGED
 import LoginPage from './pages/auth/LoginPage';
@@ -154,6 +155,11 @@ const AIAnalysisPage = React.lazy(() => import('./pages/competitive-analysis/AIA
 const DataProvidersPage = React.lazy(() => import('./pages/competitive-analysis/DataProvidersPage'));
 const CompetitivePerformancePage = React.lazy(() => import('./pages/competitive-analysis/CompetitivePerformancePage'));
 
+// CP Portal Pages (for channel_partner org users)
+const CpPortalDashboardPage = React.lazy(() => import('./pages/cp-portal/CpPortalDashboardPage'));
+const CpPortalTeamPage = React.lazy(() => import('./pages/cp-portal/CpPortalTeamPage'));
+const CpPortalProfilePage = React.lazy(() => import('./pages/cp-portal/CpPortalProfilePage'));
+
 // Channel Partners
 const ChannelPartnerListPage = React.lazy(() => import('./pages/channel-partners/ChannelPartnerListPage'));
 const ChannelPartnerFormPage = React.lazy(() => import('./pages/channel-partners/ChannelPartnerFormPage'));
@@ -286,11 +292,27 @@ const ProtectedRoute = ({ children, requiredPermission, fallback = <Unauthorized
 };
 
 // =============================================================================
+// CHANNEL PARTNER ROUTE COMPONENT
+// =============================================================================
+
+// A CP-only route wrapper: authenticated AND org type is channel_partner.
+const ChannelPartnerRoute = ({ children }) => {
+  const { isAuthenticated, isLoading, isChannelPartnerOrg } = useAuth();
+  if (isLoading) return <LoadingFallback message="Authenticating..." />;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!isChannelPartnerOrg) return <Navigate to="/dashboard" replace />;
+  return children;
+};
+
+// =============================================================================
 // ROLE-BASED DASHBOARD ROUTER - UNCHANGED
 // =============================================================================
 
 const DashboardRouter = () => {
-  const { user, roleLevel, isOwner, checkPerm } = useAuth();
+  const { user, roleLevel, isOwner, checkPerm, isChannelPartnerOrg } = useAuth();
+
+  // Redirect channel partner org users away from the developer dashboard
+  if (isChannelPartnerOrg) return <Navigate to="/partner/dashboard" replace />;
 
   // Route to appropriate dashboard based on role level / permissions first, then fall back to role string
   const getDashboardComponent = () => {
@@ -450,6 +472,26 @@ const AppRoutes = () => {
             </Suspense>
           </DashboardLayout>
         </ProtectedRoute>
+      } />
+
+      {/* ========================================= */}
+      {/* CHANNEL PARTNER PORTAL ROUTES             */}
+      {/* ========================================= */}
+
+      <Route path="/partner/dashboard" element={
+        <ChannelPartnerRoute><ChannelPartnerLayout>
+          <Suspense fallback={<LoadingFallback />}><CpPortalDashboardPage /></Suspense>
+        </ChannelPartnerLayout></ChannelPartnerRoute>
+      } />
+      <Route path="/partner/team" element={
+        <ChannelPartnerRoute><ChannelPartnerLayout>
+          <Suspense fallback={<LoadingFallback />}><CpPortalTeamPage /></Suspense>
+        </ChannelPartnerLayout></ChannelPartnerRoute>
+      } />
+      <Route path="/partner/profile" element={
+        <ChannelPartnerRoute><ChannelPartnerLayout>
+          <Suspense fallback={<LoadingFallback />}><CpPortalProfilePage /></Suspense>
+        </ChannelPartnerLayout></ChannelPartnerRoute>
       } />
 
       {/* ========================================= */}

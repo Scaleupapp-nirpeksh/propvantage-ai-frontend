@@ -199,7 +199,10 @@ const LoginPage = () => {
 
       if (result.success) {
         enqueueSnackbar(`Welcome back, ${result.user.firstName}!`, { variant: 'success' });
-        const from = location.state?.from?.pathname || result.redirectTo || '/dashboard';
+        const defaultDest = result.organization?.type === 'channel_partner'
+          ? '/partner/dashboard'
+          : '/dashboard';
+        const from = location.state?.from?.pathname || result.redirectTo || defaultDest;
         setTimeout(() => navigate(from, { replace: true }), 100);
       } else if (result.status === 429) {
         // Rate limited
