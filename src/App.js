@@ -155,6 +155,10 @@ const AIAnalysisPage = React.lazy(() => import('./pages/competitive-analysis/AIA
 const DataProvidersPage = React.lazy(() => import('./pages/competitive-analysis/DataProvidersPage'));
 const CompetitivePerformancePage = React.lazy(() => import('./pages/competitive-analysis/CompetitivePerformancePage'));
 
+// Portfolio Pages
+const PortfolioProfilePage = React.lazy(() => import('./pages/portfolio/PortfolioProfilePage'));
+const PortfolioPreviewPage = React.lazy(() => import('./pages/portfolio/PortfolioPreviewPage'));
+
 // CP Portal Pages (for channel_partner org users)
 const CpPortalDashboardPage = React.lazy(() => import('./pages/cp-portal/CpPortalDashboardPage'));
 const CpPortalTeamPage = React.lazy(() => import('./pages/cp-portal/CpPortalTeamPage'));
@@ -1377,6 +1381,28 @@ const AppRoutes = () => {
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback message="Loading partner..." />}>
               <ChannelPartnerFormPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* ========================================= */}
+      {/* PORTFOLIO ROUTES */}
+      {/* ========================================= */}
+      <Route path="/portfolio/profile" element={
+        <ProtectedRoute requiredPermission="portfolio:manage">
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback />}>
+              <PortfolioProfilePage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/portfolio/preview" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback />}>
+              <PortfolioPreviewPage />
             </Suspense>
           </DashboardLayout>
         </ProtectedRoute>

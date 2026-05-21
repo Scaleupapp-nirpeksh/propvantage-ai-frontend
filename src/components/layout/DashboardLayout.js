@@ -83,6 +83,8 @@ import {
   VpnKey,
   RuleFolder,
   Insights,
+  Storefront,
+  Visibility,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import { useChat } from '../../context/ChatContext';
@@ -208,6 +210,17 @@ const getNavigationItems = (userRole, canAccess) => {
             { id: 'cp-list',      title: 'All Partners',        icon: People,         path: '/channel-partners' },
             { id: 'cp-rules',     title: 'Commission Rules',    icon: MonetizationOn, path: '/channel-partners/commission-rules' },
             { id: 'cp-records',   title: 'Commission Records',  icon: Receipt,        path: '/channel-partners/commission-records' },
+          ],
+        },
+        {
+          id: 'portfolio',
+          title: 'Portfolio',
+          icon: Storefront,
+          path: '/portfolio/preview',
+          requiredAccess: () => canAccess.portfolioManage(),
+          children: [
+            { id: 'portfolio-preview', title: 'Preview', icon: Visibility, path: '/portfolio/preview' },
+            { id: 'portfolio-profile', title: 'Public Profile', icon: Settings, path: '/portfolio/profile' },
           ],
         },
       ],
