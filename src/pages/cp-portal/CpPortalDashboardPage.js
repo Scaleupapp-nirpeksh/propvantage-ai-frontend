@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box, Typography, Card, CardContent, List, ListItem, ListItemIcon, ListItemText,
-  Button, Chip,
+  Button,
 } from '@mui/material';
-import { CheckCircle, RadioButtonUnchecked, Lock } from '@mui/icons-material';
+import { CheckCircle, RadioButtonUnchecked, Storefront } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import { cpPortalAPI } from '../../services/api';
 
@@ -58,19 +58,22 @@ const CpPortalDashboardPage = () => {
         </CardContent>
       </Card>
 
-      <Card variant="outlined" sx={{ maxWidth: 640, opacity: 0.7 }}>
+      <Card variant="outlined" sx={{ maxWidth: 640 }}>
         <CardContent>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Lock fontSize="small" color="disabled" />
+            <Storefront fontSize="small" color="primary" />
             <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
               Find developers to partner with
             </Typography>
-            <Chip label="Coming soon" size="small" />
           </Box>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Discover real-estate developers, apply to partner with them, and start
-            registering leads — arriving in an upcoming release.
+            Discover real-estate developers, explore their portfolios, and apply to
+            partner with them.
           </Typography>
+          <Button variant="contained" sx={{ mt: 2 }}
+            onClick={() => navigate('/partner/marketplace')}>
+            Browse marketplace
+          </Button>
         </CardContent>
       </Card>
     </Box>

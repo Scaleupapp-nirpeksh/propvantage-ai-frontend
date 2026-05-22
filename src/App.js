@@ -163,6 +163,8 @@ const PortfolioPreviewPage = React.lazy(() => import('./pages/portfolio/Portfoli
 const CpPortalDashboardPage = React.lazy(() => import('./pages/cp-portal/CpPortalDashboardPage'));
 const CpPortalTeamPage = React.lazy(() => import('./pages/cp-portal/CpPortalTeamPage'));
 const CpPortalProfilePage = React.lazy(() => import('./pages/cp-portal/CpPortalProfilePage'));
+const CpMarketplacePage = React.lazy(() => import('./pages/cp-portal/CpMarketplacePage'));
+const CpPartnershipsPage = React.lazy(() => import('./pages/cp-portal/CpPartnershipsPage'));
 
 // Channel Partners
 const ChannelPartnerListPage = React.lazy(() => import('./pages/channel-partners/ChannelPartnerListPage'));
@@ -171,6 +173,7 @@ const CommissionRuleListPage = React.lazy(() => import('./pages/channel-partners
 const CommissionRuleFormPage = React.lazy(() => import('./pages/channel-partners/CommissionRuleFormPage'));
 const CommissionRecordListPage = React.lazy(() => import('./pages/channel-partners/CommissionRecordListPage'));
 const ChannelPartnerDashboardPage = React.lazy(() => import('./pages/channel-partners/ChannelPartnerDashboardPage'));
+const DeveloperPartnershipsPage = React.lazy(() => import('./pages/channel-partners/DeveloperPartnershipsPage'));
 
 // Chat
 const ChatPage = React.lazy(() => import('./pages/chat/ChatPage'));
@@ -495,6 +498,16 @@ const AppRoutes = () => {
       <Route path="/partner/profile" element={
         <ChannelPartnerRoute><ChannelPartnerLayout>
           <Suspense fallback={<LoadingFallback />}><CpPortalProfilePage /></Suspense>
+        </ChannelPartnerLayout></ChannelPartnerRoute>
+      } />
+      <Route path="/partner/marketplace" element={
+        <ChannelPartnerRoute><ChannelPartnerLayout>
+          <Suspense fallback={<LoadingFallback />}><CpMarketplacePage /></Suspense>
+        </ChannelPartnerLayout></ChannelPartnerRoute>
+      } />
+      <Route path="/partner/partnerships" element={
+        <ChannelPartnerRoute><ChannelPartnerLayout>
+          <Suspense fallback={<LoadingFallback />}><CpPartnershipsPage /></Suspense>
         </ChannelPartnerLayout></ChannelPartnerRoute>
       } />
 
@@ -1372,6 +1385,15 @@ const AppRoutes = () => {
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback message="Loading dashboard..." />}>
               <ChannelPartnerDashboardPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/channel-partners/requests" element={
+        <ProtectedRoute requiredPermission="channel_partners:view">
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading partnerships..." />}>
+              <DeveloperPartnershipsPage />
             </Suspense>
           </DashboardLayout>
         </ProtectedRoute>

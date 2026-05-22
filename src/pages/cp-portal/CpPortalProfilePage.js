@@ -20,13 +20,29 @@ const CpPortalProfilePage = () => {
   const setField = (k) => (e) => setOrg((o) => ({ ...o, [k]: e.target.value }));
   const setContact = (k) => (e) =>
     setOrg((o) => ({ ...o, contactInfo: { ...(o.contactInfo || {}), [k]: e.target.value } }));
+  const setMarketing = (k) => (e) =>
+    setOrg((o) => ({
+      ...o,
+      channelPartnerProfile: { ...(o.channelPartnerProfile || {}), [k]: e.target.value },
+    }));
 
   const save = async () => {
     setSaving(true); setError(''); setOk('');
     try {
+      const cpp = org.channelPartnerProfile || {};
+      const areasServed = String(cpp.areasServed ?? '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
       const res = await cpPortalAPI.updateOrgProfile({
         name: org.name, category: org.category, country: org.country, city: org.city,
         contactInfo: org.contactInfo,
+        channelPartnerProfile: {
+          logoUrl: cpp.logoUrl || '',
+          about: cpp.about || '',
+          areasServed,
+          trackRecord: cpp.trackRecord || '',
+        },
       });
       setOrg(res.data?.data || org);
       setOk('Profile saved.');
@@ -36,6 +52,12 @@ const CpPortalProfilePage = () => {
       setSaving(false);
     }
   };
+
+  // areasServed comes back from the API as an array; the text field edits a CSV string.
+  const cpp = org?.channelPartnerProfile || {};
+  const areasServedValue = Array.isArray(cpp.areasServed)
+    ? cpp.areasServed.join(', ')
+    : (cpp.areasServed || '');
 
   if (!org) {
     return <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
@@ -85,6 +107,36 @@ const CpPortalProfilePage = () => {
             disabled={saving} />
         </Grid>
       </Grid>
+
+      <Typography variant="h6" sx={{ fontWeight: 700, mt: 4, mb: 1 }}>
+        Marketplace profile
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        This is how developers see your firm in their marketplace.
+      </Typography>
+      <Grid container spacing={2}>
+        <Grid item xs={12}>
+          <TextField fullWidth label="Logo URL" value={cpp.logoUrl || ''}
+            onChange={setMarketing('logoUrl')} disabled={saving}
+            placeholder="https://…" />
+        </Grid>
+        <Grid item xs={12}>
+          <TextField fullWidth multiline minRows={3} label="About your firm"
+            value={cpp.about || ''} onChange={setMarketing('about')} disabled={saving} />
+        </Grid>
+        <Grid item xs={12}>
+          <TextField fullWidth label="Areas served" value={areasServedValue}
+            onChange={setMarketing('areasServed')} disabled={saving}
+            helperText="Comma-separated, e.g. Bandra, Andheri, Powai" />
+        </Grid>
+        <Grid item xs={12}>
+          <TextField fullWidth multiline minRows={3} label="Track record"
+            value={cpp.trackRecord || ''} onChange={setMarketing('trackRecord')}
+            disabled={saving}
+            helperText="Highlight your sales experience and notable achievements." />
+        </Grid>
+      </Grid>
+
       <Button variant="contained" sx={{ mt: 3 }} onClick={save} disabled={saving}>
         {saving ? 'Saving…' : 'Save profile'}
       </Button>

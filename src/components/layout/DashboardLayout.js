@@ -206,10 +206,11 @@ const getNavigationItems = (userRole, canAccess) => {
           path: '/channel-partners',
           requiredAccess: () => canAccess.channelPartners(),
           children: [
-            { id: 'cp-dashboard', title: 'Performance',        icon: BarChart,       path: '/channel-partners/dashboard' },
-            { id: 'cp-list',      title: 'All Partners',        icon: People,         path: '/channel-partners' },
-            { id: 'cp-rules',     title: 'Commission Rules',    icon: MonetizationOn, path: '/channel-partners/commission-rules' },
-            { id: 'cp-records',   title: 'Commission Records',  icon: Receipt,        path: '/channel-partners/commission-records' },
+            { id: 'cp-dashboard',    title: 'Performance',        icon: BarChart,       path: '/channel-partners/dashboard' },
+            { id: 'cp-list',         title: 'All Partners',        icon: People,         path: '/channel-partners' },
+            { id: 'cp-partnerships', title: 'Partnerships',        icon: Handshake,      path: '/channel-partners/requests' },
+            { id: 'cp-rules',        title: 'Commission Rules',    icon: MonetizationOn, path: '/channel-partners/commission-rules' },
+            { id: 'cp-records',      title: 'Commission Records',  icon: Receipt,        path: '/channel-partners/commission-records' },
           ],
         },
         {

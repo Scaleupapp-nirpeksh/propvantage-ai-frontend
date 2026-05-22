@@ -4,12 +4,16 @@ import {
   Box, Drawer, AppBar, Toolbar, Typography, List, ListItemButton, ListItemIcon,
   ListItemText, IconButton, Avatar, Menu, MenuItem,
 } from '@mui/material';
-import { Dashboard, Groups, Business, Logout, Menu as MenuIcon } from '@mui/icons-material';
+import {
+  Dashboard, Groups, Business, Logout, Menu as MenuIcon, Storefront, Handshake,
+} from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 
 const DRAWER_WIDTH = 248;
 const NAV = [
   { label: 'Dashboard', icon: Dashboard, path: '/partner/dashboard' },
+  { label: 'Marketplace', icon: Storefront, path: '/partner/marketplace' },
+  { label: 'Partnerships', icon: Handshake, path: '/partner/partnerships' },
   { label: 'My Team', icon: Groups, path: '/partner/team' },
   { label: 'Organization Profile', icon: Business, path: '/partner/profile' },
 ];

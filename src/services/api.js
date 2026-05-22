@@ -905,6 +905,24 @@ export const portfolioAPI = {
 };
 
 // =============================================================================
+// MARKETPLACE SERVICES (/api/marketplace)
+// =============================================================================
+export const marketplaceAPI = {
+  browseDevelopers: (params = {}) => api.get('/marketplace/developers', { params }),
+  browseChannelPartners: (params = {}) => api.get('/marketplace/channel-partners', { params }),
+};
+
+// =============================================================================
+// PARTNERSHIP SERVICES (/api/partnerships)
+// =============================================================================
+export const partnershipAPI = {
+  list: (params = {}) => api.get('/partnerships', { params }),
+  get: (id) => api.get(`/partnerships/${id}`),
+  create: (data) => api.post('/partnerships', data),
+  transition: (id, data) => api.patch(`/partnerships/${id}`, data),
+};
+
+// =============================================================================
 // 18-22. ALL OTHER SERVICES REMAIN UNCHANGED
 // =============================================================================
 
