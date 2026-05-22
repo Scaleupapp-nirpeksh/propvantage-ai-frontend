@@ -920,6 +920,10 @@ export const partnershipAPI = {
   get: (id) => api.get(`/partnerships/${id}`),
   create: (data) => api.post('/partnerships', data),
   transition: (id, data) => api.patch(`/partnerships/${id}`, data),
+  inviteNewCp: (data) => api.post('/partnerships/invite-new-cp', data),
+  getOffPlatformInvite: (channelPartnerId, token) =>
+    api.get(`/partnerships/invite/${channelPartnerId}`, { params: { token } }),
+  claimInvite: (data) => api.post('/partnerships/claim-invite', data),
 };
 
 // =============================================================================

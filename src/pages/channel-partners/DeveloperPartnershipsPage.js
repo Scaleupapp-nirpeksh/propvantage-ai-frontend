@@ -5,7 +5,7 @@ import {
   MenuItem, Divider, InputAdornment, Pagination, FormControl, InputLabel, Select,
   OutlinedInput, ListItemText, Checkbox,
 } from '@mui/material';
-import { Search } from '@mui/icons-material';
+import { Search, PersonAdd, ContentCopy } from '@mui/icons-material';
 import { marketplaceAPI, partnershipAPI, projectAPI } from '../../services/api';
 
 const STATUS_META = {
@@ -125,6 +125,16 @@ const DeveloperPartnershipsPage = () => {
   const [inviteProjects, setInviteProjects] = useState([]);
   const [inviteBusy, setInviteBusy] = useState(false);
   const [inviteError, setInviteError] = useState('');
+
+  // Off-platform "invite a new channel partner" dialog
+  const [newCpOpen, setNewCpOpen] = useState(false);
+  const [newCpForm, setNewCpForm] = useState({ firmName: '', email: '', category: '' });
+  const [newCpTerms, setNewCpTerms] = useState(emptyTerms);
+  const [newCpProjects, setNewCpProjects] = useState([]);
+  const [newCpBusy, setNewCpBusy] = useState(false);
+  const [newCpError, setNewCpError] = useState('');
+  const [newCpResult, setNewCpResult] = useState(null); // { firmName, inviteLink }
+  const [copyOk, setCopyOk] = useState(false);
 
   const loadPartnerships = useCallback(() => {
     setLoadingP(true);
@@ -262,6 +272,68 @@ const DeveloperPartnershipsPage = () => {
       setInviteError(err.response?.data?.message || 'Could not send the invitation.');
     } finally {
       setInviteBusy(false);
+    }
+  };
+
+  const openNewCp = () => {
+    setNewCpForm({ firmName: '', email: '', category: '' });
+    setNewCpTerms(emptyTerms);
+    setNewCpProjects([]);
+    setNewCpError('');
+    setNewCpResult(null);
+    setCopyOk(false);
+    setNewCpOpen(true);
+  };
+
+  const closeNewCp = () => {
+    if (newCpBusy) return;
+    setNewCpOpen(false);
+  };
+
+  const submitNewCp = async () => {
+    const firmName = newCpForm.firmName.trim();
+    const email = newCpForm.email.trim();
+    if (!firmName) { setNewCpError('Enter the firm name.'); return; }
+    if (!email) { setNewCpError('Enter a contact email.'); return; }
+    if (!newCpForm.category) { setNewCpError('Choose a category.'); return; }
+    const value = Number(newCpTerms.value);
+    if (!newCpTerms.value || Number.isNaN(value) || value <= 0) {
+      setNewCpError('Enter a valid commission value.');
+      return;
+    }
+    setNewCpBusy(true);
+    setNewCpError('');
+    try {
+      const payload = {
+        firmName,
+        email,
+        category: newCpForm.category,
+        commissionTerms: {
+          type: newCpTerms.type,
+          value,
+          ...(newCpTerms.notes ? { notes: newCpTerms.notes } : {}),
+        },
+      };
+      if (newCpProjects.length > 0) payload.projects = newCpProjects;
+      const res = await partnershipAPI.inviteNewCp(payload);
+      const data = res.data?.data || {};
+      setNewCpResult({ firmName: data.firmName || firmName, inviteLink: data.inviteLink || '' });
+      loadPartnerships();
+    } catch (err) {
+      setNewCpError(err.response?.data?.message || 'Could not create the invite.');
+    } finally {
+      setNewCpBusy(false);
+    }
+  };
+
+  const copyInviteLink = async () => {
+    if (!newCpResult?.inviteLink) return;
+    try {
+      await navigator.clipboard.writeText(newCpResult.inviteLink);
+      setCopyOk(true);
+      setTimeout(() => setCopyOk(false), 2000);
+    } catch {
+      setCopyOk(false);
     }
   };
 
@@ -405,6 +477,11 @@ const DeveloperPartnershipsPage = () => {
       {/* Tab 3: Find Partners */}
       {tab === 3 && (
         <>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+            <Button variant="contained" startIcon={<PersonAdd />} onClick={openNewCp}>
+              Invite a new channel partner
+            </Button>
+          </Box>
           <Card variant="outlined" sx={{ mb: 3 }}>
             <CardContent>
               <Grid container spacing={2}>
@@ -483,10 +560,12 @@ const DeveloperPartnershipsPage = () => {
                             </Typography>
                           )}
                           <Chip size="small" label={cfg.label} color={cfg.color} />
-                          {cp.partnershipStatus === 'none' && (
+                          {['none', 'rejected', 'terminated'].includes(cp.partnershipStatus) && (
                             <Box sx={{ mt: 1.5 }}>
                               <Button size="small" variant="contained"
-                                onClick={() => openInvite(cp)}>Invite</Button>
+                                onClick={() => openInvite(cp)}>
+                                {cp.partnershipStatus === 'none' ? 'Invite' : 'Re-invite'}
+                              </Button>
                             </Box>
                           )}
                         </CardContent>
@@ -556,6 +635,91 @@ const DeveloperPartnershipsPage = () => {
           <Button variant="contained" onClick={submitInvite} disabled={inviteBusy}>
             {inviteBusy ? 'Sending…' : 'Send invitation'}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Invite a new (off-platform) channel partner dialog */}
+      <Dialog open={newCpOpen} onClose={closeNewCp} maxWidth="sm" fullWidth>
+        <DialogTitle>Invite a new channel partner</DialogTitle>
+        <DialogContent dividers>
+          {newCpResult ? (
+            <>
+              <Alert severity="success" sx={{ mb: 2 }}>
+                Invite created for {newCpResult.firmName}.
+              </Alert>
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                Share this link with the channel partner so they can register and join
+                you on PropVantage:
+              </Typography>
+              <TextField
+                fullWidth
+                size="small"
+                label="Invite link"
+                value={newCpResult.inviteLink}
+                InputProps={{
+                  readOnly: true,
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <Button size="small" startIcon={<ContentCopy />} onClick={copyInviteLink}>
+                        {copyOk ? 'Copied' : 'Copy'}
+                      </Button>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.5 }}>
+                This channel partner record is now trackable under “All Partners”.
+              </Typography>
+            </>
+          ) : (
+            <>
+              {newCpError && <Alert severity="error" sx={{ mb: 2 }}>{newCpError}</Alert>}
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <TextField fullWidth size="small" label="Firm name"
+                    value={newCpForm.firmName}
+                    onChange={(e) => setNewCpForm((f) => ({ ...f, firmName: e.target.value }))}
+                    disabled={newCpBusy} />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField fullWidth size="small" type="email" label="Contact email"
+                    value={newCpForm.email}
+                    onChange={(e) => setNewCpForm((f) => ({ ...f, email: e.target.value }))}
+                    disabled={newCpBusy} />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField fullWidth size="small" select label="Category"
+                    value={newCpForm.category}
+                    onChange={(e) => setNewCpForm((f) => ({ ...f, category: e.target.value }))}
+                    disabled={newCpBusy}>
+                    <MenuItem value="individual_agent">Individual Agent</MenuItem>
+                    <MenuItem value="broker_firm">Broker Firm</MenuItem>
+                    <MenuItem value="corporate">Corporate</MenuItem>
+                    <MenuItem value="digital_aggregator">Digital Aggregator</MenuItem>
+                  </TextField>
+                </Grid>
+              </Grid>
+              <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>Commission terms</Typography>
+              <CommissionFields terms={newCpTerms} onChange={setNewCpTerms} disabled={newCpBusy} />
+              <Box sx={{ mt: 2 }}>
+                <ProjectMultiSelect projects={projects} value={newCpProjects}
+                  onChange={setNewCpProjects} disabled={newCpBusy} />
+                <Typography variant="caption" color="text.secondary">
+                  Leave empty to allow the partner to work across all projects.
+                </Typography>
+              </Box>
+            </>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button onClick={closeNewCp} disabled={newCpBusy}>
+            {newCpResult ? 'Close' : 'Cancel'}
+          </Button>
+          {!newCpResult && (
+            <Button variant="contained" onClick={submitNewCp} disabled={newCpBusy}>
+              {newCpBusy ? 'Creating…' : 'Create invite'}
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
     </Box>
