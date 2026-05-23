@@ -365,13 +365,19 @@ const ProspectDetailPage = () => {
     [activities],
   );
 
-  const payments = prospect?.commissionPayments || [];
+  // SP4 — API returns commission fields nested under `commission.*`, not
+  // flattened. Earlier code read flat `commissionPayments`/`commissionExpectedAmount`/
+  // `commissionStatus` which are undefined on the response, so the Commission
+  // tab always rendered ₹0 / pending even when the prospect had been paid.
+  // (Phase L UI smoke finding #1.)
+  const commission = prospect?.commission || {};
+  const payments = commission.payments || [];
   const totalReceived = payments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
-  const expected = Number(prospect?.commissionExpectedAmount || 0);
+  const expected = Number(commission.expectedAmount || 0);
   const balance = Math.max(0, expected - totalReceived);
   const commissionCcy =
     prospect?.commissionAgreement?.currency || prospect?.booking?.currency || 'INR';
-  const commissionStatus = prospect?.commissionStatus || 'pending';
+  const commissionStatus = commission.status || 'pending';
 
   const contextType = prospect?.developerContext?.type;
   const pushed = Boolean(prospect?.pushedToLead);
