@@ -536,6 +536,8 @@ export const AuthProvider = ({ children }) => {
         user,
         organization,
         redirectTo: getDashboardRoute(user.role),
+        // SP4: surface optional warnings (e.g. external-developer claim non-fatal failure).
+        claimWarning: responseData.claimWarning,
       };
     } catch (error) {
       const errorMessage = error.message || 'Registration failed. Please try again.';

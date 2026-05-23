@@ -77,7 +77,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { useAuth } from '../../context/AuthContext';
 import { useChat } from '../../context/ChatContext';
-import { leadAPI, aiAPI } from '../../services/api';
+import { leadAPI, aiAPI, leadRegistrationsAPI } from '../../services/api';
 import LeadEnrichmentCard from '../../components/leads/LeadEnrichmentCard';
 import ChannelPartnerAttributionSummary from '../../components/channel-partners/ChannelPartnerAttributionSummary';
 
@@ -1267,12 +1267,19 @@ const FollowUpManagement = ({ lead, onRefresh }) => {
 const LeadDetailPage = () => {
   const { leadId } = useParams();
   const navigate = useNavigate();
+  const { checkPerm } = useAuth();
 
   // State management
   const [lead, setLead] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState(0);
+
+  // SP4: proposal decision state
+  const [proposalRejectMode, setProposalRejectMode] = useState(false);
+  const [proposalRejectNote, setProposalRejectNote] = useState('');
+  const [proposalBusy, setProposalBusy] = useState(false);
+  const [proposalError, setProposalError] = useState('');
 
   // Fetch lead data
   const fetchLead = useCallback(async (opts = {}) => {
@@ -1335,6 +1342,22 @@ const LeadDetailPage = () => {
 
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
+  };
+
+  // SP4: accept / reject CP-proposed status change
+  const handleProposalDecision = async (action, note) => {
+    setProposalBusy(true);
+    setProposalError('');
+    try {
+      await leadRegistrationsAPI.decideProposal(leadId, { action, note: note || undefined });
+      setProposalRejectMode(false);
+      setProposalRejectNote('');
+      await fetchLead({ silent: true });
+    } catch (err) {
+      setProposalError(err.response?.data?.message || 'Could not complete action.');
+    } finally {
+      setProposalBusy(false);
+    }
   };
 
   if (loading) {
@@ -1400,6 +1423,116 @@ const LeadDetailPage = () => {
           Back to Leads
         </Button>
       </Box>
+
+      {/* SP4: CP-proposed status banner */}
+      {lead.proposedStatusChange && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          <Box>
+            {(() => {
+              const partner = lead.channelPartnerAttribution?.partners?.[0];
+              const agent = partner?.agentUser;
+              const agentName = agent && typeof agent === 'object'
+                ? `${agent.firstName || ''} ${agent.lastName || ''}`.trim() || agent.email
+                : 'CP Agent';
+              const cpOrg = (partner?.channelPartner && typeof partner.channelPartner === 'object'
+                ? partner.channelPartner.firmName : null) || lead.cpOrgName || 'a Channel Partner';
+              return (
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  <strong>{agentName}</strong> from <strong>{cpOrg}</strong> proposes moving this lead to <strong>{lead.proposedStatusChange.status}</strong>.
+                </Typography>
+              );
+            })()}
+            {lead.proposedStatusChange.note && (
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                Note: {lead.proposedStatusChange.note}
+              </Typography>
+            )}
+            {proposalError && (
+              <Typography variant="body2" color="error" sx={{ mb: 1 }}>{proposalError}</Typography>
+            )}
+            {checkPerm && checkPerm('leads:update') && (
+              !proposalRejectMode ? (
+                <Stack direction="row" spacing={1}>
+                  <Button size="small" variant="contained" color="success"
+                    onClick={() => handleProposalDecision('accept')} disabled={proposalBusy}>
+                    Accept Proposal
+                  </Button>
+                  <Button size="small" variant="outlined" color="error"
+                    onClick={() => setProposalRejectMode(true)} disabled={proposalBusy}>
+                    Reject Proposal
+                  </Button>
+                </Stack>
+              ) : (
+                <Box>
+                  <TextField fullWidth size="small" multiline minRows={2} sx={{ mt: 1, mb: 1 }}
+                    placeholder="Reason (optional)"
+                    value={proposalRejectNote} onChange={(e) => setProposalRejectNote(e.target.value)} />
+                  <Stack direction="row" spacing={1}>
+                    <Button size="small" variant="contained" color="error"
+                      onClick={() => handleProposalDecision('reject', proposalRejectNote)} disabled={proposalBusy}>
+                      Confirm Reject
+                    </Button>
+                    <Button size="small" onClick={() => { setProposalRejectMode(false); setProposalRejectNote(''); }} disabled={proposalBusy}>
+                      Cancel
+                    </Button>
+                  </Stack>
+                </Box>
+              )
+            )}
+          </Box>
+        </Alert>
+      )}
+
+      {/* SP4: Channel Partner attribution card (when lead came from a CP) */}
+      {lead.channelPartnerAttribution?.partners?.[0]?.channelPartner && (
+        <Card variant="outlined" sx={{ mb: 2 }}>
+          <CardContent>
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+              <Handshake fontSize="small" color="primary" />
+              <Typography variant="overline" color="text.secondary">Channel Partner</Typography>
+            </Stack>
+            {(() => {
+              const partner = lead.channelPartnerAttribution.partners[0];
+              const cp = partner.channelPartner;
+              const agent = partner.agentUser;
+              const cpName = (cp && typeof cp === 'object' ? cp.firmName : null) || lead.cpOrgName || '—';
+              const agentName = agent && typeof agent === 'object'
+                ? `${agent.firstName || ''} ${agent.lastName || ''}`.trim() || agent.email
+                : '—';
+              const agentEmail = agent && typeof agent === 'object' ? agent.email : null;
+              const note = lead.sourceProspect?.notes;
+              return (
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={4}>
+                    <Typography variant="caption" color="text.secondary">CP Organization</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>{cpName}</Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <Typography variant="caption" color="text.secondary">Agent</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>{agentName}</Typography>
+                    {agentEmail && (
+                      <Typography variant="caption" color="text.secondary">{agentEmail}</Typography>
+                    )}
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <Typography variant="caption" color="text.secondary">Submitted</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      {lead.createdAt ? new Date(lead.createdAt).toLocaleString() : '—'}
+                    </Typography>
+                  </Grid>
+                  {note && (
+                    <Grid item xs={12}>
+                      <Divider sx={{ my: 1 }} />
+                      <Typography variant="caption" color="text.secondary">Original Prospect Note</Typography>
+                      <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>{note}</Typography>
+                    </Grid>
+                  )}
+                </Grid>
+              );
+            })()}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Lead Header */}
       <LeadHeader

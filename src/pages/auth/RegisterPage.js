@@ -3,8 +3,8 @@
 // Version: 2.0 - Complete redesign with multi-step form and professional styling
 // Location: src/pages/auth/RegisterPage.js
 
-import React, { useState } from 'react';
-import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Box,
   Container,
@@ -50,6 +50,7 @@ import {
 import { useSnackbar } from 'notistack';
 
 import { useAuth } from '../../context/AuthContext';
+import { externalDeveloperInviteAPI } from '../../services/api';
 
 // PropVantage AI Logo Component (matching login page)
 const PropVantageLogo = ({ size = 'large' }) => {
@@ -220,6 +221,8 @@ const RegisterPage = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const inviteToken = searchParams.get('inviteToken') || '';
   const { register } = useAuth();
   const { enqueueSnackbar } = useSnackbar();
 
@@ -229,6 +232,11 @@ const RegisterPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
+
+  // SP4: external-developer invite preview
+  const [inviteInfo, setInviteInfo] = useState(null);     // { name, contact, city, projects, invitedByOrgName }
+  const [inviteError, setInviteError] = useState('');
+  const [inviteLoading, setInviteLoading] = useState(false);
 
   // Form data
   const [formData, setFormData] = useState({
@@ -251,6 +259,45 @@ const RegisterPage = () => {
     agreeToTerms: false,
     agreeToMarketing: false,
   });
+
+  // SP4: lookup external-developer invite by token on mount
+  useEffect(() => {
+    if (!inviteToken) return;
+    let cancelled = false;
+    setInviteLoading(true);
+    setInviteError('');
+    externalDeveloperInviteAPI.lookup(inviteToken)
+      .then((res) => {
+        if (cancelled) return;
+        const data = res.data?.data || res.data || {};
+        const info = {
+          name: data.name || '',
+          contact: data.contact || {},
+          city: data.city || '',
+          projects: data.projects || [],
+          invitedByOrgName: data.invitedByOrgName || '',
+        };
+        setInviteInfo(info);
+        setFormData((prev) => ({
+          ...prev,
+          organizationName: prev.organizationName || info.name,
+          organizationType: prev.organizationType || 'Real Estate Developer',
+          city: prev.city || info.city,
+          phone: prev.phone || info.contact?.phone || '',
+          email: prev.email || info.contact?.email || '',
+        }));
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        const msg = err.response?.data?.message
+          || (err.response?.status === 410
+            ? 'This invite link has already been used or expired.'
+            : 'This invite link is invalid.');
+        setInviteError(msg);
+      })
+      .finally(() => { if (!cancelled) setInviteLoading(false); });
+    return () => { cancelled = true; };
+  }, [inviteToken]);
 
   // Handle input changes
   const handleInputChange = (field) => (event) => {
@@ -317,13 +364,24 @@ const RegisterPage = () => {
         phoneNumber: formData.phoneNumber,
       };
 
+      // SP4: if invited from a CP's off-platform developer, attach claim token + force builder type
+      if (inviteToken) {
+        registrationData.type = 'builder';
+        registrationData.externalDeveloperInviteToken = inviteToken;
+      }
+
       const result = await register(registrationData);
 
       if (result.success) {
         enqueueSnackbar('Account created successfully! Welcome to PropVantage AI.', {
           variant: 'success',
         });
-        
+
+        // SP4: surface non-fatal claim failures
+        if (result.claimWarning) {
+          enqueueSnackbar(`Note: ${result.claimWarning}`, { variant: 'warning' });
+        }
+
         // Redirect to dashboard
         navigate(result.redirectTo || '/dashboard');
       } else {
@@ -724,6 +782,23 @@ const RegisterPage = () => {
                 Join thousands of real estate professionals using PropVantage AI
               </Typography>
             </Box>
+
+            {/* SP4: External-developer invite banner */}
+            {inviteToken && (
+              <Box sx={{ mb: 3 }}>
+                {inviteLoading && (
+                  <Alert severity="info">Loading invite details…</Alert>
+                )}
+                {!inviteLoading && inviteInfo && (
+                  <Alert severity="success">
+                    You've been invited by <strong>{inviteInfo.invitedByOrgName || 'a Channel Partner'}</strong> to join the platform — completing this registration will activate a partnership with them.
+                  </Alert>
+                )}
+                {!inviteLoading && inviteError && (
+                  <Alert severity="warning">{inviteError}</Alert>
+                )}
+              </Box>
+            )}
 
             {/* Stepper */}
             <Stepper activeStep={activeStep} sx={{ mb: 4 }}>

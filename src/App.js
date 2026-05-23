@@ -165,6 +165,12 @@ const CpPortalTeamPage = React.lazy(() => import('./pages/cp-portal/CpPortalTeam
 const CpPortalProfilePage = React.lazy(() => import('./pages/cp-portal/CpPortalProfilePage'));
 const CpMarketplacePage = React.lazy(() => import('./pages/cp-portal/CpMarketplacePage'));
 const CpPartnershipsPage = React.lazy(() => import('./pages/cp-portal/CpPartnershipsPage'));
+// SP4 — CP-side Prospect pipeline + Off-platform developers
+const ProspectsListPage = React.lazy(() => import('./pages/cp-portal/ProspectsListPage'));
+const ProspectDetailPage = React.lazy(() => import('./pages/cp-portal/ProspectDetailPage'));
+const ExternalDevelopersListPage = React.lazy(() => import('./pages/cp-portal/ExternalDevelopersListPage'));
+// SP4 — Developer-side Lead Registrations queue
+const LeadRegistrationsPage = React.lazy(() => import('./pages/leads/LeadRegistrationsPage'));
 
 // Channel Partners
 const ChannelPartnerListPage = React.lazy(() => import('./pages/channel-partners/ChannelPartnerListPage'));
@@ -510,6 +516,23 @@ const AppRoutes = () => {
           <Suspense fallback={<LoadingFallback />}><CpPartnershipsPage /></Suspense>
         </ChannelPartnerLayout></ChannelPartnerRoute>
       } />
+      {/* SP4 — CP Prospect routes (list MUST be declared before :id) */}
+      <Route path="/partner/prospects" element={
+        <ChannelPartnerRoute><ChannelPartnerLayout>
+          <Suspense fallback={<LoadingFallback />}><ProspectsListPage /></Suspense>
+        </ChannelPartnerLayout></ChannelPartnerRoute>
+      } />
+      <Route path="/partner/prospects/:id" element={
+        <ChannelPartnerRoute><ChannelPartnerLayout>
+          <Suspense fallback={<LoadingFallback />}><ProspectDetailPage /></Suspense>
+        </ChannelPartnerLayout></ChannelPartnerRoute>
+      } />
+      {/* SP4 — CP Off-Platform Developers */}
+      <Route path="/partner/external-developers" element={
+        <ChannelPartnerRoute><ChannelPartnerLayout>
+          <Suspense fallback={<LoadingFallback />}><ExternalDevelopersListPage /></Suspense>
+        </ChannelPartnerLayout></ChannelPartnerRoute>
+      } />
 
       {/* ========================================= */}
       {/* PROJECT MANAGEMENT ROUTES - UNCHANGED */}
@@ -669,6 +692,17 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
       
+      {/* SP4 — CP-pushed lead registrations queue (must be before /leads/:leadId) */}
+      <Route path="/leads/registrations" element={
+        <ProtectedRoute requiredPermission="leads:view">
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback />}>
+              <LeadRegistrationsPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
       <Route path="/leads/:leadId" element={
         <ProtectedRoute requiredPermission={(canAccess) => canAccess.leadManagement()}>
           <DashboardLayout>

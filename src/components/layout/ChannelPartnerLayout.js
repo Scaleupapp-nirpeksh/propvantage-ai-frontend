@@ -6,14 +6,17 @@ import {
 } from '@mui/material';
 import {
   Dashboard, Groups, Business, Logout, Menu as MenuIcon, Storefront, Handshake,
+  PersonSearch, Domain,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 
 const DRAWER_WIDTH = 248;
 const NAV = [
   { label: 'Dashboard', icon: Dashboard, path: '/partner/dashboard' },
+  { label: 'Prospects', icon: PersonSearch, path: '/partner/prospects' },
   { label: 'Marketplace', icon: Storefront, path: '/partner/marketplace' },
   { label: 'Partnerships', icon: Handshake, path: '/partner/partnerships' },
+  { label: 'Off-Platform Developers', icon: Domain, path: '/partner/external-developers' },
   { label: 'My Team', icon: Groups, path: '/partner/team' },
   { label: 'Organization Profile', icon: Business, path: '/partner/profile' },
 ];

@@ -927,6 +927,48 @@ export const partnershipAPI = {
 };
 
 // =============================================================================
+// SP4 — CROSS-ORG LEAD LIFECYCLE & STANDALONE CP WORKSPACE
+// =============================================================================
+
+// CP-side Prospect Pipeline (/api/cp/prospects)
+export const cpProspectsAPI = {
+  list:                   (params)      => api.get('/cp/prospects', { params }),
+  get:                    (id)          => api.get(`/cp/prospects/${id}`),
+  create:                 (data)        => api.post('/cp/prospects', data),
+  update:                 (id, data)    => api.put(`/cp/prospects/${id}`, data),
+  delete:                 (id)          => api.delete(`/cp/prospects/${id}`),
+  addActivity:            (id, data)    => api.post(`/cp/prospects/${id}/activities`, data),
+  push:                   (id)          => api.post(`/cp/prospects/${id}/push`),
+  proposeStatus:          (id, data)    => api.post(`/cp/prospects/${id}/propose-status`, data),
+  withdrawProposedStatus: (id)          => api.delete(`/cp/prospects/${id}/proposed-status`),
+  recordBooking:          (id, data)    => api.post(`/cp/prospects/${id}/booking`, data),
+  addPayment:             (id, data)    => api.post(`/cp/prospects/${id}/commission/payments`, data),
+  updateCommission:       (id, data)    => api.put(`/cp/prospects/${id}/commission`, data),
+};
+
+// CP-side Off-Platform Developers (/api/cp/external-developers)
+export const cpExternalDevelopersAPI = {
+  list:   (params) => api.get('/cp/external-developers', { params }),
+  get:    (id)     => api.get(`/cp/external-developers/${id}`),
+  create: (data)   => api.post('/cp/external-developers', data),
+  update: (id, d)  => api.put(`/cp/external-developers/${id}`, d),
+  delete: (id)     => api.delete(`/cp/external-developers/${id}`),
+  invite: (id, d)  => api.post(`/cp/external-developers/${id}/invite`, d),
+};
+
+// Public External Developer invite lookup (no auth) — used by developer RegisterPage on mount.
+export const externalDeveloperInviteAPI = {
+  lookup: (token) => api.get(`/external-developer-invites/${token}`),
+};
+
+// Developer-side Lead Registrations queue (/api/leads/registrations)
+export const leadRegistrationsAPI = {
+  list:           ()         => api.get('/leads/registrations'),
+  decide:         (id, data) => api.patch(`/leads/${id}/registration`, data),
+  decideProposal: (id, data) => api.patch(`/leads/${id}/proposal`, data),
+};
+
+// =============================================================================
 // 18-22. ALL OTHER SERVICES REMAIN UNCHANGED
 // =============================================================================
 
