@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Typography, Button, Popover, CircularProgress, useTheme, useMediaQuery } from '@mui/material';
 import { DoneAll, NotificationsNone } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useSnackbar } from 'notistack';
 import { notificationsAPI } from '../../services/api';
 import NotificationItem from './NotificationItem';
@@ -9,7 +9,13 @@ import NotificationItem from './NotificationItem';
 const NotificationPanel = ({ anchorEl, open, onClose, onCountChange }) => {
   const theme = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  // SP4 — the CP portal lives under /partner/*; "View all" routes accordingly
+  // so it lands on the layout matching the user's current context.
+  const viewAllPath = location.pathname.startsWith('/partner')
+    ? '/partner/notifications'
+    : '/notifications';
   const { enqueueSnackbar } = useSnackbar();
 
   const [notifications, setNotifications] = useState([]);
@@ -65,7 +71,7 @@ const NotificationPanel = ({ anchorEl, open, onClose, onCountChange }) => {
 
   const handleViewAll = () => {
     onClose();
-    navigate('/notifications');
+    navigate(viewAllPath);
   };
 
   return (

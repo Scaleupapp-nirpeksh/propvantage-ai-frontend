@@ -534,6 +534,15 @@ const AppRoutes = () => {
         </ChannelPartnerLayout></ChannelPartnerRoute>
       } />
 
+      {/* SP4 — CP notifications page (mirrors the dev portal's /notifications
+          but rendered inside ChannelPartnerLayout so the bell + sidebar stay
+          visible). Same NotificationsPage component — the page is org-agnostic. */}
+      <Route path="/partner/notifications" element={
+        <ChannelPartnerRoute><ChannelPartnerLayout>
+          <Suspense fallback={<LoadingFallback />}><NotificationsPage /></Suspense>
+        </ChannelPartnerLayout></ChannelPartnerRoute>
+      } />
+
       {/* ========================================= */}
       {/* PROJECT MANAGEMENT ROUTES - UNCHANGED */}
       {/* ========================================= */}

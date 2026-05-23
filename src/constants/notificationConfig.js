@@ -2,6 +2,8 @@ import {
   PersonAdd, Autorenew, CheckCircle, ChatBubble, AlternateEmail,
   CalendarToday, Warning, Schedule, TrendingUp, SmartToy,
   CurrencyRupee, Phone, Engineering, Handshake,
+  // SP4 — cross-org lead lifecycle event icons
+  Inbox, ThumbUp, ThumbDown, SwapHoriz, Verified, Business,
 } from '@mui/icons-material';
 
 // Notification type → icon, label, color mapping
@@ -20,6 +22,16 @@ export const NOTIFICATION_TYPES = {
   lead_follow_up_due:  { label: 'Follow-up Due',       icon: Phone,          color: '#fb8c00' },
   milestone_delayed:   { label: 'Milestone Delayed',   icon: Engineering,    color: '#fb8c00' },
   sale_booked:         { label: 'Sale Booked',         icon: Handshake,      color: '#43a047' },
+
+  // SP4 — cross-org lead lifecycle (CP and developer events)
+  lead_registration_received:        { label: 'Lead Submitted',        icon: Inbox,    color: '#1e88e5' },
+  lead_registration_accepted:        { label: 'Lead Accepted',         icon: ThumbUp,  color: '#43a047' },
+  lead_registration_rejected:        { label: 'Lead Rejected',         icon: ThumbDown, color: '#e53935' },
+  cp_lead_status_changed:            { label: 'Lead Status Changed',   icon: SwapHoriz, color: '#1e88e5' },
+  lead_status_proposed:              { label: 'Status Change Proposed', icon: SwapHoriz, color: '#fb8c00' },
+  lead_status_proposal_accepted:     { label: 'Proposal Accepted',     icon: ThumbUp,  color: '#43a047' },
+  lead_status_proposal_rejected:     { label: 'Proposal Rejected',     icon: ThumbDown, color: '#e53935' },
+  external_developer_claimed:        { label: 'Developer Joined',      icon: Verified, color: '#43a047' },
 };
 
 // Priority → color mapping for dots/badges

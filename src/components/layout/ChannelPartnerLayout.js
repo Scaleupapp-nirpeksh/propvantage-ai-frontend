@@ -9,6 +9,7 @@ import {
   PersonSearch, Domain,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
+import NotificationBell from '../notifications/NotificationBell';
 
 const DRAWER_WIDTH = 248;
 const NAV = [
@@ -58,6 +59,10 @@ const ChannelPartnerLayout = ({ children }) => {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" sx={{ flexGrow: 1 }}>Channel Partner Portal</Typography>
+          {/* SP4 — CP-side notification surface (bell + dropdown panel) */}
+          <Box sx={{ color: 'inherit', mr: 1 }}>
+            <NotificationBell />
+          </Box>
           <IconButton onClick={(e) => setAnchorEl(e.currentTarget)} color="inherit">
             <Avatar sx={{ width: 32, height: 32 }}>
               {user?.firstName?.[0]}{user?.lastName?.[0]}
