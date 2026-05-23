@@ -3,7 +3,7 @@ import {
   CalendarToday, Warning, Schedule, TrendingUp, SmartToy,
   CurrencyRupee, Phone, Engineering, Handshake,
   // SP4 — cross-org lead lifecycle event icons
-  Inbox, ThumbUp, ThumbDown, SwapHoriz, Verified, Business,
+  Inbox, ThumbUp, ThumbDown, SwapHoriz, Verified,
 } from '@mui/icons-material';
 
 // Notification type → icon, label, color mapping
