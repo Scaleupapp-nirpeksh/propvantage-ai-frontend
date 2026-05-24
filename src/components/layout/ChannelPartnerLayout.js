@@ -6,20 +6,26 @@ import {
 } from '@mui/material';
 import {
   Dashboard, Groups, Business, Logout, Menu as MenuIcon, Storefront, Handshake,
-  PersonSearch, Domain,
+  PersonSearch, Domain, AutoAwesome, Payments, FactCheck, Insights as InsightsIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import NotificationBell from '../notifications/NotificationBell';
 
 const DRAWER_WIDTH = 248;
 const NAV = [
-  { label: 'Dashboard', icon: Dashboard, path: '/partner/dashboard' },
-  { label: 'Prospects', icon: PersonSearch, path: '/partner/prospects' },
-  { label: 'Marketplace', icon: Storefront, path: '/partner/marketplace' },
-  { label: 'Partnerships', icon: Handshake, path: '/partner/partnerships' },
-  { label: 'Off-Platform Developers', icon: Domain, path: '/partner/external-developers' },
-  { label: 'My Team', icon: Groups, path: '/partner/team' },
-  { label: 'Organization Profile', icon: Business, path: '/partner/profile' },
+  { label: 'Dashboard',                icon: Dashboard,     path: '/partner/dashboard' },
+  // SP5 — analytics surfaces
+  { label: 'AI Insights',              icon: AutoAwesome,   path: '/partner/insights' },
+  { label: 'Commission',               icon: Payments,      path: '/partner/commission' },
+  { label: 'Reconciliation',           icon: FactCheck,     path: '/partner/commission/reconciliation' },
+  { label: 'Developer Performance',    icon: InsightsIcon,  path: '/partner/developers/performance' },
+  // SP1–SP4 operational surfaces
+  { label: 'Prospects',                icon: PersonSearch,  path: '/partner/prospects' },
+  { label: 'Marketplace',              icon: Storefront,    path: '/partner/marketplace' },
+  { label: 'Partnerships',             icon: Handshake,     path: '/partner/partnerships' },
+  { label: 'Off-Platform Developers',  icon: Domain,        path: '/partner/external-developers' },
+  { label: 'My Team',                  icon: Groups,        path: '/partner/team' },
+  { label: 'Organization Profile',     icon: Business,      path: '/partner/profile' },
 ];
 
 const ChannelPartnerLayout = ({ children }) => {

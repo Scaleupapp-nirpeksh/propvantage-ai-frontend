@@ -125,6 +125,16 @@ const ProjectAccessPage = React.lazy(() => import('./pages/settings/ProjectAcces
 const NotificationsPage = React.lazy(() => import('./pages/notifications/NotificationsPage'));
 const NotificationPreferencesPage = React.lazy(() => import('./pages/settings/NotificationPreferencesPage'));
 
+// SP5 — CP analytics + insights pages
+const CpInsightsPage                  = React.lazy(() => import('./pages/cp-portal/CpInsightsPage'));
+const CommissionDashboardPage         = React.lazy(() => import('./pages/cp-portal/CommissionDashboardPage'));
+const ReconciliationDashboardPage     = React.lazy(() => import('./pages/cp-portal/ReconciliationDashboardPage'));
+const DeveloperPerformanceDetailPage  = React.lazy(() => import('./pages/cp-portal/DeveloperPerformanceDetailPage'));
+// SP5 — dev-side analytics pages
+const ChannelPartnerScorecardPage = React.lazy(() => import('./pages/analytics/ChannelPartnerScorecardPage'));
+const CommissionPayoutsPage       = React.lazy(() => import('./pages/analytics/CommissionPayoutsPage'));
+const LeadQualityPage             = React.lazy(() => import('./pages/analytics/LeadQualityPage'));
+
 // Task Management Pages
 const MyTasksPage = React.lazy(() => import('./pages/tasks/MyTasksPage'));
 const TaskListPage = React.lazy(() => import('./pages/tasks/TaskListPage'));
@@ -541,6 +551,51 @@ const AppRoutes = () => {
         <ChannelPartnerRoute><ChannelPartnerLayout>
           <Suspense fallback={<LoadingFallback />}><NotificationsPage /></Suspense>
         </ChannelPartnerLayout></ChannelPartnerRoute>
+      } />
+
+      {/* SP5 — CP analytics + insights pages */}
+      <Route path="/partner/insights" element={
+        <ChannelPartnerRoute><ChannelPartnerLayout>
+          <Suspense fallback={<LoadingFallback />}><CpInsightsPage /></Suspense>
+        </ChannelPartnerLayout></ChannelPartnerRoute>
+      } />
+      <Route path="/partner/commission" element={
+        <ChannelPartnerRoute><ChannelPartnerLayout>
+          <Suspense fallback={<LoadingFallback />}><CommissionDashboardPage /></Suspense>
+        </ChannelPartnerLayout></ChannelPartnerRoute>
+      } />
+      <Route path="/partner/commission/reconciliation" element={
+        <ChannelPartnerRoute><ChannelPartnerLayout>
+          <Suspense fallback={<LoadingFallback />}><ReconciliationDashboardPage /></Suspense>
+        </ChannelPartnerLayout></ChannelPartnerRoute>
+      } />
+      <Route path="/partner/developers/performance" element={
+        <ChannelPartnerRoute><ChannelPartnerLayout>
+          <Suspense fallback={<LoadingFallback />}><DeveloperPerformanceDetailPage /></Suspense>
+        </ChannelPartnerLayout></ChannelPartnerRoute>
+      } />
+
+      {/* SP5 — dev-side analytics pages (Areas 6–8) */}
+      <Route path="/analytics/channel-partners" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback />}><ChannelPartnerScorecardPage /></Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/analytics/commission-payouts" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback />}><CommissionPayoutsPage /></Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/analytics/lead-quality" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback />}><LeadQualityPage /></Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
       } />
 
       {/* ========================================= */}
