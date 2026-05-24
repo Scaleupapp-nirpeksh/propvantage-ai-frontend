@@ -44,7 +44,7 @@ const formatRelative = (iso) => {
   return `${days}d ago`;
 };
 
-const AIInsightCard = ({ surface, range, compact = true, embedded = false, quotaExhausted = false }) => {
+const AIInsightCard = ({ surface, range, compact = true, embedded = false, quotaExhausted = false, suppressQuotaError = false }) => {
   const [state, setState] = useState('loading');
   const [insight, setInsight] = useState(null);
   const [error, setError] = useState(null);
@@ -148,6 +148,15 @@ const AIInsightCard = ({ surface, range, compact = true, embedded = false, quota
         return <AIScheduledPlaceholder surface={surface} nextRunAt={insight?.expiresAt} />;
 
       case 'quota_exceeded':
+        // When a parent (e.g. CpPortalDashboardPage) shows a page-level
+        // quota banner, suppress the per-card noise — render a tiny one-liner.
+        if (suppressQuotaError) {
+          return (
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', py: 0.5 }}>
+              AI commentary paused — daily quota reached.
+            </Typography>
+          );
+        }
         return (
           <Box sx={{ py: 2, textAlign: 'center' }}>
             <ErrorOutline color="warning" sx={{ mb: 0.5 }} />

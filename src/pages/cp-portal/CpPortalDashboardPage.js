@@ -1,20 +1,24 @@
 // File: src/pages/cp-portal/CpPortalDashboardPage.js
-// Description: SP5 — 5-card responsive dashboard per spec §7.3. Each card
-//   combines a deterministic recharts visualisation with an embedded
-//   <AIInsightCard surface="..." /> that surfaces the LLM commentary.
+// Description: SP5 — CP dashboard. 5-card responsive grid per spec §7.3
+//   with UX hardening from real-prod feedback:
 //
-//   The legacy onboarding card (getting started / browse marketplace) is
-//   preserved at the bottom for brand-new CP orgs that don't have analytics
-//   data yet — the analytics cards naturally show 'insufficient_data' empty
-//   states in that case.
+//   • Page-level quota banner instead of 4 per-card "quota reached" blocks
+//   • Pipeline funnel: angled labels + truncated text so they don't collide
+//   • Commission overview: single-month data shown as a stat, not a 1-dot
+//     line chart
+//   • Developer Performance: long names truncated + tooltipped
+//   • Layout: 2-column on lg so 5 cards fit cleanly (2+2+1 spans the last
+//     row across both halves) and rows have equal heights
+//   • All cards stretch to the same height per row
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box, Card, CardContent, Typography, Grid, Stack, Chip, Button, Skeleton,
+  Alert, AlertTitle, Tooltip as MuiTooltip, useTheme,
 } from '@mui/material';
 import {
-  TrendingUp, Payments, People, Domain, FactCheck, Storefront,
+  TrendingUp, Payments, People, Domain, FactCheck, Storefront, AutoAwesome,
 } from '@mui/icons-material';
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, ResponsiveContainer,
@@ -24,6 +28,8 @@ import { useAuth } from '../../context/AuthContext';
 import { cpAnalyticsAPI } from '../../services/api';
 import AIInsightCard from '../../components/ai/AIInsightCard';
 import AIQuotaIndicator from '../../components/ai/AIQuotaIndicator';
+
+// ─── Formatting helpers ───────────────────────────────────────────────────
 
 const fmtMoneyIN = (v) => {
   if (typeof v !== 'number' || !Number.isFinite(v)) return '—';
@@ -35,35 +41,72 @@ const fmtPct = (frac) => (typeof frac === 'number' ? `${Math.round(frac * 100)}%
 const inrRow = (byCurrency) =>
   (byCurrency || []).find((c) => c.currency === 'INR') || (byCurrency || [])[0] || null;
 
-const DashCard = ({ title, icon: Icon, kpi, viewMoreLabel, viewMoreTo, children, navigate, embeddedSurface, range }) => (
+// Short labels for funnel stages so they fit on the x-axis.
+const SHORT_STATUS = {
+  'New':                  'New',
+  'Contacted':            'Contacted',
+  'Qualified':            'Qualified',
+  'Site Visit Scheduled': 'Visit Sched',
+  'Site Visit Completed': 'Visit Done',
+  'Negotiating':          'Negotiating',
+  'Booked':               'Booked',
+};
+
+// Truncate long developer names cleanly.
+const truncate = (s, n = 22) => (s && s.length > n ? `${s.slice(0, n - 1)}…` : s || '—');
+
+// ─── Reusable card chrome ─────────────────────────────────────────────────
+
+const DashCard = ({ title, icon: Icon, kpi, viewMoreLabel, viewMoreTo, children, navigate, embeddedSurface, range, quotaExhausted }) => (
   <Card variant="outlined" sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-    <CardContent sx={{ flexGrow: 1 }}>
-      <Stack direction="row" alignItems="center" spacing={1}>
-        <Icon color="primary" />
-        <Typography variant="subtitle1" sx={{ fontWeight: 700, flexGrow: 1 }}>{title}</Typography>
+    <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+      <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: kpi ? 1.5 : 1 }}>
+        <Icon color="primary" fontSize="small" />
+        <Typography variant="subtitle1" sx={{ fontWeight: 700, flexGrow: 1, fontSize: '0.95rem' }}>{title}</Typography>
         {viewMoreTo && (
-          <Button size="small" onClick={() => navigate(viewMoreTo)} sx={{ textTransform: 'none' }}>
+          <Button size="small" onClick={() => navigate(viewMoreTo)} sx={{ textTransform: 'none', fontSize: '0.75rem', minWidth: 'auto', px: 1 }}>
             {viewMoreLabel || 'View details'}
           </Button>
         )}
       </Stack>
-      {kpi && <Box sx={{ mt: 1.5 }}>{kpi}</Box>}
-      <Box sx={{ mt: 1.5 }}>{children}</Box>
-      {embeddedSurface && <AIInsightCard surface={embeddedSurface} range={range} compact embedded />}
+      {kpi && <Box>{kpi}</Box>}
+      <Box sx={{ mt: 1.5, flexGrow: 1 }}>{children}</Box>
+      {embeddedSurface && (
+        <AIInsightCard
+          surface={embeddedSurface}
+          range={range}
+          compact
+          embedded
+          quotaExhausted={quotaExhausted}
+          suppressQuotaError={quotaExhausted}
+        />
+      )}
     </CardContent>
   </Card>
 );
 
+// Compact KPI tile.
+const KPI = ({ label, value, color = 'text.primary' }) => (
+  <Box>
+    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.2 }}>{label}</Typography>
+    <Typography variant="h6" sx={{ fontWeight: 700, color, mt: 0.25 }}>{value}</Typography>
+  </Box>
+);
+
+// ─── Page ─────────────────────────────────────────────────────────────────
+
 const CpPortalDashboardPage = () => {
   const navigate = useNavigate();
+  const theme = useTheme();
   const { user, organization } = useAuth();
+
   const [pipeline, setPipeline] = useState(null);
   const [commission, setCommission] = useState(null);
   const [agents, setAgents] = useState(null);
   const [developers, setDevelopers] = useState(null);
   const [recon, setRecon] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [, setUsage] = useState(null);
+  const [usage, setUsage] = useState(null);
 
   const canViewTeam = useMemo(() => {
     const perms = user?.role?.permissions || user?.permissions || [];
@@ -92,18 +135,27 @@ const CpPortalDashboardPage = () => {
     return () => { cancelled = true; };
   }, [canViewTeam]);
 
+  // Quota-exhausted state (drives the page banner + per-card suppression).
+  const quotaExhausted = useMemo(() => {
+    if (!usage) return false;
+    const used = (usage.scheduledGenerations || 0) + (usage.onDemandGenerations || 0) + (usage.copilotMessages || 0);
+    return used >= (usage.quota?.dailyQuota ?? 200);
+  }, [usage]);
+
+  // ─── Card-specific renderers ────────────────────────────────────────────
+
   const PipelineCard = () => {
-    const funnel = pipeline?.breakdowns?.funnel || [];
+    const funnel = (pipeline?.breakdowns?.funnel || []).map((f) => ({ ...f, short: SHORT_STATUS[f.status] || f.status }));
     return (
       <DashCard title="Pipeline Health" icon={TrendingUp} navigate={navigate}
-        viewMoreTo="/partner/prospects" viewMoreLabel="View prospects"
-        embeddedSurface="pipeline_health" range="30d"
+        viewMoreTo="/partner/prospects" viewMoreLabel="Prospects"
+        embeddedSurface="pipeline_health" range="30d" quotaExhausted={quotaExhausted}
         kpi={
-          <Stack direction="row" spacing={2} flexWrap="wrap">
-            <Box><Typography variant="caption" color="text.secondary">Total</Typography><Typography variant="h6">{pipeline?.summary?.totalProspects ?? '—'}</Typography></Box>
-            <Box><Typography variant="caption" color="text.secondary">Active</Typography><Typography variant="h6">{pipeline?.summary?.activeProspects ?? '—'}</Typography></Box>
-            <Box><Typography variant="caption" color="text.secondary">Aging &gt;30d</Typography><Typography variant="h6" color={pipeline?.summary?.agingOver30d ? 'warning.main' : 'text.primary'}>{pipeline?.summary?.agingOver30d ?? '—'}</Typography></Box>
-            <Box><Typography variant="caption" color="text.secondary">Due today</Typography><Typography variant="h6" color={pipeline?.summary?.followUpsDueToday ? 'error.main' : 'text.primary'}>{pipeline?.summary?.followUpsDueToday ?? '—'}</Typography></Box>
+          <Stack direction="row" spacing={2.5} flexWrap="wrap" useFlexGap>
+            <KPI label="Total"      value={pipeline?.summary?.totalProspects ?? '—'} />
+            <KPI label="Active"     value={pipeline?.summary?.activeProspects ?? '—'} />
+            <KPI label="Aging >30d" value={pipeline?.summary?.agingOver30d ?? '—'}    color={pipeline?.summary?.agingOver30d ? 'warning.main' : 'text.primary'} />
+            <KPI label="Due today"  value={pipeline?.summary?.followUpsDueToday ?? '—'} color={pipeline?.summary?.followUpsDueToday ? 'error.main' : 'text.primary'} />
           </Stack>
         }
       >
@@ -111,7 +163,21 @@ const CpPortalDashboardPage = () => {
           ? <Skeleton variant="rectangular" height={140} />
           : funnel.length > 0 && (
             <Box sx={{ height: 140 }}>
-              <ResponsiveContainer><BarChart data={funnel}><XAxis dataKey="status" tick={{ fontSize: 10 }} interval={0} /><YAxis hide /><ReTooltip /><Bar dataKey="count" fill="#1e88e5" /></BarChart></ResponsiveContainer>
+              <ResponsiveContainer>
+                <BarChart data={funnel} margin={{ top: 5, right: 5, left: -25, bottom: 25 }}>
+                  <XAxis
+                    dataKey="short"
+                    tick={{ fontSize: 10, fill: theme.palette.text.secondary }}
+                    angle={-25}
+                    textAnchor="end"
+                    interval={0}
+                    height={50}
+                  />
+                  <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
+                  <ReTooltip cursor={{ fill: theme.palette.action.hover }} formatter={(v, _, ctx) => [v, ctx.payload.status]} />
+                  <Bar dataKey="count" fill={theme.palette.primary.main} radius={[3, 3, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </Box>
           )
         }
@@ -124,24 +190,41 @@ const CpPortalDashboardPage = () => {
     const months = commission?.series?.byMonth || [];
     return (
       <DashCard title="Commission Overview" icon={Payments} navigate={navigate}
-        viewMoreTo="/partner/commission" embeddedSurface="commission_overview" range="30d"
+        viewMoreTo="/partner/commission" embeddedSurface="commission_overview" range="30d" quotaExhausted={quotaExhausted}
         kpi={
-          <Stack direction="row" spacing={2} flexWrap="wrap">
-            <Box><Typography variant="caption" color="text.secondary">Received (INR)</Typography><Typography variant="h6" color="success.main">{fmtMoneyIN(inr?.received)}</Typography></Box>
-            <Box><Typography variant="caption" color="text.secondary">Expected</Typography><Typography variant="h6">{fmtMoneyIN(inr?.expected)}</Typography></Box>
-            <Box><Typography variant="caption" color="text.secondary">Outstanding</Typography><Typography variant="h6" color={inr?.outstanding ? 'warning.main' : 'text.primary'}>{fmtMoneyIN(inr?.outstanding)}</Typography></Box>
-            <Box><Typography variant="caption" color="text.secondary">Realisation</Typography><Typography variant="h6">{fmtPct(inr?.realisationRate)}</Typography></Box>
+          <Stack direction="row" spacing={2.5} flexWrap="wrap" useFlexGap>
+            <KPI label="Received (INR)" value={fmtMoneyIN(inr?.received)}     color="success.main" />
+            <KPI label="Expected"       value={fmtMoneyIN(inr?.expected)} />
+            <KPI label="Outstanding"    value={fmtMoneyIN(inr?.outstanding)}  color={inr?.outstanding ? 'warning.main' : 'text.primary'} />
+            <KPI label="Realisation"    value={fmtPct(inr?.realisationRate)} />
           </Stack>
         }
       >
-        {loading
-          ? <Skeleton variant="rectangular" height={120} />
-          : months.length > 0 && (
-            <Box sx={{ height: 120 }}>
-              <ResponsiveContainer><LineChart data={months}><XAxis dataKey="month" tick={{ fontSize: 10 }} /><YAxis hide /><ReTooltip formatter={(v) => fmtMoneyIN(v)} /><Line type="monotone" dataKey="received" stroke="#43a047" /></LineChart></ResponsiveContainer>
-            </Box>
-          )
-        }
+        {loading ? (
+          <Skeleton variant="rectangular" height={120} />
+        ) : months.length >= 2 ? (
+          <Box sx={{ height: 120 }}>
+            <ResponsiveContainer>
+              <LineChart data={months} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
+                <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => v >= 1e5 ? `${(v / 1e5).toFixed(1)}L` : v} />
+                <ReTooltip formatter={(v) => fmtMoneyIN(v)} />
+                <Line type="monotone" dataKey="received" stroke={theme.palette.success.main} strokeWidth={2} dot={{ r: 3 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </Box>
+        ) : months.length === 1 ? (
+          // Single data point — show as a stat, not a degenerate 1-dot chart.
+          <Box sx={{ height: 120, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', bgcolor: 'action.hover', borderRadius: 1 }}>
+            <Typography variant="caption" color="text.secondary">{months[0].month} received</Typography>
+            <Typography variant="h5" sx={{ fontWeight: 700, color: 'success.main', mt: 0.5 }}>{fmtMoneyIN(months[0].received)}</Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>More history will appear after the next month.</Typography>
+          </Box>
+        ) : (
+          <Box sx={{ height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Typography variant="caption" color="text.secondary">No commission received in this period.</Typography>
+          </Box>
+        )}
       </DashCard>
     );
   };
@@ -152,21 +235,21 @@ const CpPortalDashboardPage = () => {
     return (
       <DashCard title="Agent Performance" icon={People} navigate={navigate}
         viewMoreTo="/partner/team" viewMoreLabel="Team page"
-        embeddedSurface="agent_performance" range="30d"
+        embeddedSurface="agent_performance" range="30d" quotaExhausted={quotaExhausted}
       >
         {loading
           ? <Skeleton variant="rectangular" height={130} />
           : top.length === 0
           ? <Typography variant="body2" color="text.secondary">No agent activity yet.</Typography>
-          : top.map((a) => (
-            <Stack key={String(a.userId)} direction="row" justifyContent="space-between" alignItems="center" sx={{ py: 0.5 }}>
-              <Typography variant="body2" noWrap sx={{ maxWidth: 160 }}>{a.name}</Typography>
-              <Stack direction="row" spacing={1} alignItems="center">
-                <Chip size="small" label={`${a.prospectsBooked} booked`} />
-                <Typography variant="caption" color="text.secondary">{fmtPct(a.conversionRate)} conv</Typography>
+          : <Stack spacing={0.5}>{top.map((a) => (
+              <Stack key={String(a.userId)} direction="row" justifyContent="space-between" alignItems="center">
+                <MuiTooltip title={a.name}><Typography variant="body2" noWrap sx={{ maxWidth: 160 }}>{a.name}</Typography></MuiTooltip>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Chip size="small" label={`${a.prospectsBooked} booked`} sx={{ height: 20, fontSize: '0.7rem' }} />
+                  <Typography variant="caption" color="text.secondary">{fmtPct(a.conversionRate)}</Typography>
+                </Stack>
               </Stack>
-            </Stack>
-          ))
+            ))}</Stack>
         }
       </DashCard>
     );
@@ -177,27 +260,27 @@ const CpPortalDashboardPage = () => {
     const overall = developers?.overallConversion ?? 0;
     return (
       <DashCard title="Developer Performance" icon={Domain} navigate={navigate}
-        viewMoreTo="/partner/developers/performance" embeddedSurface="developer_performance" range="30d"
+        viewMoreTo="/partner/developers/performance" embeddedSurface="developer_performance" range="30d" quotaExhausted={quotaExhausted}
         kpi={<Typography variant="caption" color="text.secondary">Overall conversion: <strong>{fmtPct(overall)}</strong></Typography>}
       >
         {loading
           ? <Skeleton variant="rectangular" height={130} />
           : top.length === 0
           ? <Typography variant="body2" color="text.secondary">No developer activity yet.</Typography>
-          : top.map((d) => (
-            <Stack key={String(d.id || d.name)} direction="row" justifyContent="space-between" alignItems="center" sx={{ py: 0.5 }}>
-              <Stack direction="row" spacing={1} alignItems="center" sx={{ maxWidth: 180 }}>
-                <Typography variant="body2" noWrap>{d.name}</Typography>
-                <Chip size="small" variant="outlined" label={d.context} sx={{ fontSize: '0.6rem' }} />
+          : <Stack spacing={0.5}>{top.map((d) => (
+              <Stack key={String(d.id || d.name)} direction="row" justifyContent="space-between" alignItems="center">
+                <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0, flexGrow: 1 }}>
+                  <MuiTooltip title={d.name}><Typography variant="body2" noWrap sx={{ maxWidth: 160 }}>{truncate(d.name, 22)}</Typography></MuiTooltip>
+                  <Chip size="small" variant="outlined" label={d.context} sx={{ fontSize: '0.6rem', height: 18 }} />
+                </Stack>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Typography variant="caption" color={d.deltaVsOverall >= 0 ? 'success.main' : 'error.main'}>
+                    {d.deltaVsOverall >= 0 ? '▲' : '▼'} {fmtPct(Math.abs(d.deltaVsOverall || 0))}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">{fmtPct(d.conversionRate)}</Typography>
+                </Stack>
               </Stack>
-              <Stack direction="row" spacing={1} alignItems="center">
-                <Typography variant="caption" color={d.deltaVsOverall >= 0 ? 'success.main' : 'error.main'}>
-                  {d.deltaVsOverall >= 0 ? '▲' : '▼'} {fmtPct(Math.abs(d.deltaVsOverall || 0))}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">{fmtPct(d.conversionRate)} conv</Typography>
-              </Stack>
-            </Stack>
-          ))
+            ))}</Stack>
         }
       </DashCard>
     );
@@ -206,37 +289,50 @@ const CpPortalDashboardPage = () => {
   const ReconciliationCard = () => {
     const s = recon?.summary || {};
     const donut = [
-      { name: 'Matched',  value: s.matched   || 0, fill: '#43a047' },
-      { name: 'CP only',  value: s.cpOnly    || 0, fill: '#fb8c00' },
-      { name: 'Dev only', value: s.devOnly   || 0, fill: '#1e88e5' },
-      { name: 'Mismatch', value: s.mismatched|| 0, fill: '#e53935' },
+      { name: 'Matched',  value: s.matched   || 0, fill: theme.palette.success.main },
+      { name: 'CP only',  value: s.cpOnly    || 0, fill: theme.palette.warning.main },
+      { name: 'Dev only', value: s.devOnly   || 0, fill: theme.palette.info.main },
+      { name: 'Mismatch', value: s.mismatched|| 0, fill: theme.palette.error.main },
     ];
     const total = donut.reduce((sum, x) => sum + x.value, 0);
     return (
       <DashCard title="Commission Reconciliation" icon={FactCheck} navigate={navigate}
-        viewMoreTo="/partner/commission/reconciliation" embeddedSurface="commission_reconciliation" range="30d"
+        viewMoreTo="/partner/commission/reconciliation" embeddedSurface="commission_reconciliation" range="30d" quotaExhausted={quotaExhausted}
         kpi={
-          <Stack direction="row" spacing={2}>
-            <Box><Typography variant="caption" color="text.secondary">Matched</Typography><Typography variant="h6" color="success.main">{s.matched ?? 0}</Typography></Box>
-            <Box><Typography variant="caption" color="text.secondary">CP only</Typography><Typography variant="h6" color="warning.main">{s.cpOnly ?? 0}</Typography></Box>
-            <Box><Typography variant="caption" color="text.secondary">Dev only</Typography><Typography variant="h6">{s.devOnly ?? 0}</Typography></Box>
-            <Box><Typography variant="caption" color="text.secondary">Mismatch</Typography><Typography variant="h6" color="error.main">{s.mismatched ?? 0}</Typography></Box>
+          <Stack direction="row" spacing={2.5} flexWrap="wrap" useFlexGap>
+            <KPI label="Matched"    value={s.matched   ?? 0} color="success.main" />
+            <KPI label="CP only"    value={s.cpOnly    ?? 0} color="warning.main" />
+            <KPI label="Dev only"   value={s.devOnly   ?? 0} />
+            <KPI label="Mismatch"   value={s.mismatched?? 0} color="error.main" />
           </Stack>
         }
       >
         {loading
           ? <Skeleton variant="rectangular" height={130} />
           : total === 0
-          ? <Typography variant="body2" color="text.secondary">No reconciliation rows yet — push prospects to start.</Typography>
-          : <Box sx={{ height: 130 }}><ResponsiveContainer><PieChart><Pie data={donut} dataKey="value" innerRadius={30} outerRadius={50}>{donut.map((d, i) => <Cell key={i} fill={d.fill} />)}</Pie><Legend wrapperStyle={{ fontSize: '0.7rem' }} /></PieChart></ResponsiveContainer></Box>
+          ? <Box sx={{ height: 130, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Typography variant="caption" color="text.secondary">No reconciliation rows yet — push prospects to start.</Typography>
+            </Box>
+          : <Box sx={{ height: 130 }}>
+              <ResponsiveContainer>
+                <PieChart>
+                  <Pie data={donut} dataKey="value" innerRadius={30} outerRadius={50}>
+                    {donut.map((d, i) => <Cell key={i} fill={d.fill} />)}
+                  </Pie>
+                  <Legend wrapperStyle={{ fontSize: '0.7rem' }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </Box>
         }
       </DashCard>
     );
   };
 
+  // ─── Render ─────────────────────────────────────────────────────────────
+
   return (
     <Box>
-      <Stack direction="row" alignItems="center" sx={{ mb: 3 }}>
+      <Stack direction="row" alignItems="center" sx={{ mb: 2 }}>
         <Box sx={{ flexGrow: 1 }}>
           <Typography variant="h5" sx={{ fontWeight: 700 }}>Welcome, {user?.firstName}</Typography>
           <Typography variant="body2" color="text.secondary">
@@ -246,12 +342,40 @@ const CpPortalDashboardPage = () => {
         <AIQuotaIndicator onUsageChange={setUsage} />
       </Stack>
 
-      <Grid container spacing={2}>
+      {/* Page-level quota banner — replaces the previous per-card error spam. */}
+      {quotaExhausted && (
+        <Alert
+          severity="warning"
+          icon={<AutoAwesome fontSize="small" />}
+          sx={{ mb: 2 }}
+          action={
+            usage?.resetsAt && (
+              <Typography variant="caption" sx={{ pr: 1 }}>
+                Resets {new Date(usage.resetsAt).toLocaleString(undefined, { hour: '2-digit', minute: '2-digit' })}
+              </Typography>
+            )
+          }
+        >
+          <AlertTitle sx={{ fontSize: '0.875rem' }}>AI commentary paused for today</AlertTitle>
+          You've used your daily AI quota ({usage?.quota?.dailyQuota ?? 200} generations). The deterministic analytics below
+          continue to work — only the AI narratives are paused until midnight IST.
+        </Alert>
+      )}
+
+      {/*
+        Layout strategy:
+          xs (mobile): 1 column
+          md (tablet): 2 columns → 2+2+1 (last card spans full width)
+          lg (desktop): the 5-card grid; the 5th card spans the half-row gap
+        Reconciliation gets explicit md=12 / lg=4 so it doesn't sit alone in
+        a row with empty space to its right.
+      */}
+      <Grid container spacing={2} alignItems="stretch">
         <Grid item xs={12} md={6} lg={4}><PipelineCard /></Grid>
         <Grid item xs={12} md={6} lg={4}><CommissionCard /></Grid>
         {canViewTeam && <Grid item xs={12} md={6} lg={4}><AgentsCard /></Grid>}
         <Grid item xs={12} md={6} lg={4}><DevelopersCard /></Grid>
-        <Grid item xs={12} md={6} lg={4}><ReconciliationCard /></Grid>
+        <Grid item xs={12} md={12} lg={canViewTeam ? 8 : 4}><ReconciliationCard /></Grid>
       </Grid>
 
       <Card variant="outlined" sx={{ mt: 3, maxWidth: 640 }}>
