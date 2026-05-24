@@ -14,6 +14,7 @@ import {
 } from '@mui/icons-material';
 import { cpProspectsAPI, leadAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import CommissionInvoicePanel from '../../components/cp-portal/CommissionInvoicePanel';
 
 // Canonical Prospect.status enum from models/prospectModel.js. We display
 // friendly labels but submit the canonical values — the previous list shipped
@@ -836,6 +837,12 @@ const ProspectDetailPage = () => {
                 )}
               </CardContent>
             </Card>
+          </Grid>
+
+          {/* SP5+ — Commission invoice generation lives in its own card
+              below the agreement + payments columns so it spans full width. */}
+          <Grid item xs={12}>
+            <CommissionInvoicePanel prospect={prospect} onChanged={loadProspect} />
           </Grid>
         </Grid>
       )}
