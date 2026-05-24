@@ -270,11 +270,15 @@ const LeadHeader = ({ lead, onEdit, onRefresh, isLoading }) => {
             </Box>
           </Box>
 
-          {/* Key Metrics */}
+          {/* Key Metrics — read from the actual Lead shape (top-level .budget,
+              structured .requirements). Previous version read field names that
+              don't exist on the model, so this strip was always "Not specified". */}
           <Grid container spacing={2}>
             <Grid item xs={3}>
               <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                {lead?.requirements?.budgetRange || 'Not specified'}
+                {lead?.budget?.min || lead?.budget?.max
+                  ? `${formatCurrency(lead.budget.min || 0)} – ${formatCurrency(lead.budget.max || 0)}`
+                  : 'Not specified'}
               </Typography>
               <Typography variant="caption" color="text.secondary">
                 Budget Range
@@ -282,18 +286,18 @@ const LeadHeader = ({ lead, onEdit, onRefresh, isLoading }) => {
             </Grid>
             <Grid item xs={3}>
               <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                {lead?.requirements?.propertyTypes?.length || 0}
+                {lead?.requirements?.unitType || 'Not specified'}
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                Property Types
+                Unit Type
               </Typography>
             </Grid>
             <Grid item xs={3}>
               <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                {lead?.requirements?.interestedProjects?.length || 0}
+                {lead?.project?.name || '—'}
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                Projects
+                Project
               </Typography>
             </Grid>
             <Grid item xs={3}>
@@ -521,69 +525,99 @@ const LeadOverview = ({ lead, onRefresh }) => {
               <Home color="primary" />
               Property Requirements
             </Typography>
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={4}>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  Budget Range
-                </Typography>
-                <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-                  {lead?.requirements?.budgetRange || 'Not specified'}
-                </Typography>
-                {lead?.requirements?.specificBudget && (
-                  <Typography variant="body2" color="primary">
-                    Specific: {formatCurrency(lead.requirements.specificBudget)}
-                  </Typography>
-                )}
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  Property Types
-                </Typography>
-                <Stack direction="row" spacing={1} flexWrap="wrap">
-                  {lead?.requirements?.propertyTypes?.map((type, index) => (
-                    <Chip key={index} label={type} color="primary" size="small" variant="outlined" />
-                  )) || <Typography variant="body2" color="text.secondary">Not specified</Typography>}
-                </Stack>
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  Preferred Location
-                </Typography>
-                <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                  {lead?.requirements?.preferredLocation || 'Any location'}
-                </Typography>
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  Occupancy Timeline
-                </Typography>
-                <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                  {lead?.requirements?.occupancyTimeline || 'Flexible'}
-                </Typography>
-              </Grid>
-              <Grid item xs={12} md={8}>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  Interested Projects
-                </Typography>
-                {lead?.requirements?.interestedProjects?.length > 0 ? (
-                  <Stack direction="row" spacing={1} flexWrap="wrap">
-                    {lead.requirements.interestedProjects.map((project, index) => (
-                      <Chip 
-                        key={index} 
-                        label={project?.name || project} 
-                        color="secondary" 
-                        size="small" 
-                        variant="outlined" 
-                      />
-                    ))}
-                  </Stack>
-                ) : (
-                  <Typography variant="body2" color="text.secondary">
-                    No specific project preferences
-                  </Typography>
-                )}
-              </Grid>
-            </Grid>
+            {/* Read from the actual Lead.requirements shape ({timeline, unitType,
+                floor, facing, amenities, specialRequirements}). Previous version
+                read invented field names, so this card was always empty. */}
+            {(() => {
+              const TIMELINE_LABELS = {
+                'immediate': 'Immediate',
+                '1-3_months': '1–3 months',
+                '3-6_months': '3–6 months',
+                '6-12_months': '6–12 months',
+                '12+_months': '12+ months',
+              };
+              const FLOOR_LABELS = { low: 'Low floor', medium: 'Mid floor', high: 'High floor', any: 'Any' };
+              const r = lead?.requirements || {};
+              const hasBudget = lead?.budget?.min || lead?.budget?.max;
+              return (
+                <Grid container spacing={3}>
+                  <Grid item xs={12} md={4}>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      Budget Range
+                    </Typography>
+                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                      {hasBudget
+                        ? `${formatCurrency(lead.budget.min || 0)} – ${formatCurrency(lead.budget.max || 0)}`
+                        : 'Not specified'}
+                    </Typography>
+                    {lead?.budget?.currency && hasBudget && (
+                      <Typography variant="caption" color="text.secondary">
+                        {lead.budget.currency}
+                      </Typography>
+                    )}
+                  </Grid>
+                  <Grid item xs={12} md={4}>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      Unit Type
+                    </Typography>
+                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                      {r.unitType || 'Not specified'}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={4}>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      Timeline
+                    </Typography>
+                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                      {r.timeline ? (TIMELINE_LABELS[r.timeline] || r.timeline) : 'Flexible'}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={4}>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      Floor Preference
+                    </Typography>
+                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                      {r.floor?.preference && r.floor.preference !== 'any'
+                        ? (FLOOR_LABELS[r.floor.preference] || r.floor.preference)
+                        : 'Any'}
+                      {r.floor?.specific ? ` (floor ${r.floor.specific})` : ''}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={4}>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      Facing
+                    </Typography>
+                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                      {r.facing && r.facing !== 'Any' ? r.facing : 'Any'}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={4}>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      Preferred Amenities
+                    </Typography>
+                    {Array.isArray(r.amenities) && r.amenities.length > 0 ? (
+                      <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                        {r.amenities.map((a, i) => (
+                          <Chip key={i} label={a} color="primary" size="small" variant="outlined" />
+                        ))}
+                      </Stack>
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">None specified</Typography>
+                    )}
+                  </Grid>
+                  {r.specialRequirements && (
+                    <Grid item xs={12}>
+                      <Typography variant="body2" color="text.secondary" gutterBottom>
+                        Special Requirements
+                      </Typography>
+                      <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
+                        {r.specialRequirements}
+                      </Typography>
+                    </Grid>
+                  )}
+                </Grid>
+              );
+            })()}
           </CardContent>
         </Card>
       </Grid>
