@@ -626,11 +626,18 @@ const ProspectsListPage = () => {
                   {projectsForPartnership.length === 0 && (
                     <MenuItem value="" disabled>No published projects</MenuItem>
                   )}
-                  {projectsForPartnership.map((pr) => (
-                    <MenuItem key={pr.id || pr._id} value={pr.id || pr._id}>
-                      {pr.name}{pr.location ? ` — ${pr.location}` : ''}
-                    </MenuItem>
-                  ))}
+                  {projectsForPartnership.map((pr) => {
+                    // Project.location is an object {city, area, pincode, state, landmark};
+                    // previously rendered raw which printed "[object Object]".
+                    const loc = typeof pr.location === 'string'
+                      ? pr.location
+                      : [pr.location?.city, pr.location?.area].filter(Boolean).join(', ');
+                    return (
+                      <MenuItem key={pr.id || pr._id} value={pr.id || pr._id}>
+                        {pr.name}{loc ? ` — ${loc}` : ''}
+                      </MenuItem>
+                    );
+                  })}
                 </TextField>
               </Grid>
             </Grid>
