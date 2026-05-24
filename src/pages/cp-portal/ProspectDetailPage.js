@@ -519,11 +519,46 @@ const ProspectDetailPage = () => {
                     {fmtMoney(prospect.budget.max, prospect.budget.currency || 'INR')}
                   </Typography>
                 )}
-                {prospect.requirements && (
-                  <Typography variant="body2" sx={{ mt: 1, whiteSpace: 'pre-wrap' }}>
-                    {prospect.requirements}
-                  </Typography>
-                )}
+                {/* SP4+ — requirements is now a structured object matching
+                    Lead.requirements; render each populated subfield. */}
+                {prospect.requirements && (() => {
+                  const r = prospect.requirements;
+                  const rows = [];
+                  if (r.timeline) {
+                    const TIMELINE_LABELS = {
+                      'immediate': 'Immediate',
+                      '1-3_months': '1–3 months',
+                      '3-6_months': '3–6 months',
+                      '6-12_months': '6–12 months',
+                      '12+_months': '12+ months',
+                    };
+                    rows.push(['Timeline', TIMELINE_LABELS[r.timeline] || r.timeline]);
+                  }
+                  if (r.unitType) rows.push(['Unit Type', r.unitType]);
+                  if (r.floor?.preference && r.floor.preference !== 'any') {
+                    const FLOOR_LABELS = { low: 'Low', medium: 'Medium', high: 'High' };
+                    rows.push(['Floor Preference', FLOOR_LABELS[r.floor.preference] || r.floor.preference]);
+                  }
+                  if (r.facing && r.facing !== 'Any') rows.push(['Facing', r.facing]);
+                  if (Array.isArray(r.amenities) && r.amenities.length) {
+                    rows.push(['Amenities', r.amenities.join(', ')]);
+                  }
+                  if (!rows.length && !r.specialRequirements) return null;
+                  return (
+                    <Box sx={{ mt: 1 }}>
+                      {rows.map(([k, v]) => (
+                        <Typography key={k} variant="body2">
+                          <strong>{k}:</strong> {v}
+                        </Typography>
+                      ))}
+                      {r.specialRequirements && (
+                        <Typography variant="body2" sx={{ mt: 0.5, whiteSpace: 'pre-wrap' }}>
+                          <strong>Special:</strong> {r.specialRequirements}
+                        </Typography>
+                      )}
+                    </Box>
+                  );
+                })()}
                 {prospect.notes && (
                   <>
                     <Divider sx={{ my: 1 }} />

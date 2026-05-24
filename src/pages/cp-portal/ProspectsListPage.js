@@ -72,10 +72,35 @@ const initialForm = {
   budgetMin: '',
   budgetMax: '',
   budgetCurrency: 'INR',
-  requirements: '',
+  // SP4+ — structured requirements (mirrors Lead.requirements on dev side).
+  reqTimeline: '',
+  reqUnitType: '',
+  reqFloorPreference: 'any',
+  reqFacing: 'Any',
+  reqAmenities: '', // comma-separated in the form; split on submit
+  reqSpecialRequirements: '',
   notes: '',
   creationNote: '',
 };
+
+const TIMELINE_OPTIONS = [
+  { value: '', label: '—' },
+  { value: 'immediate', label: 'Immediate' },
+  { value: '1-3_months', label: '1–3 months' },
+  { value: '3-6_months', label: '3–6 months' },
+  { value: '6-12_months', label: '6–12 months' },
+  { value: '12+_months', label: '12+ months' },
+];
+const FLOOR_PREF_OPTIONS = [
+  { value: 'any', label: 'Any' },
+  { value: 'low', label: 'Low' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'high', label: 'High' },
+];
+const FACING_OPTIONS = [
+  'Any', 'North', 'South', 'East', 'West',
+  'North-East', 'North-West', 'South-East', 'South-West',
+];
 
 const ProspectsListPage = () => {
   const navigate = useNavigate();
@@ -291,7 +316,24 @@ const ProspectsListPage = () => {
           currency: form.budgetCurrency || 'INR',
         };
       }
-      if (form.requirements.trim()) payload.requirements = form.requirements.trim();
+      // SP4+ — structured requirements (matches Lead.requirements on dev side).
+      // Only include the object if at least one subfield is meaningfully set,
+      // so we don't write defaults-only on empty submissions.
+      const amenitiesList = form.reqAmenities
+        .split(',').map((s) => s.trim()).filter(Boolean);
+      const reqObj = {};
+      if (form.reqTimeline) reqObj.timeline = form.reqTimeline;
+      if (form.reqUnitType.trim()) reqObj.unitType = form.reqUnitType.trim();
+      if (form.reqFloorPreference && form.reqFloorPreference !== 'any') {
+        reqObj.floor = { preference: form.reqFloorPreference };
+      }
+      if (form.reqFacing && form.reqFacing !== 'Any') reqObj.facing = form.reqFacing;
+      if (amenitiesList.length) reqObj.amenities = amenitiesList;
+      if (form.reqSpecialRequirements.trim()) {
+        reqObj.specialRequirements = form.reqSpecialRequirements.trim();
+      }
+      if (Object.keys(reqObj).length) payload.requirements = reqObj;
+
       if (form.notes.trim()) payload.notes = form.notes.trim();
       if (form.creationNote.trim()) payload.creationNote = form.creationNote.trim();
 
@@ -631,9 +673,48 @@ const ProspectsListPage = () => {
               <TextField fullWidth size="small" label="Budget Currency"
                 value={form.budgetCurrency} onChange={setField('budgetCurrency')} />
             </Grid>
+            {/* SP4+ — structured requirements (parity with dev-side Lead form). */}
             <Grid item xs={12}>
-              <TextField fullWidth size="small" multiline minRows={2} label="Requirements"
-                value={form.requirements} onChange={setField('requirements')} />
+              <Typography variant="overline" color="text.secondary">Requirements</Typography>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField select fullWidth size="small" label="Timeline"
+                value={form.reqTimeline} onChange={setField('reqTimeline')}>
+                {TIMELINE_OPTIONS.map((o) => (
+                  <MenuItem key={o.value || 'none'} value={o.value}>{o.label}</MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField fullWidth size="small" label="Unit Type"
+                placeholder="e.g. 2BHK, 3BHK, Villa"
+                value={form.reqUnitType} onChange={setField('reqUnitType')} />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField select fullWidth size="small" label="Floor Preference"
+                value={form.reqFloorPreference} onChange={setField('reqFloorPreference')}>
+                {FLOOR_PREF_OPTIONS.map((o) => (
+                  <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField select fullWidth size="small" label="Facing"
+                value={form.reqFacing} onChange={setField('reqFacing')}>
+                {FACING_OPTIONS.map((o) => <MenuItem key={o} value={o}>{o}</MenuItem>)}
+              </TextField>
+            </Grid>
+            <Grid item xs={12}>
+              <TextField fullWidth size="small" label="Preferred Amenities"
+                placeholder="Comma-separated, e.g. Gym, Pool, Clubhouse"
+                value={form.reqAmenities} onChange={setField('reqAmenities')} />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField fullWidth size="small" multiline minRows={2}
+                label="Special Requirements"
+                placeholder="Anything else the customer specifically asked for"
+                value={form.reqSpecialRequirements}
+                onChange={setField('reqSpecialRequirements')} />
             </Grid>
             <Grid item xs={12}>
               <TextField fullWidth size="small" multiline minRows={2} label="Notes"
