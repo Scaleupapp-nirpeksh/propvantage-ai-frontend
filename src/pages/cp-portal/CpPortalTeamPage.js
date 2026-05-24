@@ -1,12 +1,13 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   Box, Typography, Table, TableHead, TableBody, TableRow, TableCell, Button, Chip,
   Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem, Alert,
-  IconButton, Tooltip,
+  IconButton, Tooltip, Tabs, Tab, Skeleton,
 } from '@mui/material';
 import { PersonAdd, Block, ContentCopy } from '@mui/icons-material';
-import { cpPortalAPI } from '../../services/api';
+import { cpPortalAPI, cpAnalyticsAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import AIInsightCard from '../../components/ai/AIInsightCard';
 
 const INVITE_ROLES = ['CP Manager', 'CP Agent'];
 
@@ -45,6 +46,34 @@ const CpPortalTeamPage = () => {
     catch (err) { setError(err.response?.data?.message || 'Could not deactivate the member.'); }
   };
 
+  // SP5 — Performance tab. Gated by cp_analytics:view_team (only Owner /
+  // Manager see it). The agents data is the same shape as the dashboard's
+  // Agent Performance card.
+  const canViewTeamPerf = useMemo(() => {
+    const perms = user?.role?.permissions || user?.permissions || [];
+    return Array.isArray(perms) && perms.includes('cp_analytics:view_team');
+  }, [user]);
+
+  const [tab, setTab] = useState(0); // 0 = Members, 1 = Performance
+  const [agents, setAgents] = useState(null);
+  const [agentsLoading, setAgentsLoading] = useState(false);
+
+  useEffect(() => {
+    if (tab !== 1 || !canViewTeamPerf) return;
+    setAgentsLoading(true);
+    cpAnalyticsAPI.getAgents({ range: '30d' })
+      .then((r) => { setAgents(r.data?.data); setAgentsLoading(false); })
+      .catch(() => { setAgents(null); setAgentsLoading(false); });
+  }, [tab, canViewTeamPerf]);
+
+  const fmtPct = (frac) => (typeof frac === 'number' ? `${Math.round(frac * 100)}%` : '—');
+  const fmtMoneyIN = (v) => {
+    if (typeof v !== 'number' || !Number.isFinite(v)) return '—';
+    if (v >= 1e7) return `₹${(v / 1e7).toFixed(2)} Cr`;
+    if (v >= 1e5) return `₹${(v / 1e5).toFixed(2)} L`;
+    return `₹${Math.round(v).toLocaleString('en-IN')}`;
+  };
+
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -56,6 +85,46 @@ const CpPortalTeamPage = () => {
       </Box>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
+      {canViewTeamPerf && (
+        <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2 }}>
+          <Tab label="Members" />
+          <Tab label="Performance" />
+        </Tabs>
+      )}
+
+      {tab === 1 && canViewTeamPerf ? (
+        <Box>
+          {agentsLoading ? <Skeleton variant="rectangular" height={240} /> : (
+            <Table size="small">
+              <TableHead><TableRow>
+                <TableCell>Agent</TableCell><TableCell align="right">Active</TableCell>
+                <TableCell align="right">Booked</TableCell><TableCell align="right">Conversion</TableCell>
+                <TableCell align="right">30d activity</TableCell><TableCell align="right">Commission</TableCell>
+                <TableCell align="right">Score</TableCell>
+              </TableRow></TableHead>
+              <TableBody>
+                {(agents?.agents || []).map((a) => (
+                  <TableRow key={String(a.userId)}>
+                    <TableCell>{a.name}</TableCell>
+                    <TableCell align="right">{a.prospectsActive}</TableCell>
+                    <TableCell align="right">{a.prospectsBooked}</TableCell>
+                    <TableCell align="right">{fmtPct(a.conversionRate)}</TableCell>
+                    <TableCell align="right">{a.activityVolume30d}</TableCell>
+                    <TableCell align="right">{fmtMoneyIN(a.commissionGenerated)}</TableCell>
+                    <TableCell align="right"><strong>{a.compositeScore}</strong></TableCell>
+                  </TableRow>
+                ))}
+                {(agents?.agents || []).length === 0 && (
+                  <TableRow><TableCell colSpan={7}><Typography variant="body2" color="text.secondary" align="center" sx={{ py: 2 }}>No agent activity yet.</Typography></TableCell></TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
+          <Box sx={{ mt: 2 }}>
+            <AIInsightCard surface="agent_performance" range="30d" compact={false} />
+          </Box>
+        </Box>
+      ) : (
       <Table size="small">
         <TableHead><TableRow>
           <TableCell>Name</TableCell><TableCell>Email</TableCell><TableCell>Role</TableCell>
@@ -83,6 +152,7 @@ const CpPortalTeamPage = () => {
           ))}
         </TableBody>
       </Table>
+      )}
 
       <Dialog open={inviteOpen} onClose={() => setInviteOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>Invite a team member</DialogTitle>
