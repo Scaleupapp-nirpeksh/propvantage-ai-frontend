@@ -78,12 +78,17 @@ import {
   Visibility,
   Calculate,
   Chat as ChatIcon,
+  Bolt,
+  RequestQuote,
+  Payment as PaymentIcon,
 } from '@mui/icons-material';
 
 import { useAuth } from '../../context/AuthContext';
 import { useChat } from '../../context/ChatContext';
 import { formatCurrency, formatDate, formatDateTime, formatPhoneNumber } from '../../utils/formatters';
 import ChannelPartnerAttributionSummary from '../../components/channel-partners/ChannelPartnerAttributionSummary';
+import { paymentAPI } from '../../services/api';
+import LinearProgress from '@mui/material/LinearProgress';
 
 // ============================================================================
 // SAFE API IMPORT
@@ -826,6 +831,145 @@ const PaymentBreakdownCard = ({ sale }) => {
 };
 
 // ============================================================================
+// CUSTOMER PAYMENT PROGRESS — running total + 20% threshold marker
+// 2026-05-24 lifecycle-repair (F5): the dev needs to see at-a-glance
+// how much the customer has paid and whether they've crossed the 20%
+// threshold (which triggers the commission invoice). Previously
+// SaleDetailPage showed only the static cost-sheet snapshot — no
+// running totals, no threshold awareness.
+// ============================================================================
+
+const CustomerPaymentProgressCard = ({ sale, saleId, onRefresh }) => {
+  const [plan, setPlan] = React.useState(null);
+  const [loading, setLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    if (!saleId) return;
+    setLoading(true);
+    paymentAPI.getPaymentPlanDetails(saleId)
+      .then((res) => {
+        if (!cancelled) setPlan(res?.data?.data || res?.data || null);
+      })
+      .catch(() => {
+        if (!cancelled) setPlan(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [saleId]);
+
+  const salePrice = Number(sale?.salePrice || 0);
+  const installments = plan?.installments || plan?.schedule || [];
+  const totalReceived = installments.reduce((sum, i) => sum + (Number(i.paidAmount) || 0), 0);
+  const paidPct = salePrice > 0 ? (totalReceived / salePrice) * 100 : 0;
+  const triggerCrossed = !!sale?.commissionInvoiceTriggered?.at;
+  const isCpAttributed = sale?.channelPartnerAttribution?.viaChannelPartner === true;
+  const nextDue = installments.find((i) => i.status === 'pending' || (Number(i.paidAmount) || 0) < (Number(i.amount) || 0));
+
+  return (
+    <Card>
+      <CardHeader
+        title="Customer Payment Progress"
+        avatar={
+          <Avatar sx={{ bgcolor: 'info.main', width: 56, height: 56 }}>
+            <PaymentIcon />
+          </Avatar>
+        }
+      />
+      <CardContent>
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+            <CircularProgress size={24} />
+          </Box>
+        ) : (
+          <Stack spacing={2}>
+            <Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Received so far
+                </Typography>
+                <Typography variant="body2" fontWeight={600}>
+                  {formatCurrency(totalReceived)} / {formatCurrency(salePrice)}
+                </Typography>
+              </Box>
+              <LinearProgress
+                variant="determinate"
+                value={Math.min(paidPct, 100)}
+                sx={{ height: 10, borderRadius: 5 }}
+                color={paidPct >= 100 ? 'success' : paidPct >= 20 ? 'info' : 'primary'}
+              />
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
+                <Typography variant="caption" color="text.secondary">
+                  {paidPct.toFixed(1)}% paid
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {(100 - paidPct).toFixed(1)}% remaining
+                </Typography>
+              </Box>
+            </Box>
+
+            {/* 20% threshold marker — visible only when this is a CP-attributed sale */}
+            {isCpAttributed && (
+              <Alert
+                severity={triggerCrossed ? 'success' : paidPct >= 15 ? 'warning' : 'info'}
+                icon={<Bolt fontSize="small" />}
+              >
+                {triggerCrossed ? (
+                  <>
+                    <strong>Commission invoice triggered.</strong> Customer payments crossed
+                    the 20% threshold on{' '}
+                    {sale?.commissionInvoiceTriggered?.at
+                      ? formatDate(sale.commissionInvoiceTriggered.at)
+                      : 'recently'}{' '}
+                    — a draft commission invoice is available for the channel partner.
+                  </>
+                ) : paidPct >= 15 ? (
+                  <>
+                    <strong>Approaching 20% commission threshold.</strong> {(20 - paidPct).toFixed(1)}%
+                    more from the customer and a commission invoice will be auto-created.
+                  </>
+                ) : (
+                  <>
+                    <strong>Commission threshold at 20% paid.</strong> A draft commission
+                    invoice will be auto-created for the channel partner when customer
+                    payments cross 20% of the sale price.
+                  </>
+                )}
+              </Alert>
+            )}
+
+            {nextDue && (
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Box>
+                  <Typography variant="body2" color="text.secondary">
+                    Next due
+                  </Typography>
+                  <Typography variant="body1" fontWeight={500}>
+                    {nextDue.installmentNumber ? `Installment ${nextDue.installmentNumber}` : nextDue.label || 'Next payment'}
+                  </Typography>
+                </Box>
+                <Box sx={{ textAlign: 'right' }}>
+                  <Typography variant="body1" fontWeight={600}>
+                    {formatCurrency(Number(nextDue.amount) - (Number(nextDue.paidAmount) || 0))}
+                  </Typography>
+                  {nextDue.currentDueDate && (
+                    <Typography variant="caption" color="text.secondary">
+                      Due {formatDate(nextDue.currentDueDate)}
+                    </Typography>
+                  )}
+                </Box>
+              </Box>
+            )}
+          </Stack>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+// ============================================================================
 // ENHANCED SALE TIMELINE
 // ============================================================================
 
@@ -1222,6 +1366,9 @@ const SaleDetailPage = () => {
         <Grid item xs={12} lg={4}>
           <Stack spacing={3}>
             <PaymentBreakdownCard sale={sale} />
+
+            {/* 2026-05-24 lifecycle-repair (F5): customer payment progress + 20% threshold */}
+            <CustomerPaymentProgressCard sale={sale} saleId={saleId} />
             <SalesPersonCard sale={sale} />
 
             <Card>
@@ -1246,6 +1393,37 @@ const SaleDetailPage = () => {
                     Generate Documents
                   </Button>
                   */}
+                  {/* 2026-05-24 lifecycle-repair (F4): primary action on a
+                      Sale Detail page is "Record Customer Payment" — this
+                      drives the 20% threshold which triggers commission. */}
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    startIcon={<PaymentIcon />}
+                    fullWidth
+                    onClick={() => navigate(`/payments/record?saleId=${saleId}`)}
+                  >
+                    Record Customer Payment
+                  </Button>
+
+                  {/* 2026-05-24 lifecycle-repair (F4): "Generate Commission Invoice"
+                      visible only for CP-attributed sales where the 20% trigger
+                      has fired. The backend has typically auto-created a draft
+                      already (Phase 3.3); this button takes the dev to the
+                      CP-side prospect view so they can review the draft. */}
+                  {sale?.channelPartnerAttribution?.viaChannelPartner === true &&
+                    sale?.commissionInvoiceTriggered?.at && (
+                    <Button
+                      variant="outlined"
+                      color="success"
+                      startIcon={<RequestQuote />}
+                      fullWidth
+                      onClick={() => navigate(`/leads/${sale.lead?._id || sale.lead}`)}
+                    >
+                      View Commission Invoice
+                    </Button>
+                  )}
+
                   <Button
                     variant="outlined"
                     startIcon={<AccountBalance />}
