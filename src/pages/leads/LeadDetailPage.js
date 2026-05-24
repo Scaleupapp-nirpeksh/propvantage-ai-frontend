@@ -80,6 +80,7 @@ import { useChat } from '../../context/ChatContext';
 import { leadAPI, aiAPI, leadRegistrationsAPI } from '../../services/api';
 import LeadEnrichmentCard from '../../components/leads/LeadEnrichmentCard';
 import ChannelPartnerAttributionSummary from '../../components/channel-partners/ChannelPartnerAttributionSummary';
+import DevCommissionInvoiceCard from '../../components/leads/DevCommissionInvoiceCard';
 
 // =============================================================================
 // UTILITY FUNCTIONS
@@ -503,6 +504,13 @@ const LeadOverview = ({ lead, onRefresh }) => {
             <ChannelPartnerAttributionSummary attribution={lead.channelPartnerAttribution} />
           </CardContent>
         </Card>
+      </Grid>
+
+      {/* SP5+ — Commission Invoices submitted by the CP for this lead.
+          The card auto-hides if there are no invoices, so direct dev leads
+          (no CP attribution) get no empty card. */}
+      <Grid item xs={12}>
+        <DevCommissionInvoiceCard leadId={lead?._id} />
       </Grid>
 
       {/* Property Requirements */}
