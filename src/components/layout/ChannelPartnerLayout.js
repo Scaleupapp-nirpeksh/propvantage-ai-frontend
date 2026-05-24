@@ -10,6 +10,7 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import NotificationBell from '../notifications/NotificationBell';
+import CpCopilotDrawer from '../ai/CpCopilotDrawer';
 
 const DRAWER_WIDTH = 248;
 const NAV = [
@@ -98,6 +99,9 @@ const ChannelPartnerLayout = ({ children }) => {
         <Toolbar />
         {children}
       </Box>
+      {/* SP5 — CP-side AI Copilot floating button + drawer. Always mounted
+          on every CP portal page; toggled via ⌘J or the FAB. */}
+      <CpCopilotDrawer />
     </Box>
   );
 };
