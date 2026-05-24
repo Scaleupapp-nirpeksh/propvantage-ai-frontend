@@ -390,6 +390,33 @@ const DeveloperPartnershipsPage = () => {
             {commission && (
               <Chip size="small" variant="outlined" label={commission} sx={{ mt: 1 }} />
             )}
+            {/* SP5+ — performance flags for active partners (6m window). */}
+            {p.status === 'active' && p.recentActivity && (p.recentActivity.flags || []).length > 0 && (
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mt: 1.5 }}>
+                {p.recentActivity.flags.includes('no_leads_6m') && (
+                  <Chip
+                    size="small"
+                    color="error"
+                    label="No leads in 6 months"
+                    sx={{ height: 22 }}
+                  />
+                )}
+                {p.recentActivity.flags.includes('no_bookings_6m') && (
+                  <Chip
+                    size="small"
+                    color="warning"
+                    label={`0 bookings · ${p.recentActivity.leads6m} lead${p.recentActivity.leads6m === 1 ? '' : 's'} in 6m`}
+                    sx={{ height: 22 }}
+                  />
+                )}
+              </Box>
+            )}
+            {/* When active and healthy, show a tiny positive activity line. */}
+            {p.status === 'active' && p.recentActivity && (p.recentActivity.flags || []).length === 0 && (p.recentActivity.leads6m > 0 || p.recentActivity.bookings6m > 0) && (
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.5 }}>
+                Last 6 months: <strong>{p.recentActivity.leads6m}</strong> lead{p.recentActivity.leads6m === 1 ? '' : 's'}, <strong>{p.recentActivity.bookings6m}</strong> booking{p.recentActivity.bookings6m === 1 ? '' : 's'}
+              </Typography>
+            )}
             {actions && (
               <Box sx={{ display: 'flex', gap: 1, mt: 2, flexWrap: 'wrap' }}>
                 {actions(p, busy)}
