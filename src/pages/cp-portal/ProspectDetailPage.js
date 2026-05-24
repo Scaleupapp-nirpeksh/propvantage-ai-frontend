@@ -15,10 +15,22 @@ import {
 import { cpProspectsAPI, leadAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
+// Canonical Prospect.status enum from models/prospectModel.js. We display
+// friendly labels but submit the canonical values — the previous list shipped
+// friendlier strings that the backend rejected ('Site Visit Done' →
+// 'status must be one of: New, Contacted, Qualified, Site Visit Scheduled, …').
 const PROSPECT_STATUSES = [
-  'New', 'Contacted', 'Site Visit Scheduled', 'Site Visit Done',
-  'Negotiation', 'Booked', 'Lost', 'On Hold',
+  { value: 'New',                  label: 'New' },
+  { value: 'Contacted',            label: 'Contacted' },
+  { value: 'Qualified',            label: 'Qualified' },
+  { value: 'Site Visit Scheduled', label: 'Site Visit Scheduled' },
+  { value: 'Site Visit Completed', label: 'Site Visit Done' },
+  { value: 'Negotiating',          label: 'Negotiating' },
+  { value: 'Booked',               label: 'Booked' },
+  { value: 'Lost',                 label: 'Lost' },
+  { value: 'Unqualified',          label: 'Unqualified' },
 ];
+const STATUS_LABEL = Object.fromEntries(PROSPECT_STATUSES.map((s) => [s.value, s.label]));
 
 const ACTIVITY_TYPES = [
   { value: 'call', label: 'Call' },
@@ -31,15 +43,17 @@ const FOLLOW_UP_TYPES = ['call', 'site_visit', 'meeting', 'other'];
 
 const PAYMENT_METHODS = ['bank_transfer', 'cheque', 'cash', 'upi', 'other'];
 
+// Keyed on the canonical enum values (matches PROSPECT_STATUSES above).
 const STATUS_COLOR = {
   New: 'default',
   Contacted: 'info',
+  Qualified: 'info',
   'Site Visit Scheduled': 'info',
-  'Site Visit Done': 'primary',
-  Negotiation: 'warning',
+  'Site Visit Completed': 'primary',
+  Negotiating: 'warning',
   Booked: 'success',
   Lost: 'error',
-  'On Hold': 'default',
+  Unqualified: 'default',
 };
 
 const COMMISSION_COLOR = {
@@ -488,7 +502,7 @@ const ProspectDetailPage = () => {
                 <Typography variant="body1" sx={{ mt: 0.5 }}>Agent: {agentLabel}</Typography>
                 <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
                   <Chip size="small" label={`Priority: ${prospect.priority || 'Medium'}`} />
-                  <Chip size="small" label={prospect.status || 'New'} color={STATUS_COLOR[prospect.status] || 'default'} />
+                  <Chip size="small" label={STATUS_LABEL[prospect.status] || prospect.status || 'New'} color={STATUS_COLOR[prospect.status] || 'default'} />
                 </Stack>
               </CardContent>
             </Card>
@@ -864,7 +878,7 @@ const ProspectDetailPage = () => {
         <DialogContent dividers>
           <TextField select fullWidth size="small" required label="New status" sx={{ mb: 2 }}
             value={statusForm.status} onChange={(e) => setStatusForm((f) => ({ ...f, status: e.target.value }))}>
-            {PROSPECT_STATUSES.map((s) => <MenuItem key={s} value={s}>{s}</MenuItem>)}
+            {PROSPECT_STATUSES.map((s) => <MenuItem key={s.value} value={s.value}>{s.label}</MenuItem>)}
           </TextField>
           <TextField fullWidth size="small" multiline minRows={3} label="Note for developer"
             value={statusForm.note} onChange={(e) => setStatusForm((f) => ({ ...f, note: e.target.value }))} />
@@ -883,7 +897,7 @@ const ProspectDetailPage = () => {
         <DialogContent dividers>
           <TextField select fullWidth size="small" required label="Status"
             value={externalStatusVal} onChange={(e) => setExternalStatusVal(e.target.value)}>
-            {PROSPECT_STATUSES.map((s) => <MenuItem key={s} value={s}>{s}</MenuItem>)}
+            {PROSPECT_STATUSES.map((s) => <MenuItem key={s.value} value={s.value}>{s.label}</MenuItem>)}
           </TextField>
         </DialogContent>
         <DialogActions sx={{ px: 3, py: 2 }}>
