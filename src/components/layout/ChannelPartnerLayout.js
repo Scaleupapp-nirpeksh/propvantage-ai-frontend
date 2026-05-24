@@ -13,20 +13,47 @@ import NotificationBell from '../notifications/NotificationBell';
 import CpCopilotDrawer from '../ai/CpCopilotDrawer';
 
 const DRAWER_WIDTH = 248;
-const NAV = [
-  { label: 'Dashboard',                icon: Dashboard,     path: '/partner/dashboard' },
-  // SP5 — analytics surfaces
-  { label: 'AI Insights',              icon: AutoAwesome,   path: '/partner/insights' },
-  { label: 'Commission',               icon: Payments,      path: '/partner/commission' },
-  { label: 'Reconciliation',           icon: FactCheck,     path: '/partner/commission/reconciliation' },
-  { label: 'Developer Performance',    icon: InsightsIcon,  path: '/partner/developers/performance' },
-  // SP1–SP4 operational surfaces
-  { label: 'Prospects',                icon: PersonSearch,  path: '/partner/prospects' },
-  { label: 'Marketplace',              icon: Storefront,    path: '/partner/marketplace' },
-  { label: 'Partnerships',             icon: Handshake,     path: '/partner/partnerships' },
-  { label: 'Off-Platform Developers',  icon: Domain,        path: '/partner/external-developers' },
-  { label: 'My Team',                  icon: Groups,        path: '/partner/team' },
-  { label: 'Organization Profile',     icon: Business,      path: '/partner/profile' },
+
+// Grouped nav. Order: Workspace → Insights → Commission → Network → Settings.
+// Each group renders a small uppercase caption above its items. Flat (not
+// collapsible) so every item stays one click away.
+const NAV_SECTIONS = [
+  {
+    section: 'Workspace',
+    items: [
+      { label: 'Dashboard', icon: Dashboard,    path: '/partner/dashboard' },
+      { label: 'Prospects', icon: PersonSearch, path: '/partner/prospects' },
+    ],
+  },
+  {
+    section: 'Insights',
+    items: [
+      { label: 'AI Insights',           icon: AutoAwesome,  path: '/partner/insights' },
+      { label: 'Developer Performance', icon: InsightsIcon, path: '/partner/developers/performance' },
+    ],
+  },
+  {
+    section: 'Commission',
+    items: [
+      { label: 'Overview',       icon: Payments,  path: '/partner/commission' },
+      { label: 'Reconciliation', icon: FactCheck, path: '/partner/commission/reconciliation' },
+    ],
+  },
+  {
+    section: 'Network',
+    items: [
+      { label: 'Marketplace',             icon: Storefront, path: '/partner/marketplace' },
+      { label: 'Partnerships',            icon: Handshake,  path: '/partner/partnerships' },
+      { label: 'Off-Platform Developers', icon: Domain,     path: '/partner/external-developers' },
+    ],
+  },
+  {
+    section: 'Settings',
+    items: [
+      { label: 'My Team',             icon: Groups,   path: '/partner/team' },
+      { label: 'Organization Profile', icon: Business, path: '/partner/profile' },
+    ],
+  },
 ];
 
 const ChannelPartnerLayout = ({ children }) => {
@@ -41,19 +68,57 @@ const ChannelPartnerLayout = ({ children }) => {
       <Toolbar>
         <Typography variant="h6" sx={{ fontWeight: 700 }}>PropVantage</Typography>
       </Toolbar>
-      <Typography variant="caption" sx={{ px: 2, color: 'text.secondary', mt: 1 }}>
-        {organization?.name}
-      </Typography>
-      <List sx={{ mt: 1 }}>
-        {NAV.map((item) => (
-          <ListItemButton key={item.path}
-            selected={location.pathname === item.path}
-            onClick={() => { navigate(item.path); setMobileOpen(false); }}>
-            <ListItemIcon><item.icon /></ListItemIcon>
-            <ListItemText primary={item.label} />
-          </ListItemButton>
+      <Box sx={{ px: 2, pt: 1, pb: 0.5 }}>
+        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', lineHeight: 1.2 }}>
+          {organization?.name}
+        </Typography>
+      </Box>
+      <Box sx={{ mt: 0.5 }}>
+        {NAV_SECTIONS.map((section, idx) => (
+          <Box key={section.section} sx={{ mt: idx === 0 ? 0.5 : 1.5 }}>
+            <Typography
+              variant="overline"
+              sx={{
+                px: 2,
+                color: 'text.disabled',
+                fontSize: '0.65rem',
+                fontWeight: 600,
+                letterSpacing: 0.8,
+                display: 'block',
+                lineHeight: 1.8,
+              }}
+            >
+              {section.section}
+            </Typography>
+            <List dense disablePadding>
+              {section.items.map((item) => {
+                const isActive =
+                  location.pathname === item.path ||
+                  // Treat /partner/commission as also "active" when on /reconciliation
+                  // child path — but only mark the parent if there's no exact match
+                  // on the more-specific child route.
+                  (item.path === '/partner/commission' && location.pathname === '/partner/commission');
+                return (
+                  <ListItemButton
+                    key={item.path}
+                    selected={isActive}
+                    onClick={() => { navigate(item.path); setMobileOpen(false); }}
+                    sx={{ py: 0.5, pl: 2.5 }}
+                  >
+                    <ListItemIcon sx={{ minWidth: 36 }}>
+                      <item.icon fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={item.label}
+                      primaryTypographyProps={{ fontSize: '0.875rem' }}
+                    />
+                  </ListItemButton>
+                );
+              })}
+            </List>
+          </Box>
         ))}
-      </List>
+      </Box>
     </Box>
   );
 
