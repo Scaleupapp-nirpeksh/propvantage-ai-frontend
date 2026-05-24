@@ -71,6 +71,7 @@ import {
   Refresh,
   Handshake,
   Chat as ChatIcon,
+  ShoppingCart,
 } from '@mui/icons-material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -328,9 +329,28 @@ const LeadHeader = ({ lead, onEdit, onRefresh, isLoading }) => {
             </IconButton>
           </Tooltip>
 
-          {canAccess.leadManagement() && (
+          {/* 2026-05-24 lifecycle-repair (F1): "Convert to Booking" CTA.
+              Visible when the lead is in active pipeline (not pending /
+              Booked / Lost / Unqualified). Routes to /sales/create with
+              the leadId query param; CreateSalePage auto-pre-fills the
+              customer + auto-hydrates channel-partner attribution from
+              the lead so the dev never has to manually re-tag the CP. */}
+          {canAccess.leadManagement() && lead?.status &&
+            !['pending', 'Booked', 'Lost', 'Unqualified'].includes(lead.status) && (
             <Button
               variant="contained"
+              color="success"
+              startIcon={<ShoppingCart />}
+              onClick={() => navigate(`/sales/create?leadId=${lead._id}`)}
+              sx={{ mr: 1 }}
+            >
+              Convert to Booking
+            </Button>
+          )}
+
+          {canAccess.leadManagement() && (
+            <Button
+              variant="outlined"
               startIcon={<Edit />}
               onClick={onEdit}
               sx={{ mr: 1 }}

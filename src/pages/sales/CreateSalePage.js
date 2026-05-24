@@ -3241,6 +3241,39 @@ const CreateSalePage = () => {
     fetchAllData();
   }, []);
 
+  // 2026-05-24 lifecycle-repair (F2 + F3): when navigated here from
+  // LeadDetailPage's "Convert to Booking" CTA, pre-fill customer + hydrate
+  // the channelPartnerAttribution form state from the upstream Lead so the
+  // dev does NOT need to manually re-tag the CP. The backend has the same
+  // safety net (services/salesAttributionHelper.js) — this just makes the
+  // UI honest by showing the inherited attribution explicitly.
+  const [hydratedFromLead, setHydratedFromLead] = useState(false);
+  useEffect(() => {
+    if (hydratedFromLead) return;
+    const leadIdParam = searchParams.get('leadId');
+    if (!leadIdParam || !leads || leads.length === 0) return;
+    const sourceLead = leads.find((l) => String(l._id) === String(leadIdParam));
+    if (!sourceLead) return;
+
+    setSelectedCustomer(sourceLead);
+    if (sourceLead.channelPartnerAttribution?.viaChannelPartner === true) {
+      const cleanPartners = (sourceLead.channelPartnerAttribution.partners || [])
+        .filter((p) => p && p.channelPartner)
+        .map((p) => ({
+          channelPartner: p.channelPartner?._id || p.channelPartner,
+          agent: p.agent?._id || p.agent || null,
+          // Preserve the User ref so the backend's agentUser path works.
+          agentUser: p.agentUser?._id || p.agentUser || null,
+          sharePct: Number(p.sharePct) || 0,
+        }));
+      setChannelPartnerAttribution({
+        viaChannelPartner: true,
+        partners: cleanPartners,
+      });
+    }
+    setHydratedFromLead(true);
+  }, [leads, searchParams, hydratedFromLead]);
+
   const fetchAllData = async () => {
     try {
       setError(null);
@@ -3519,6 +3552,16 @@ const CreateSalePage = () => {
               <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
                 Channel partner
               </Typography>
+              {/* 2026-05-24 lifecycle-repair (F3): when the source lead was
+                  CP-attributed, surface a clear banner so the dev knows the
+                  attribution is pre-filled from the lead — they should not
+                  manually re-tag, and they should not silently untick. */}
+              {selectedCustomer?.channelPartnerAttribution?.viaChannelPartner === true && (
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  Channel partner attribution has been auto-inherited from the lead.
+                  Untick only if this booking is genuinely not via a channel partner.
+                </Alert>
+              )}
               <ChannelPartnerAttributionFields
                 value={channelPartnerAttribution}
                 onChange={setChannelPartnerAttribution}
