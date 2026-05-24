@@ -200,13 +200,46 @@ const LeadRegistrationsPage = () => {
               </>
             )}
 
-            {drawerLead.requirements && (
-              <>
-                <Divider sx={{ my: 2 }} />
-                <Typography variant="overline" color="text.secondary">Requirements</Typography>
-                <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>{drawerLead.requirements}</Typography>
-              </>
-            )}
+            {/* Lead.requirements is a structured object; render each populated
+                subfield. Rendering it raw triggers React error #31. */}
+            {drawerLead.requirements && (() => {
+              const r = drawerLead.requirements;
+              const TIMELINE_LABELS = {
+                'immediate': 'Immediate',
+                '1-3_months': '1–3 months',
+                '3-6_months': '3–6 months',
+                '6-12_months': '6–12 months',
+                '12+_months': '12+ months',
+              };
+              const FLOOR_LABELS = { low: 'Low', medium: 'Medium', high: 'High' };
+              const rows = [];
+              if (r.timeline) rows.push(['Timeline', TIMELINE_LABELS[r.timeline] || r.timeline]);
+              if (r.unitType) rows.push(['Unit Type', r.unitType]);
+              if (r.floor?.preference && r.floor.preference !== 'any') {
+                rows.push(['Floor Preference', FLOOR_LABELS[r.floor.preference] || r.floor.preference]);
+              }
+              if (r.facing && r.facing !== 'Any') rows.push(['Facing', r.facing]);
+              if (Array.isArray(r.amenities) && r.amenities.length) {
+                rows.push(['Amenities', r.amenities.join(', ')]);
+              }
+              if (!rows.length && !r.specialRequirements) return null;
+              return (
+                <>
+                  <Divider sx={{ my: 2 }} />
+                  <Typography variant="overline" color="text.secondary">Requirements</Typography>
+                  {rows.map(([k, v]) => (
+                    <Typography key={k} variant="body2">
+                      <strong>{k}:</strong> {v}
+                    </Typography>
+                  ))}
+                  {r.specialRequirements && (
+                    <Typography variant="body2" sx={{ mt: 0.5, whiteSpace: 'pre-wrap' }}>
+                      <strong>Special:</strong> {r.specialRequirements}
+                    </Typography>
+                  )}
+                </>
+              );
+            })()}
 
             {drawerLead.sourceProspect?.notes && (
               <>
