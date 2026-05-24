@@ -969,6 +969,44 @@ export const leadRegistrationsAPI = {
 };
 
 // =============================================================================
+// SP5 — ANALYTICS, COMMISSION VISIBILITY & AI INSIGHTS
+// =============================================================================
+
+// CP-side analytics (Areas 1–5: pipeline, commission, agents, developers,
+// reconciliation). All endpoints honour partnerAccessScope on the server.
+export const cpAnalyticsAPI = {
+  getPipeline:                (params) => api.get('/cp/analytics/pipeline',     { params }),
+  getCommission:              (params) => api.get('/cp/analytics/commission',   { params }),
+  getAgents:                  (params) => api.get('/cp/analytics/agents',       { params }),
+  getDevelopers:              (params) => api.get('/cp/analytics/developers',   { params }),
+  getReconciliation:          (params) => api.get('/cp/analytics/reconciliation', { params }),
+  getReconciliationDetail:    (id)     => api.get(`/cp/analytics/reconciliation/${id}`),
+  markReconciliationReviewed: (id)     => api.post(`/cp/analytics/reconciliation/${id}/reviewed`),
+};
+
+// CP-side AI insights pipeline. Each surface is server-cached for 24h;
+// `generate` forces a fresh LLM call and bumps onDemandGenerations.
+export const cpInsightsAPI = {
+  get:      (surface, params) => api.get(`/cp/insights/${surface}`, { params }),
+  generate: (surface, body)   => api.post(`/cp/insights/${surface}/generate`, body || {}),
+  usage:    ()                => api.get('/cp/ai/usage'),
+};
+
+// CP-side Copilot (chat).
+export const cpCopilotAPI = {
+  message: (data) => api.post('/cp/copilot/message', data),
+};
+
+// Developer-side analytics (Areas 6–8 — CP scorecard, commission payouts,
+// lead quality). Deterministic only; no AI surface for dev side beyond
+// the existing dev Copilot tool extensions.
+export const devAnalyticsAPI = {
+  getChannelPartnerScorecard: (params) => api.get('/analytics/cp-scorecard',       { params }),
+  getCommissionPayouts:       (params) => api.get('/analytics/commission-payouts', { params }),
+  getLeadQuality:             (params) => api.get('/analytics/lead-quality',       { params }),
+};
+
+// =============================================================================
 // 18-22. ALL OTHER SERVICES REMAIN UNCHANGED
 // =============================================================================
 
