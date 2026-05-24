@@ -81,6 +81,7 @@ import {
   Bolt,
   RequestQuote,
   Payment as PaymentIcon,
+  Person,
 } from '@mui/icons-material';
 
 import { useAuth } from '../../context/AuthContext';
@@ -1375,6 +1376,21 @@ const SaleDetailPage = () => {
               <CardHeader title="Channel Partner" />
               <CardContent>
                 <ChannelPartnerAttributionSummary attribution={sale.channelPartnerAttribution} />
+                {/* 2026-05-24 lifecycle-repair (F17, F18): upstream Lead +
+                    Prospect backlinks. The dev can now navigate the full chain
+                    Prospect → Lead → Sale from the SaleDetail page. */}
+                {(sale?.lead || sale?.lead?._id) && (
+                  <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    <Chip
+                      icon={<Person />}
+                      label="From Lead"
+                      size="small"
+                      clickable
+                      onClick={() => navigate(`/leads/${sale.lead._id || sale.lead}`)}
+                      variant="outlined"
+                    />
+                  </Box>
+                )}
               </CardContent>
             </Card>
 

@@ -12,7 +12,7 @@ import {
 import {
   ArrowBack, Refresh, Add, Send, Edit, Cancel, MoneyOff,
 } from '@mui/icons-material';
-import { cpProspectsAPI, leadAPI } from '../../services/api';
+import { cpProspectsAPI, leadAPI, cpAnalyticsAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import CommissionInvoicePanel from '../../components/cp-portal/CommissionInvoicePanel';
 
@@ -90,6 +90,13 @@ const ProspectDetailPage = () => {
   // Lead detail (for proposed-status visibility when pushed)
   const [pushedLead, setPushedLead] = useState(null);
 
+  // 2026-05-24 lifecycle-repair (F7, F14): cross-org reconciliation state so
+  // the CP can see the dev-side commission position inline on the Prospect
+  // Commission tab. The reconciliation API joins CP-side Prospect.commission
+  // with the dev-side CommissionRecord and reports the matched/mismatched/
+  // cp_only/dev_only status with the discrepancy delta.
+  const [reconciliation, setReconciliation] = useState(null);
+
   // Dialog state
   const [openActivity, setOpenActivity] = useState(false);
   const [activityForm, setActivityForm] = useState({
@@ -158,6 +165,28 @@ const ProspectDetailPage = () => {
       })
       .catch(() => setPushedLead(null));
   }, [prospect?.pushedToLead]);
+
+  // 2026-05-24 lifecycle-repair (F7): fetch reconciliation detail so the
+  // Commission tab can show the dev-side commission state inline with the
+  // CP's local ledger. Best-effort — if the API 404s (no Sale exists yet),
+  // we silently fall back to the CP-ledger-only view.
+  useEffect(() => {
+    if (!id) {
+      setReconciliation(null);
+      return;
+    }
+    let cancelled = false;
+    cpAnalyticsAPI.getReconciliationDetail(id)
+      .then((res) => {
+        if (cancelled) return;
+        const data = res.data?.data || res.data;
+        setReconciliation(data);
+      })
+      .catch(() => {
+        if (!cancelled) setReconciliation(null);
+      });
+    return () => { cancelled = true; };
+  }, [id, prospect?.commission?.payments?.length]);
 
   const showOk = (msg) => { setSnack({ ok: msg, err: '' }); };
   const showErr = (msg) => { setSnack({ ok: '', err: msg }); };
@@ -471,6 +500,23 @@ const ProspectDetailPage = () => {
       {/* ── Tab 1: Overview ── */}
       {tab === 0 && (
         <Grid container spacing={2}>
+          {/* 2026-05-24 lifecycle-repair (F14): deal-of-the-year banner. When
+              the dev books the unit, the CP sees this prominent banner so they
+              don't have to dig into the linked Lead to find out. */}
+          {pushedLead?.status === 'Booked' && (
+            <Grid item xs={12}>
+              <Alert severity="success" sx={{ alignItems: 'center' }}>
+                <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                  🎉 This prospect was booked by the developer.
+                </Typography>
+                <Typography variant="body2" sx={{ mt: 0.5 }}>
+                  Commission is now accruing. Once the customer has paid 20% of the sale
+                  price, a draft commission invoice will be auto-created — you can review
+                  and submit it from the Commission tab.
+                </Typography>
+              </Alert>
+            </Grid>
+          )}
           <Grid item xs={12} md={6}>
             <Card variant="outlined">
               <CardContent>
@@ -752,6 +798,90 @@ const ProspectDetailPage = () => {
       {/* ── Tab 4: Commission ── */}
       {tab === 3 && (
         <Grid container spacing={2}>
+          {/* 2026-05-24 lifecycle-repair (F7): cross-org reconciliation banner.
+              Shows the dev-side commission state inline so the CP no longer has
+              to navigate away to the Reconciliation Dashboard to find out what
+              the developer has recorded. */}
+          {reconciliation && (
+            <Grid item xs={12}>
+              <Card variant="outlined" sx={{ borderColor: (
+                reconciliation.status === 'matched' ? 'success.light' :
+                reconciliation.status === 'mismatched' ? 'warning.light' :
+                reconciliation.status === 'cp_only' ? 'info.light' :
+                reconciliation.status === 'dev_only' ? 'info.light' :
+                'divider'
+              ) }}>
+                <CardContent>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+                    <Typography variant="overline" color="text.secondary">
+                      Developer-side commission position
+                    </Typography>
+                    <Chip
+                      size="small"
+                      label={
+                        reconciliation.status === 'matched' ? 'Matched' :
+                        reconciliation.status === 'mismatched' ? `Mismatched (₹${Math.abs(Number(reconciliation.discrepancy || 0)).toLocaleString('en-IN')})` :
+                        reconciliation.status === 'cp_only' ? 'CP-only (no dev record yet)' :
+                        reconciliation.status === 'dev_only' ? 'Dev-only (no CP ledger)' :
+                        reconciliation.status || 'Unknown'
+                      }
+                      color={
+                        reconciliation.status === 'matched' ? 'success' :
+                        reconciliation.status === 'mismatched' ? 'warning' :
+                        'info'
+                      }
+                    />
+                  </Stack>
+                  {reconciliation.devRecord ? (
+                    <Grid container spacing={2} sx={{ mt: 0.5 }}>
+                      <Grid item xs={6} sm={3}>
+                        <Typography variant="caption" color="text.secondary">Dev expected</Typography>
+                        <Typography variant="body1" fontWeight={600}>
+                          {fmtMoney(reconciliation.devRecord.expected || reconciliation.devRecord.grossAmount || 0, 'INR')}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={6} sm={3}>
+                        <Typography variant="caption" color="text.secondary">Dev paid</Typography>
+                        <Typography variant="body1" fontWeight={600}>
+                          {fmtMoney(reconciliation.devRecord.paid || reconciliation.devRecord.paidAmount || 0, 'INR')}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={6} sm={3}>
+                        <Typography variant="caption" color="text.secondary">Your expected</Typography>
+                        <Typography variant="body1" fontWeight={600}>
+                          {fmtMoney(reconciliation.cpLedger?.expected || expected || 0, commissionCcy)}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={6} sm={3}>
+                        <Typography variant="caption" color="text.secondary">Your received</Typography>
+                        <Typography variant="body1" fontWeight={600}>
+                          {fmtMoney(reconciliation.cpLedger?.received || totalReceived || 0, commissionCcy)}
+                        </Typography>
+                      </Grid>
+                    </Grid>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                      The developer hasn't recorded a commission record for this booking yet.
+                      Your local ledger below is your own working record.
+                    </Typography>
+                  )}
+                  {reconciliation.explanation && (
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                      {reconciliation.explanation}
+                    </Typography>
+                  )}
+                  <Button
+                    size="small"
+                    sx={{ mt: 1 }}
+                    onClick={() => navigate(`/partner/commission/reconciliation?prospectId=${id}`)}
+                  >
+                    View full reconciliation →
+                  </Button>
+                </CardContent>
+              </Card>
+            </Grid>
+          )}
+
           <Grid item xs={12} md={6}>
             <Card variant="outlined">
               <CardContent>
