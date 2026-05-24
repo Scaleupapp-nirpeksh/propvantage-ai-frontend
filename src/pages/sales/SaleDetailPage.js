@@ -30,6 +30,7 @@ import {
   DialogContentText,
   Alert,
   LinearProgress,
+  CircularProgress,
   Stack,
   useTheme,
   useMediaQuery,
@@ -89,7 +90,7 @@ import { useChat } from '../../context/ChatContext';
 import { formatCurrency, formatDate, formatDateTime, formatPhoneNumber } from '../../utils/formatters';
 import ChannelPartnerAttributionSummary from '../../components/channel-partners/ChannelPartnerAttributionSummary';
 import { paymentAPI } from '../../services/api';
-import LinearProgress from '@mui/material/LinearProgress';
+// LinearProgress already imported from '@mui/material' at line 32.
 
 // ============================================================================
 // SAFE API IMPORT
