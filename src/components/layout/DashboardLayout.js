@@ -253,6 +253,10 @@ const getNavigationItems = (userRole, canAccess) => {
             { id: 'budget-vs-actual', title: 'Budget vs Actual', icon: CompareArrows, path: '/analytics/budget', requiredAccess: () => canAccess.viewFinancials() },
             { id: 'financial-realtime', title: 'Real-time Financial', icon: TrendingFlat, path: '/analytics/financial', requiredAccess: () => canAccess.viewFinancials() },
             { id: 'predictive', title: 'Predictions', icon: PsychologyAlt, path: '/analytics/predictions', requiredAccess: () => canAccess.viewFinancials() },
+            // SP5 — dev-side channel-partner analytics
+            { id: 'analytics-cp-scorecard',  title: 'Channel Partners',   icon: People,      path: '/analytics/channel-partners' },
+            { id: 'analytics-cp-payouts',    title: 'Commission Payouts', icon: AttachMoney, path: '/analytics/commission-payouts' },
+            { id: 'analytics-lead-quality',  title: 'Lead Quality',       icon: TrendingUp,  path: '/analytics/lead-quality' },
           ],
         },
         {
