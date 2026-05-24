@@ -504,7 +504,42 @@ const ProspectDetailPage = () => {
                 <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
                   <Chip size="small" label={`Priority: ${prospect.priority || 'Medium'}`} />
                   <Chip size="small" label={STATUS_LABEL[prospect.status] || prospect.status || 'New'} color={STATUS_COLOR[prospect.status] || 'default'} />
+                  {/* SP4+ — CP-side prospect score */}
+                  <Chip
+                    size="small"
+                    label={`Score: ${Math.round(prospect.score || 0)} · ${prospect.scoreGrade || 'Cold'}`}
+                    color={
+                      prospect.scoreGrade === 'Hot' ? 'error'
+                      : prospect.scoreGrade === 'Warm' ? 'warning'
+                      : 'default'
+                    }
+                    variant={prospect.scoreGrade === 'Hot' ? 'filled' : 'outlined'}
+                  />
+                  {prospect.devScore != null && (
+                    <Chip
+                      size="small"
+                      label={`Dev: ${Math.round(prospect.devScore)} · ${prospect.devScoreGrade || '—'}`}
+                      variant="outlined"
+                      color="info"
+                    />
+                  )}
                 </Stack>
+                {/* SP4+ — breakdown so the CP can see what's pushing the score up/down */}
+                {prospect.scoreBreakdown && (
+                  <Box sx={{ mt: 1.5 }}>
+                    <Typography variant="caption" color="text.secondary">Score breakdown</Typography>
+                    {[
+                      ['Budget', prospect.scoreBreakdown.budgetAlignment],
+                      ['Engagement', prospect.scoreBreakdown.engagementLevel],
+                      ['Timeline', prospect.scoreBreakdown.timelineUrgency],
+                      ['Recency', prospect.scoreBreakdown.recencyFactor],
+                    ].filter(([, v]) => v && v.rawScore != null).map(([label, v]) => (
+                      <Typography key={label} variant="caption" sx={{ display: 'block' }}>
+                        <strong>{label}:</strong> {v.rawScore}/100 — {v.reasoning}
+                      </Typography>
+                    ))}
+                  </Box>
+                )}
               </CardContent>
             </Card>
           </Grid>

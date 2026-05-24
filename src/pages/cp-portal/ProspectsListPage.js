@@ -79,6 +79,9 @@ const initialForm = {
   reqFacing: 'Any',
   reqAmenities: '', // comma-separated in the form; split on submit
   reqSpecialRequirements: '',
+  // SP4+ — research sources for dev-side enrichment pipeline (optional).
+  enrichLinkedinUrl: '',
+  enrichCompanyWebsite: '',
   notes: '',
   creationNote: '',
 };
@@ -334,6 +337,18 @@ const ProspectsListPage = () => {
       }
       if (Object.keys(reqObj).length) payload.requirements = reqObj;
 
+      // SP4+ — research sources for dev-side enrichment, if supplied.
+      const linkedin = form.enrichLinkedinUrl.trim();
+      const companyWeb = form.enrichCompanyWebsite.trim();
+      if (linkedin || companyWeb) {
+        payload.enrichment = {
+          sources: {
+            linkedinUrl: linkedin || undefined,
+            companyWebsite: companyWeb || undefined,
+          },
+        };
+      }
+
       if (form.notes.trim()) payload.notes = form.notes.trim();
       if (form.creationNote.trim()) payload.creationNote = form.creationNote.trim();
 
@@ -495,6 +510,7 @@ const ProspectsListPage = () => {
                   <TableCell>Developer</TableCell>
                   <TableCell>Project</TableCell>
                   <TableCell>Status</TableCell>
+                  <TableCell>Score</TableCell>
                   <TableCell>Agent</TableCell>
                   <TableCell>Last Activity</TableCell>
                   <TableCell>Follow-up</TableCell>
@@ -521,6 +537,26 @@ const ProspectsListPage = () => {
                     <TableCell>{renderProjectCell(p)}</TableCell>
                     <TableCell>
                       <Chip size="small" label={p.status || 'New'} color={STATUS_COLOR[p.status] || 'default'} />
+                    </TableCell>
+                    <TableCell>
+                      {/* SP4+ — CP-side prospect score + (if pushed) mirror of dev-side score */}
+                      <Stack direction="column" spacing={0.5}>
+                        <Chip
+                          size="small"
+                          label={`${Math.round(p.score || 0)} · ${p.scoreGrade || 'Cold'}`}
+                          color={
+                            p.scoreGrade === 'Hot' ? 'error'
+                            : p.scoreGrade === 'Warm' ? 'warning'
+                            : 'default'
+                          }
+                          variant={p.scoreGrade === 'Hot' ? 'filled' : 'outlined'}
+                        />
+                        {p.devScore != null && (
+                          <Typography variant="caption" color="text.secondary">
+                            Dev: {Math.round(p.devScore)} ({p.devScoreGrade || '—'})
+                          </Typography>
+                        )}
+                      </Stack>
                     </TableCell>
                     <TableCell>{renderAgentCell(p)}</TableCell>
                     <TableCell>{renderLastActivity(p)}</TableCell>
@@ -715,6 +751,27 @@ const ProspectsListPage = () => {
                 placeholder="Anything else the customer specifically asked for"
                 value={form.reqSpecialRequirements}
                 onChange={setField('reqSpecialRequirements')} />
+            </Grid>
+            {/* SP4+ — research sources for dev-side AI enrichment (optional). */}
+            <Grid item xs={12}>
+              <Typography variant="overline" color="text.secondary">
+                Research Sources (optional)
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                Helps the developer's AI enrich the lead with seniority / employer context.
+              </Typography>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField fullWidth size="small" label="LinkedIn Profile URL"
+                placeholder="https://www.linkedin.com/in/..."
+                value={form.enrichLinkedinUrl}
+                onChange={setField('enrichLinkedinUrl')} />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField fullWidth size="small" label="Company Website"
+                placeholder="https://..."
+                value={form.enrichCompanyWebsite}
+                onChange={setField('enrichCompanyWebsite')} />
             </Grid>
             <Grid item xs={12}>
               <TextField fullWidth size="small" multiline minRows={2} label="Notes"
