@@ -8,7 +8,7 @@
 import React, { useState } from 'react';
 import {
   Box, Card, CardContent, Typography, Stack, Tabs, Tab,
-  ToggleButtonGroup, ToggleButton, Button,
+  ToggleButtonGroup, ToggleButton,
 } from '@mui/material';
 import { AutoAwesome } from '@mui/icons-material';
 import AIInsightCard from '../../components/ai/AIInsightCard';
