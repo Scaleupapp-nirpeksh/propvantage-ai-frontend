@@ -1007,6 +1007,29 @@ export const devAnalyticsAPI = {
 };
 
 // =============================================================================
+// SP5+ — COMMISSION INVOICES (CP issues, Dev approves + pays)
+// =============================================================================
+
+// CP-side: create + edit drafts, submit, cancel.
+export const cpCommissionInvoicesAPI = {
+  list:    (params)   => api.get('/cp/commission-invoices',          { params }),
+  get:     (id)       => api.get(`/cp/commission-invoices/${id}`),
+  create:  (data)     => api.post('/cp/commission-invoices', data),
+  update:  (id, data) => api.put(`/cp/commission-invoices/${id}`, data),
+  submit:  (id)       => api.post(`/cp/commission-invoices/${id}/submit`),
+  cancel:  (id)       => api.post(`/cp/commission-invoices/${id}/cancel`),
+};
+
+// Dev-side: approve/reject submitted invoices; record payment on approved.
+export const devCommissionInvoicesAPI = {
+  list:          (params)   => api.get('/commission-invoices',                    { params }),
+  get:           (id)       => api.get(`/commission-invoices/${id}`),
+  approve:       (id, data) => api.post(`/commission-invoices/${id}/approve`, data || {}),
+  reject:        (id, data) => api.post(`/commission-invoices/${id}/reject`, data || {}),
+  recordPayment: (id, data) => api.post(`/commission-invoices/${id}/payment`, data),
+};
+
+// =============================================================================
 // 18-22. ALL OTHER SERVICES REMAIN UNCHANGED
 // =============================================================================
 
