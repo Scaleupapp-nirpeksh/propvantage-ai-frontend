@@ -462,7 +462,43 @@ const PaymentOverview = ({ paymentData, analytics, loading, period }) => {
   const theme = useTheme();
   const [chartType, setChartType] = useState('area');
 
-  const metrics = useMemo(() => calculatePaymentMetrics(paymentData), [paymentData]);
+  // 2026-05-25 fix: PaymentReports KPI cards were stuck at zero because
+  // `calculatePaymentMetrics` aggregates the local `paymentData` array, which
+  // ONLY contains overdue + due-today installments + a few sales-derived
+  // rows. The real completed-payment totals live in the server-side
+  // `/payments/reports/statistics` response (passed in as `analytics`). When
+  // `analytics.payments` is populated we use those authoritative numbers and
+  // fall back to the local computation only when the stats response is empty.
+  const metrics = useMemo(() => {
+    const local = calculatePaymentMetrics(paymentData);
+    const apiPayments = analytics?.payments || null;
+    const apiOverdue = analytics?.overdue || null;
+    if (!apiPayments && !apiOverdue) return local;
+
+    const apiTotalPayments = Number(apiPayments?.totalPayments) || 0;
+    const apiTotalAmount = Number(apiPayments?.totalAmount) || 0;
+    const apiOverdueCount = Number(apiOverdue?.overdueInstallments) || 0;
+    const apiOverdueAmount = Number(apiOverdue?.overdueAmount) || 0;
+
+    // Collection-rate proxy: completed payments / (completed + overdue installments).
+    // Avoids division-by-zero. When there's no activity, falls back to local rate.
+    const denom = apiTotalPayments + apiOverdueCount;
+    const collectionRate = denom > 0
+      ? (apiTotalPayments / denom) * 100
+      : local.collectionRate;
+
+    return {
+      ...local,
+      total: apiTotalPayments,
+      totalAmount: apiTotalAmount,
+      completed: apiTotalPayments,
+      completedAmount: apiTotalAmount,
+      averagePayment: Number(apiPayments?.averagePayment) || local.averagePayment,
+      overdue: apiOverdueCount,
+      overdueAmount: apiOverdueAmount,
+      collectionRate,
+    };
+  }, [paymentData, analytics]);
   
   const trendData = useMemo(() => {
     return aggregatePaymentsByPeriod(paymentData, parseInt(period) || 30);
@@ -1361,41 +1397,65 @@ const PaymentReportsPage = () => {
 
       if (overdueResult.status === 'fulfilled') {
         const response = overdueResult.value.data;
-        const overduePayments = response.data || [];
-        
-        // Convert overdue installments to payment format
-        const overdueAsPayments = Array.isArray(overduePayments) ? overduePayments.map(installment => ({
+        const payload = response?.data || {};
+
+        // 2026-05-25 fix: the overdue endpoint returns a nested report shape
+        //   { totalOverdueAmount, totalOverdueCustomers, totalOverdueInstallments,
+        //     customerGroups: [{ customer, project, installments: [...] }] }
+        // The previous code treated this as a flat installments array
+        // (Array.isArray(payload) was always false → 0 overdue mapped). Now
+        // we flatten customerGroups[].installments[] OR accept a top-level
+        // array if a future endpoint returns one directly.
+        const rawInstallments = Array.isArray(payload)
+          ? payload
+          : (payload.customerGroups || []).flatMap((cg) =>
+              (cg.installments || []).map((inst) => ({
+                ...inst,
+                customer: inst.customer || cg.customer,
+                project: inst.project || cg.project,
+              }))
+            );
+
+        const overdueAsPayments = rawInstallments.map((installment) => ({
           _id: installment._id,
-          amount: installment.pendingAmount || installment.amount,
+          amount: installment.pendingAmount || installment.currentAmount || installment.amount,
           status: 'overdue',
-          dueDate: installment.dueDate,
+          // Installment uses currentDueDate / originalDueDate, not dueDate
+          dueDate: installment.currentDueDate || installment.originalDueDate || installment.dueDate,
           paymentMethod: 'Unknown',
           customer: installment.customer || { name: 'Unknown Customer' },
           project: installment.project || { name: 'Unknown Project' },
-          customerName: installment.customerName,
-          notes: `Overdue installment - ${installment.notes || ''}`,
+          customerName: installment.customer
+            ? `${installment.customer.firstName || ''} ${installment.customer.lastName || ''}`.trim()
+            : 'Unknown',
+          notes: `Overdue installment ${installment.installmentNumber || ''} - ${installment.description || ''}`,
           type: 'installment',
-        })) : [];
-        
+        }));
+
         allPaymentData = [...allPaymentData, ...overdueAsPayments];
         console.log('✅ Overdue payments loaded:', overdueAsPayments.length, 'overdue');
       }
 
       if (dueTodayResult.status === 'fulfilled') {
         const response = dueTodayResult.value.data;
-        const dueTodayPayments = response.data || [];
-        
-        // Convert due today installments to payment format
+        const dueTodayPayments = response?.data || [];
+
+        // 2026-05-25 fix: Installment schema uses `currentDueDate` and
+        // `originalDueDate`, not `dueDate`. The previous mapping always
+        // set `dueDate: undefined` which made the OverdueManagement age
+        // buckets crash silently and the records table show blank dates.
         const dueTodayAsPayments = Array.isArray(dueTodayPayments) ? dueTodayPayments.map(installment => ({
           _id: installment._id,
-          amount: installment.pendingAmount || installment.amount,
+          amount: installment.pendingAmount || installment.currentAmount || installment.amount,
           status: installment.status === 'overdue' ? 'overdue' : 'pending',
-          dueDate: installment.dueDate,
+          dueDate: installment.currentDueDate || installment.originalDueDate || installment.dueDate,
           paymentMethod: 'Unknown',
           customer: installment.customer || { name: 'Unknown Customer' },
           project: installment.project || { name: 'Unknown Project' },
-          customerName: installment.customerName,
-          notes: `Due today - ${installment.notes || ''}`,
+          customerName: installment.customer
+            ? `${installment.customer.firstName || ''} ${installment.customer.lastName || ''}`.trim()
+            : 'Unknown',
+          notes: `Due today - ${installment.description || ''}`,
           type: 'installment',
         })) : [];
         
