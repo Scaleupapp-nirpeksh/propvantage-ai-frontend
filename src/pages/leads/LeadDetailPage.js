@@ -216,21 +216,45 @@ const LeadHeader = ({ lead, onEdit, onRefresh, isLoading }) => {
                 {lead?.firstName} {lead?.lastName}
               </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 1 }}>
-                <Chip 
-                  label={lead?.status || 'Unknown'} 
-                  color={getStatusColor(lead?.status)} 
+                <Chip
+                  label={lead?.status || 'Unknown'}
+                  color={getStatusColor(lead?.status)}
                   size="small"
                 />
-                <Chip 
-                  label={lead?.priority || 'Medium'} 
-                  color={getPriorityColor(lead?.priority)} 
-                  size="small" 
+                {/* 2026-05-25 — site-visit aging chip. Visible only when the
+                    lead is stuck at Site Visit Scheduled (visit booked but
+                    not logged) or Site Visit Completed (visit done but lead
+                    not advanced). Same logic as the Leads list column. */}
+                {['Site Visit Scheduled', 'Site Visit Completed'].includes(lead?.status) && (lead?.statusChangedAt || lead?.updatedAt) && (() => {
+                  const days = Math.max(0, Math.floor((Date.now() - new Date(lead.statusChangedAt || lead.updatedAt).getTime()) / 86400000));
+                  const color = days >= 10 ? 'error' : days >= 5 ? 'warning' : days >= 2 ? 'info' : 'success';
+                  const label = lead.status === 'Site Visit Scheduled'
+                    ? (days === 0 ? 'Awaiting visit (today)' : `Awaiting visit ${days}d`)
+                    : (days === 0 ? 'Just completed' : `${days}d since visit`);
+                  const tip = lead.status === 'Site Visit Scheduled'
+                    ? 'Days since moved to "Site Visit Scheduled" — visit not yet logged.'
+                    : 'Days since visit completed — lead not yet advanced.';
+                  return (
+                    <Tooltip title={tip}>
+                      <Chip
+                        label={label}
+                        color={color}
+                        size="small"
+                        variant="outlined"
+                      />
+                    </Tooltip>
+                  );
+                })()}
+                <Chip
+                  label={lead?.priority || 'Medium'}
+                  color={getPriorityColor(lead?.priority)}
+                  size="small"
                   variant="outlined"
                 />
-                <Chip 
-                  label={lead?.source || 'Unknown'} 
-                  color="info" 
-                  size="small" 
+                <Chip
+                  label={lead?.source || 'Unknown'}
+                  color="info"
+                  size="small"
                   variant="outlined"
                 />
               </Box>

@@ -291,8 +291,50 @@ const LeadsListPage = () => {
       ),
     },
     {
-      id: 'status', label: 'Status', sortable: false, width: 140,
-      render: (_, lead) => <StatusChip status={lead.status} type="lead" size="small" />,
+      id: 'status', label: 'Status', sortable: false, width: 160,
+      render: (_, lead) => {
+        // 2026-05-25 — aging indicator for stuck site-visit stages.
+        // Shows "X days at this status" beneath the StatusChip when the lead
+        // is in 'Site Visit Scheduled' (visit booked but not logged) or
+        // 'Site Visit Completed' (visit done but status hasn't progressed).
+        // Color-coded so the dev's eye is drawn to the leads going cold.
+        const SITE_VISIT_AGING_STATUSES = ['Site Visit Scheduled', 'Site Visit Completed'];
+        const showAging = SITE_VISIT_AGING_STATUSES.includes(lead.status);
+        let agingNode = null;
+        if (showAging) {
+          const since = lead.statusChangedAt || lead.updatedAt;
+          if (since) {
+            const days = Math.max(0, Math.floor((Date.now() - new Date(since).getTime()) / 86400000));
+            const color = days >= 10 ? 'error' : days >= 5 ? 'warning' : days >= 2 ? 'info' : 'success';
+            const label = lead.status === 'Site Visit Scheduled'
+              ? (days === 0 ? 'Awaiting visit (today)' : `Awaiting visit ${days}d`)
+              : (days === 0 ? 'Just completed' : `${days}d since visit`);
+            agingNode = (
+              <Tooltip
+                title={
+                  lead.status === 'Site Visit Scheduled'
+                    ? 'Days since the lead was moved to "Site Visit Scheduled" — visit has not been logged yet.'
+                    : 'Days since the visit was logged — lead has not moved to the next stage.'
+                }
+              >
+                <Chip
+                  size="small"
+                  color={color}
+                  variant="outlined"
+                  label={label}
+                  sx={{ height: 18, fontSize: '0.65rem', mt: 0.5, '& .MuiChip-label': { px: 0.75 } }}
+                />
+              </Tooltip>
+            );
+          }
+        }
+        return (
+          <Box>
+            <StatusChip status={lead.status} type="lead" size="small" />
+            {agingNode}
+          </Box>
+        );
+      },
     },
     {
       id: 'project', label: 'Project', sortable: false, hideOnMobile: true,
