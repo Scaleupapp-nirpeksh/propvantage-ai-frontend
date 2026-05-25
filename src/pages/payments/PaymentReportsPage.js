@@ -1324,7 +1324,6 @@ const DetailedPaymentsTable = ({ paymentData, loading }) => {
 const PaymentReportsPage = () => {
   const navigate = useNavigate();
   const { canAccess } = useAuth();
-  const theme = useTheme();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // State management
@@ -1632,16 +1631,15 @@ const PaymentReportsPage = () => {
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Box sx={{ flexGrow: 1, bgcolor: 'background.default', minHeight: '100vh' }}>
-        
-        {/* Enhanced Header */}
-        <Paper 
-          sx={{ 
-            p: 3, 
-            mb: 3, 
-            background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)}, ${alpha(theme.palette.secondary.main, 0.05)})`,
-            border: 0,
-            borderRadius: 0,
-          }}
+
+        {/* 2026-05-25 UI fix: removed gradient + borderRadius:0 + edge-to-edge
+            styling that made this header look like a banner separate from the
+            rest of the app. Other payment pages (DueTodayPage, OverduePaymentsPage)
+            use a plain outlined card and sit within DashboardLayout's normal
+            padding. Now this page matches. */}
+        <Paper
+          variant="outlined"
+          sx={{ p: 3, mb: 3 }}
         >
           <Breadcrumbs sx={{ mb: 2 }}>
             <Link color="inherit" href="/" onClick={() => navigate('/')}>

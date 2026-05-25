@@ -18,7 +18,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   Box,
   Grid,
@@ -1028,7 +1028,13 @@ const PaymentConfirmationStep = ({ saleData, paymentData, allocation, installmen
  */
 const RecordPaymentPage = () => {
   const navigate = useNavigate();
-  const { saleId } = useParams();
+  const params = useParams();
+  const [searchParams] = useSearchParams();
+  // 2026-05-25 fix: SaleDetailPage's "Record Customer Payment" CTA links to
+  // `/payments/record?saleId=<id>` (query param), while the legacy URL pattern
+  // `/payments/plans/:saleId/record-payment` uses a route param. Accept either
+  // form so navigating from a sale page auto-loads its data.
+  const saleId = params.saleId || searchParams.get('saleId');
   const { canAccess } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
