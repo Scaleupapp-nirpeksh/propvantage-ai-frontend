@@ -68,7 +68,7 @@ export const builderReducer = (state, action) => {
         ...state,
         blocks: state.blocks.map((b) =>
           b.id === action.id
-            ? { ...b, ...action.patch, config: action.patch.config ? { ...action.patch.config } : b.config }
+            ? { ...b, ...action.patch, config: action.patch.config ? { ...b.config, ...action.patch.config } : b.config }
             : b
         ),
       };

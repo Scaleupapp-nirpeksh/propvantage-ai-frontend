@@ -50,6 +50,12 @@ describe('builderReducer', () => {
     expect(s.imageSlots).toHaveLength(0);
   });
 
+  it('merges block config on update, preserving untouched keys', () => {
+    let s = builderReducer(initialBuilderState, actions.addBlock({ id: 'b1', type: 'layout.hero', title: 'Hero', config: { subtitle: 'old', imageSlotId: 'img1' } }));
+    s = builderReducer(s, actions.updateBlock('b1', { config: { subtitle: 'new' } }));
+    expect(s.blocks[0].config).toEqual({ subtitle: 'new', imageSlotId: 'img1' });
+  });
+
   it('hydrates from a fetched template and back to a payload', () => {
     const template = {
       name: 'Loaded', description: 'd',
