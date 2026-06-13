@@ -85,6 +85,7 @@ import {
   Insights,
   Storefront,
   Visibility,
+  Summarize,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import { useChat } from '../../context/ChatContext';
@@ -231,6 +232,13 @@ const getNavigationItems = (userRole, canAccess) => {
     {
       section: 'INTELLIGENCE',
       items: [
+        {
+          id: 'reports',
+          title: 'Reports',
+          icon: Summarize,
+          path: '/reports',
+          requiredAccess: () => canAccess.reports(),
+        },
         {
           id: 'leadership',
           title: 'Leadership',
