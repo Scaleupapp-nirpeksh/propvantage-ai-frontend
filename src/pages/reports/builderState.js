@@ -107,5 +107,10 @@ export const buildTemplatePayload = (state) => ({
 
 /** Generate a unique block/slot id (browser crypto, with a safe fallback). */
 let state_counter = 0;
-export const makeId = (prefix = 'b') =>
-  `${prefix}_${(globalThis.crypto?.randomUUID?.() || `${performance.now()}_${state_counter++}`)}`;
+export const makeId = (prefix = 'b') => {
+  try {
+    return `${prefix}_${window.crypto.randomUUID()}`;
+  } catch (_e) {
+    return `${prefix}_${performance.now()}_${state_counter++}`;
+  }
+};
