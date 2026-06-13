@@ -96,10 +96,15 @@ const ReportTemplateBuilder = () => {
     }
   };
 
-  // Canvas shows resolved data when a preview exists, else the design-time blocks (no data)
-  const canvasBlocks = previewBlocks
-    ? previewBlocks
-    : state.blocks.map((b) => ({ ...b, kind: catalog.find((c) => c.type === b.type)?.kind, data: {} }));
+  // Canvas shows resolved data when a preview exists, else the design-time blocks (no data).
+  // Snapshot blocks from the backend don't carry `kind`, so derive it from the catalog by type —
+  // the renderer needs `kind` to pick kpi/chart/table vs layout. (Phase 2's public page has no
+  // catalog, so the snapshot generator should attach `kind` server-side there.)
+  const canvasBlocks = (previewBlocks || state.blocks).map((b) => ({
+    ...b,
+    kind: b.kind || catalog.find((c) => c.type === b.type)?.kind,
+    data: previewBlocks ? b.data : {},
+  }));
 
   return (
     <Box>
