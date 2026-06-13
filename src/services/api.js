@@ -1612,6 +1612,31 @@ export const leadershipAPI = {
   getProjectComparison: (params = {}) => api.get('/leadership/project-comparison', { params }),
 };
 
+// ─── Reports (Leadership Report Builder) ───────────────────────────────
+export const reportAPI = {
+  // Block catalog for the builder palette
+  getCatalog: () => api.get('/reports/catalog'),
+
+  // Template CRUD
+  listTemplates: (params = {}) => api.get('/reports/templates', { params }),
+  getTemplate: (id) => api.get(`/reports/templates/${id}`),
+  createTemplate: (data) => api.post('/reports/templates', data),
+  updateTemplate: (id, data) => api.put(`/reports/templates/${id}`, data),
+  deleteTemplate: (id) => api.delete(`/reports/templates/${id}`),
+
+  // Ad-hoc generate (preview)
+  generate: (id) => api.post(`/reports/templates/${id}/generate`),
+
+  // Image upload (hero/gallery/logo) → returns { url, s3Key }
+  uploadImage: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/reports/uploads', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+};
+
 // =============================================================================
 // CHAT & MESSAGING SERVICES (/api/chat)
 // =============================================================================
