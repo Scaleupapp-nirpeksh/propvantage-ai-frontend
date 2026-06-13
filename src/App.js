@@ -194,6 +194,10 @@ const DeveloperPartnershipsPage = React.lazy(() => import('./pages/channel-partn
 // Chat
 const ChatPage = React.lazy(() => import('./pages/chat/ChatPage'));
 
+// Reports (Leadership Report Builder)
+const ReportTemplateListPage = React.lazy(() => import('./pages/reports/ReportTemplateListPage'));
+const ReportTemplateBuilder = React.lazy(() => import('./pages/reports/ReportTemplateBuilder'));
+
 // Error Pages - UNCHANGED
 const NotFoundPage = React.lazy(() => import('./pages/error/NotFoundPage'));
 const UnauthorizedPage = React.lazy(() => import('./pages/error/UnauthorizedPage'));
@@ -1076,6 +1080,35 @@ const AppRoutes = () => {
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback section="analytics" message="Loading leadership dashboard..." />}>
               <LeadershipDashboardPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* Reports — Leadership Report Builder */}
+      <Route path="/reports" element={
+        <ProtectedRoute requiredPermission="reports:view">
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback />}>
+              <ReportTemplateListPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/reports/templates/new" element={
+        <ProtectedRoute requiredPermission="reports:manage">
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback />}>
+              <ReportTemplateBuilder />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/reports/templates/:id/edit" element={
+        <ProtectedRoute requiredPermission="reports:manage">
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback />}>
+              <ReportTemplateBuilder />
             </Suspense>
           </DashboardLayout>
         </ProtectedRoute>
