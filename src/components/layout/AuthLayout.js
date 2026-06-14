@@ -1,392 +1,334 @@
 // File: src/components/layout/AuthLayout.js
-// Description: Authentication layout component for PropVantage AI - Professional auth page layout
-// Version: 1.0 - Complete auth layout with branding and responsive design
-// Location: src/components/layout/AuthLayout.js
+// Description: Authentication shell for PropVantage AI — a refined, "architectural
+//   luxury" split screen. Left: a deep warm-charcoal brand panel with gold accents
+//   and editorial Playfair type. Right: a clean cream column that hosts the auth form.
+// Version: 3.0 — full redesign (cohesive split, single legible logo, brand-true palette)
 
 import React from 'react';
-import {
-  Box,
-  Container,
-  Grid,
-  Paper,
-  Typography,
-  useTheme,
-  useMediaQuery,
-  Avatar,
-  Chip,
-} from '@mui/material';
-import {
-  BusinessCenter,
-  TrendingUp,
-  Psychology,
-  Analytics,
-  Security,
-} from '@mui/icons-material';
+import { Box, Typography, useTheme, useMediaQuery } from '@mui/material';
+import { Apartment, TrendingUp, AutoAwesome, Insights } from '@mui/icons-material';
 
-// PropVantage AI Logo Component (text-based since no logo provided)
-const PropVantageLogo = ({ size = 'large' }) => {
-  const theme = useTheme();
-  
-  const logoSizes = {
-    small: { fontSize: '1.5rem', iconSize: 24 },
-    medium: { fontSize: '2rem', iconSize: 32 },
-    large: { fontSize: '2.5rem', iconSize: 40 },
-  };
-  
-  const currentSize = logoSizes[size];
-  
-  return (
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 2,
-        mb: 1,
-      }}
-    >
-      <Avatar
-        sx={{
-          bgcolor: theme.palette.primary.main,
-          width: currentSize.iconSize * 1.5,
-          height: currentSize.iconSize * 1.5,
-        }}
-      >
-        <BusinessCenter sx={{ fontSize: currentSize.iconSize }} />
-      </Avatar>
-      <Box>
-        <Typography
-          variant="h1"
-          sx={{
-            fontSize: currentSize.fontSize,
-            fontWeight: 700,
-            background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-            backgroundClip: 'text',
-            textFillColor: 'transparent',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            lineHeight: 1,
-          }}
-        >
-          PropVantage
-        </Typography>
-        <Typography
-          variant="body2"
-          sx={{
-            color: theme.palette.text.secondary,
-            fontWeight: 500,
-            letterSpacing: '0.1em',
-            mt: -0.5,
-          }}
-        >
-          AI POWERED CRM
-        </Typography>
-      </Box>
-    </Box>
-  );
+// ── Brand tokens (auth-scoped) ───────────────────────────────────────────────
+const C = {
+  ink: '#15120B',
+  ink2: '#241B10',
+  ink3: '#2C2014',
+  gold: '#D4AF37',
+  goldHi: '#EBCB63',
+  goldLine: 'rgba(212, 175, 55, 0.22)',
+  cream: '#FAF7F1',
+  hairline: 'rgba(255, 255, 255, 0.08)',
+  bodyOnDark: 'rgba(247, 242, 232, 0.72)',
 };
+const DISPLAY = '"Playfair Display", Georgia, "Times New Roman", serif';
 
-// Feature Highlight Component
-const FeatureHighlight = ({ icon: Icon, title, description, color }) => {
-  const theme = useTheme();
-  
+// Single source of truth for the logo lockup (used on both panels).
+const Logo = ({ variant = 'light', compact = false }) => {
+  const onDark = variant === 'light';
+  const markSize = compact ? 38 : 46;
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'flex-start',
-        gap: 2,
-        p: 2,
-        borderRadius: 2,
-        bgcolor: `${color}.50`,
-        border: `1px solid ${theme.palette[color]?.[200] || theme.palette.grey[200]}`,
-      }}
-    >
-      <Avatar
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+      <Box
         sx={{
-          bgcolor: `${color}.100`,
-          color: `${color}.700`,
-          width: 40,
-          height: 40,
+          width: markSize,
+          height: markSize,
+          borderRadius: 2,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+          background: onDark
+            ? 'linear-gradient(145deg, rgba(212,175,55,0.18), rgba(212,175,55,0.04))'
+            : 'linear-gradient(145deg, #1d1810, #2c2415)',
+          border: `1px solid ${onDark ? C.goldLine : 'transparent'}`,
+          boxShadow: onDark ? 'none' : '0 6px 18px rgba(26,22,12,0.25)',
         }}
       >
-        <Icon sx={{ fontSize: 20 }} />
-      </Avatar>
-      <Box sx={{ flex: 1 }}>
+        <Apartment sx={{ fontSize: compact ? 20 : 24, color: C.gold }} />
+      </Box>
+      <Box sx={{ lineHeight: 1 }}>
         <Typography
-          variant="subtitle2"
+          component="div"
           sx={{
+            fontFamily: DISPLAY,
             fontWeight: 600,
-            color: theme.palette.text.primary,
-            mb: 0.5,
+            fontSize: compact ? '1.35rem' : '1.6rem',
+            letterSpacing: '0.01em',
+            color: onDark ? '#FBF8F0' : '#1A140A',
+            lineHeight: 1.05,
           }}
         >
-          {title}
+          Prop<Box component="span" sx={{ color: C.gold }}>Vantage</Box>
         </Typography>
         <Typography
-          variant="body2"
+          component="div"
           sx={{
-            color: theme.palette.text.secondary,
-            lineHeight: 1.4,
+            mt: 0.4,
+            fontSize: '0.6rem',
+            fontWeight: 600,
+            letterSpacing: '0.28em',
+            textTransform: 'uppercase',
+            color: onDark ? C.bodyOnDark : 'rgba(26,20,10,0.5)',
           }}
         >
-          {description}
+          Elite Real Estate CRM
         </Typography>
       </Box>
     </Box>
   );
 };
 
-// Key Features List
-const keyFeatures = [
-  {
-    icon: TrendingUp,
-    title: 'Sales Pipeline',
-    description: 'Track leads from inquiry to closure with AI-powered insights',
-    color: 'success',
-  },
-  {
-    icon: Psychology,
-    title: 'AI Insights',
-    description: 'Get intelligent recommendations for lead conversion',
-    color: 'primary',
-  },
-  {
-    icon: Analytics,
-    title: 'Advanced Analytics',
-    description: 'Real-time dashboards and predictive sales forecasting',
-    color: 'info',
-  },
-  {
-    icon: Security,
-    title: 'Secure & Reliable',
-    description: 'Enterprise-grade security with role-based access control',
-    color: 'warning',
-  },
+const VALUE_PROPS = [
+  { icon: TrendingUp, title: 'Sales pipeline', desc: 'Track every lead from first enquiry to final booking.' },
+  { icon: AutoAwesome, title: 'AI insights', desc: 'Recommendations that show your team where to focus next.' },
+  { icon: Insights, title: 'Revenue intelligence', desc: 'Live dashboards and predictive sales forecasting.' },
 ];
 
-// Stats Component
-const PlatformStats = () => {
-  const theme = useTheme();
-  
-  return (
-    <Box sx={{ mt: 4, mb: 3 }}>
-      <Typography
-        variant="h6"
-        sx={{
-          textAlign: 'center',
-          mb: 2,
-          color: theme.palette.text.secondary,
-          fontWeight: 500,
-        }}
-      >
-        Trusted by Leading Builders
-      </Typography>
-  
+const ValueRow = ({ icon: Icon, title, desc, delay }) => (
+  <Box
+    sx={{
+      display: 'flex',
+      gap: 2,
+      py: 2,
+      borderTop: `1px solid ${C.hairline}`,
+      animation: 'pvFadeUp 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both',
+      animationDelay: delay,
+    }}
+  >
+    <Box
+      sx={{
+        width: 40,
+        height: 40,
+        borderRadius: '50%',
+        flexShrink: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        border: `1px solid ${C.goldLine}`,
+        bgcolor: 'rgba(212,175,55,0.06)',
+      }}
+    >
+      <Icon sx={{ fontSize: 19, color: C.gold }} />
     </Box>
-  );
-};
+    <Box>
+      <Typography sx={{ fontWeight: 600, fontSize: '0.95rem', color: '#FBF8F0', mb: 0.25 }}>
+        {title}
+      </Typography>
+      <Typography sx={{ fontSize: '0.85rem', color: C.bodyOnDark, lineHeight: 1.5 }}>
+        {desc}
+      </Typography>
+    </Box>
+  </Box>
+);
 
-// Main Auth Layout Component
 const AuthLayout = ({ children, title, subtitle }) => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const isTablet = useMediaQuery(theme.breakpoints.down('lg'));
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
 
   return (
     <Box
       sx={{
         minHeight: '100vh',
-        background: `linear-gradient(135deg, ${theme.palette.primary.main}10 0%, ${theme.palette.secondary.main}10 100%)`,
         display: 'flex',
-        alignItems: 'center',
-        py: 4,
+        bgcolor: C.cream,
+        // keyframes registered once here; referenced by name below
+        '@keyframes pvFadeUp': {
+          from: { opacity: 0, transform: 'translateY(14px)' },
+          to: { opacity: 1, transform: 'translateY(0)' },
+        },
+        '@keyframes pvFadeIn': { from: { opacity: 0 }, to: { opacity: 1 } },
       }}
     >
-      <Container maxWidth="xl">
-        <Grid container spacing={4} alignItems="center" justifyContent="center">
-          {/* Left Side - Branding & Features (Hidden on mobile) */}
-          {!isMobile && (
-            <Grid item xs={12} md={6} lg={7}>
-              <Box sx={{ pr: isTablet ? 2 : 4 }}>
-                {/* Logo and Main Heading */}
-                <PropVantageLogo size="large" />
-                <Typography
-                  variant="h4"
-                  sx={{
-                    fontWeight: 600,
-                    color: theme.palette.text.primary,
-                    mb: 2,
-                    mt: 2,
-                  }}
-                >
-                  AI-Powered Real Estate CRM
-                </Typography>
-                <Typography
-                  variant="h6"
-                  sx={{
-                    color: theme.palette.text.secondary,
-                    mb: 4,
-                    fontWeight: 400,
-                    lineHeight: 1.6,
-                  }}
-                >
-                  Streamline your real estate business with intelligent project management, 
-                  lead tracking, and predictive analytics.
-                </Typography>
-
-                {/* Feature Highlights */}
-                <Box sx={{ mb: 4 }}>
-                  <Typography
-                    variant="h6"
-                    sx={{
-                      fontWeight: 600,
-                      mb: 3,
-                      color: theme.palette.text.primary,
-                    }}
-                  >
-                    Why Choose PropVantage AI?
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    {keyFeatures.slice(0, 3).map((feature, index) => (
-                      <FeatureHighlight key={index} {...feature} />
-                    ))}
-                  </Box>
-                </Box>
-
-                {/* Platform Stats */}
-                <PlatformStats />
-
-                {/* Technology Stack */}
-                <Box sx={{ mt: 4 }}>
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      color: theme.palette.text.secondary,
-                      mb: 2,
-                      textAlign: 'center',
-                    }}
-                  >
-                    Powered by Advanced Technology
-                  </Typography>
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      justifyContent: 'center',
-                      flexWrap: 'wrap',
-                      gap: 1,
-                    }}
-                  >
-                    
-                  </Box>
-                </Box>
-              </Box>
-            </Grid>
-          )}
-
-          {/* Right Side - Auth Form */}
-          <Grid item xs={12} md={6} lg={5}>
-            <Paper
-              elevation={8}
-              sx={{
-                p: isMobile ? 3 : 4,
-                borderRadius: 3,
-                background: 'rgba(255, 255, 255, 0.95)',
-                backdropFilter: 'blur(10px)',
-                border: `1px solid ${theme.palette.grey[200]}`,
-                boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)',
-              }}
-            >
-              {/* Mobile Logo */}
-              {isMobile && (
-                <Box sx={{ textAlign: 'center', mb: 3 }}>
-                  <PropVantageLogo size="medium" />
-                </Box>
-              )}
-
-              {/* Page Title */}
-              {title && (
-                <Typography
-                  variant="h5"
-                  sx={{
-                    fontWeight: 600,
-                    color: theme.palette.text.primary,
-                    mb: 1,
-                    textAlign: isMobile ? 'center' : 'left',
-                  }}
-                >
-                  {title}
-                </Typography>
-              )}
-
-              {/* Page Subtitle */}
-              {subtitle && (
-                <Typography
-                  variant="body2"
-                  sx={{
-                    color: theme.palette.text.secondary,
-                    mb: 3,
-                    textAlign: isMobile ? 'center' : 'left',
-                  }}
-                >
-                  {subtitle}
-                </Typography>
-              )}
-
-              {/* Auth Form Content */}
-              {children}
-
-              {/* Mobile Features (shown only on mobile) */}
-              {isMobile && (
-                <Box sx={{ mt: 4, pt: 3, borderTop: `1px solid ${theme.palette.grey[200]}` }}>
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      textAlign: 'center',
-                      color: theme.palette.text.secondary,
-                      mb: 2,
-                    }}
-                  >
-                    Key Features
-                  </Typography>
-                  <Box sx={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 1 }}>
-                    {['Lead Management', 'AI Insights', 'Real-time Analytics', 'Project Tracking'].map((feature) => (
-                      <Chip
-                        key={feature}
-                        label={feature}
-                        size="small"
-                        sx={{
-                          bgcolor: theme.palette.primary.main,
-                          color: 'white',
-                          fontSize: '0.7rem',
-                        }}
-                      />
-                    ))}
-                  </Box>
-                </Box>
-              )}
-            </Paper>
-          </Grid>
-        </Grid>
-      </Container>
-
-      {/* Footer */}
-      <Box
-        sx={{
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          py: 2,
-          textAlign: 'center',
-        }}
-      >
-        <Typography
-          variant="caption"
+      {/* ── LEFT · brand panel (desktop only) ─────────────────────────────── */}
+      {isDesktop && (
+        <Box
           sx={{
-            color: theme.palette.text.secondary,
+            position: 'relative',
+            flex: '1 1 56%',
+            maxWidth: '58%',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            color: '#fff',
+            px: { md: 7, lg: 10 },
+            py: { md: 7, lg: 8 },
+            background: `linear-gradient(157deg, ${C.ink} 0%, ${C.ink2} 52%, ${C.ink3} 100%)`,
           }}
         >
-          © 2025 PropVantage AI.
+          {/* atmosphere */}
+          <Box
+            aria-hidden
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              pointerEvents: 'none',
+              background: [
+                'radial-gradient(58% 48% at 88% 6%, rgba(212,175,55,0.20), transparent 70%)',
+                'radial-gradient(46% 38% at -5% 104%, rgba(212,175,55,0.07), transparent 70%)',
+                'repeating-linear-gradient(90deg, rgba(255,255,255,0.022) 0 1px, transparent 1px 72px)',
+                'repeating-linear-gradient(0deg, rgba(255,255,255,0.018) 0 1px, transparent 1px 72px)',
+              ].join(','),
+            }}
+          />
+          {/* architect's arc */}
+          <Box
+            aria-hidden
+            sx={{
+              position: 'absolute',
+              width: 720,
+              height: 720,
+              right: -260,
+              bottom: -300,
+              borderRadius: '50%',
+              border: `1px solid ${C.goldLine}`,
+              pointerEvents: 'none',
+              '&::after': {
+                content: '""',
+                position: 'absolute',
+                inset: 90,
+                borderRadius: '50%',
+                border: '1px solid rgba(212,175,55,0.10)',
+              },
+            }}
+          />
+
+          {/* top: logo */}
+          <Box sx={{ position: 'relative', zIndex: 1, animation: 'pvFadeUp 0.7s cubic-bezier(0.2,0.7,0.2,1) both' }}>
+            <Logo variant="light" />
+          </Box>
+
+          {/* middle: headline + value props */}
+          <Box sx={{ position: 'relative', zIndex: 1, maxWidth: 540, my: 4 }}>
+            <Typography
+              sx={{
+                fontSize: '0.72rem',
+                fontWeight: 600,
+                letterSpacing: '0.28em',
+                textTransform: 'uppercase',
+                color: C.gold,
+                mb: 2.5,
+                animation: 'pvFadeUp 0.7s cubic-bezier(0.2,0.7,0.2,1) both',
+                animationDelay: '0.05s',
+              }}
+            >
+              AI-Powered Revenue Intelligence
+            </Typography>
+            <Typography
+              sx={{
+                fontFamily: DISPLAY,
+                fontWeight: 500,
+                fontSize: { md: '2.6rem', lg: '3.1rem' },
+                lineHeight: 1.08,
+                letterSpacing: '-0.01em',
+                color: '#FCFAF4',
+                mb: 2.5,
+                animation: 'pvFadeUp 0.75s cubic-bezier(0.2,0.7,0.2,1) both',
+                animationDelay: '0.12s',
+              }}
+            >
+              Intelligence for the people who build{' '}
+              <Box component="span" sx={{ fontStyle: 'italic', color: C.goldHi }}>landmarks.</Box>
+            </Typography>
+            <Typography
+              sx={{
+                fontSize: '1.02rem',
+                lineHeight: 1.6,
+                color: C.bodyOnDark,
+                maxWidth: 460,
+                mb: 1,
+                animation: 'pvFadeUp 0.8s cubic-bezier(0.2,0.7,0.2,1) both',
+                animationDelay: '0.2s',
+              }}
+            >
+              One command center for your projects, leads, payments and reporting —
+              with the precision your developments deserve.
+            </Typography>
+
+            <Box sx={{ mt: 3 }}>
+              {VALUE_PROPS.map((v, i) => (
+                <ValueRow key={v.title} {...v} delay={`${0.32 + i * 0.1}s`} />
+              ))}
+            </Box>
+          </Box>
+
+          {/* bottom: trust line */}
+          <Box
+            sx={{
+              position: 'relative',
+              zIndex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1.5,
+              animation: 'pvFadeIn 1s ease both',
+              animationDelay: '0.7s',
+            }}
+          >
+            <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: C.gold }} />
+            <Typography sx={{ fontSize: '0.72rem', letterSpacing: '0.22em', textTransform: 'uppercase', color: C.bodyOnDark }}>
+              Trusted by leading developers
+            </Typography>
+          </Box>
+        </Box>
+      )}
+
+      {/* ── RIGHT · form column ───────────────────────────────────────────── */}
+      <Box
+        sx={{
+          flex: 1,
+          minWidth: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          position: 'relative',
+          px: { xs: 3, sm: 6 },
+          py: { xs: 6, sm: 8 },
+          bgcolor: C.cream,
+          // subtle texture so the cream panel isn't flat
+          backgroundImage:
+            'radial-gradient(60% 50% at 100% 0%, rgba(212,175,55,0.06), transparent 60%)',
+        }}
+      >
+        <Box
+          sx={{
+            width: '100%',
+            maxWidth: 416,
+            animation: 'pvFadeUp 0.7s cubic-bezier(0.2,0.7,0.2,1) both',
+            animationDelay: isDesktop ? '0.15s' : '0s',
+          }}
+        >
+          {/* compact logo on mobile (left panel is hidden) */}
+          {!isDesktop && (
+            <Box sx={{ mb: 4 }}>
+              <Logo variant="dark" compact />
+            </Box>
+          )}
+
+          {title && (
+            <Typography sx={{ fontFamily: DISPLAY, fontWeight: 600, fontSize: '1.9rem', color: '#1A140A', mb: 0.5 }}>
+              {title}
+            </Typography>
+          )}
+          {subtitle && (
+            <Typography sx={{ color: 'rgba(26,20,10,0.6)', mb: 3 }}>{subtitle}</Typography>
+          )}
+
+          {children}
+        </Box>
+
+        {/* footer */}
+        <Typography
+          sx={{
+            position: 'absolute',
+            bottom: 20,
+            left: 0,
+            right: 0,
+            textAlign: 'center',
+            fontSize: '0.72rem',
+            color: 'rgba(26,20,10,0.4)',
+          }}
+        >
+          © {new Date().getFullYear()} PropVantage AI · Elite Real Estate CRM
         </Typography>
       </Box>
     </Box>

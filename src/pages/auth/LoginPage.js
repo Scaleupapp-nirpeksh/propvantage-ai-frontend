@@ -1,15 +1,11 @@
 // File: src/pages/auth/LoginPage.js
-// Description: Updated login page with proper AuthContext integration for role-based redirect
-// Version: 2.0 - Enhanced with proper redirect logic and error handling
-// Location: src/pages/auth/LoginPage.js
+// Description: Login form content rendered inside AuthLayout's form column.
+// Version: 3.0 - Redesigned presentation (architectural-luxury). Auth logic unchanged.
 
 import React, { useState, useEffect } from 'react';
 import { Link as RouterLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
-  Container,
-  Card,
-  CardContent,
   TextField,
   Button,
   Typography,
@@ -21,89 +17,39 @@ import {
   Alert,
   CircularProgress,
   Divider,
-  Avatar,
-  useTheme,
-  useMediaQuery,
 } from '@mui/material';
 import {
   Visibility,
   VisibilityOff,
-  Email,
-  Lock,
-  Login as LoginIcon,
-  PersonAdd,
-  BusinessCenter,
+  EmailOutlined,
+  LockOutlined,
+  ArrowForward,
+  PersonAddAlt,
 } from '@mui/icons-material';
 import { useSnackbar } from 'notistack';
 
 import { useAuth } from '../../context/AuthContext';
 
-// PropVantage AI Logo Component
-const PropVantageLogo = ({ size = 'large' }) => {
-  const theme = useTheme();
-  
-  const logoSizes = {
-    small: { fontSize: '1.5rem', iconSize: 24 },
-    medium: { fontSize: '2rem', iconSize: 32 },
-    large: { fontSize: '2.5rem', iconSize: 40 },
-  };
-  
-  const currentSize = logoSizes[size];
-  
-  return (
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 2,
-        mb: 2,
-      }}
-    >
-      <Avatar
-        sx={{
-          bgcolor: theme.palette.primary.main,
-          width: currentSize.iconSize * 1.5,
-          height: currentSize.iconSize * 1.5,
-        }}
-      >
-        <BusinessCenter sx={{ fontSize: currentSize.iconSize }} />
-      </Avatar>
-      <Box sx={{ textAlign: 'center' }}>
-        <Typography
-          variant="h1"
-          sx={{
-            fontSize: currentSize.fontSize,
-            fontWeight: 700,
-            background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-            backgroundClip: 'text',
-            textFillColor: 'transparent',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            lineHeight: 1,
-          }}
-        >
-          PropVantage
-        </Typography>
-        <Typography
-          variant="body2"
-          sx={{
-            color: theme.palette.text.secondary,
-            fontWeight: 500,
-            letterSpacing: '0.1em',
-            mt: -0.5,
-          }}
-        >
-          AI POWERED CRM
-        </Typography>
-      </Box>
-    </Box>
-  );
+const DISPLAY = '"Playfair Display", Georgia, serif';
+
+// Refined field styling shared by both inputs.
+const fieldSx = {
+  mb: 2,
+  '& .MuiOutlinedInput-root': {
+    borderRadius: 1.5,
+    backgroundColor: '#fff',
+    fontSize: '0.95rem',
+    transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
+    '& fieldset': { borderColor: '#E6DFD0' },
+    '&:hover fieldset': { borderColor: '#CBBE99' },
+    '&.Mui-focused fieldset': { borderColor: '#C9A33B', borderWidth: '1.5px' },
+    '&.Mui-focused': { boxShadow: '0 0 0 4px rgba(212,175,55,0.10)' },
+  },
+  '& .MuiInputLabel-root': { color: 'rgba(26,20,10,0.55)' },
+  '& .MuiInputLabel-root.Mui-focused': { color: '#9A7B1F' },
 };
 
 const LoginPage = () => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const navigate = useNavigate();
   const location = useLocation();
   const { login, isAuthenticated, isChannelPartnerOrg, error: authError, clearError } = useAuth();
@@ -156,7 +102,7 @@ const LoginPage = () => {
       ...prev,
       [field]: value,
     }));
-    
+
     // Clear field error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({
@@ -189,7 +135,7 @@ const LoginPage = () => {
   // Handle form submission
   const handleSubmit = async (event) => {
     event.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
@@ -239,221 +185,183 @@ const LoginPage = () => {
     }
   };
 
-  return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        display: 'flex',
-        alignItems: 'center',
-        py: 3,
-      }}
-    >
-      <Container maxWidth="sm">
-        {/* Logo */}
-        <PropVantageLogo size={isMobile ? 'medium' : 'large'} />
+  const disabled = isLoading || rateLimitSeconds > 0 || isLocked;
 
-        {/* Login Card */}
-        <Card
+  return (
+    <Box>
+      {/* Header */}
+      <Typography
+        sx={{
+          fontFamily: DISPLAY,
+          fontWeight: 600,
+          fontSize: '2rem',
+          lineHeight: 1.1,
+          color: '#1A140A',
+          mb: 0.75,
+        }}
+      >
+        Welcome back
+      </Typography>
+      <Typography sx={{ color: 'rgba(26,20,10,0.6)', fontSize: '0.95rem', mb: 3.5 }}>
+        Sign in to your PropVantage workspace.
+      </Typography>
+
+      {/* Error / Rate Limit / Lockout Display */}
+      {isLocked && (
+        <Alert severity="error" sx={{ mb: 2, borderRadius: 1.5 }}>
+          Your account has been locked after multiple failed login attempts. Please try again later or contact your administrator.
+        </Alert>
+      )}
+      {rateLimitSeconds > 0 && (
+        <Alert severity="warning" sx={{ mb: 2, borderRadius: 1.5 }}>
+          Too many attempts. Please wait {rateLimitSeconds} seconds before trying again.
+        </Alert>
+      )}
+      {!isLocked && rateLimitSeconds <= 0 && (errors.submit || authError) && (
+        <Alert severity="error" sx={{ mb: 2, borderRadius: 1.5 }}>
+          {errors.submit || authError}
+        </Alert>
+      )}
+
+      {/* Login Form */}
+      <Box component="form" onSubmit={handleSubmit} noValidate>
+        <TextField
+          fullWidth
+          label="Email address"
+          type="email"
+          placeholder="you@company.com"
+          value={formData.email}
+          onChange={handleInputChange('email')}
+          error={!!errors.email}
+          helperText={errors.email}
+          disabled={isLoading}
+          autoComplete="email"
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <EmailOutlined sx={{ fontSize: 20, color: errors.email ? 'error.main' : 'rgba(26,20,10,0.4)' }} />
+              </InputAdornment>
+            ),
+          }}
+          sx={fieldSx}
+        />
+
+        <TextField
+          fullWidth
+          label="Password"
+          type={showPassword ? 'text' : 'password'}
+          placeholder="Enter your password"
+          value={formData.password}
+          onChange={handleInputChange('password')}
+          error={!!errors.password}
+          helperText={errors.password}
+          disabled={isLoading}
+          autoComplete="current-password"
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <LockOutlined sx={{ fontSize: 20, color: errors.password ? 'error.main' : 'rgba(26,20,10,0.4)' }} />
+              </InputAdornment>
+            ),
+            endAdornment: (
+              <InputAdornment position="end">
+                <IconButton
+                  onClick={() => setShowPassword(!showPassword)}
+                  edge="end"
+                  disabled={isLoading}
+                  size="small"
+                  sx={{ color: 'rgba(26,20,10,0.45)' }}
+                >
+                  {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                </IconButton>
+              </InputAdornment>
+            ),
+          }}
+          sx={{ ...fieldSx, mb: 1 }}
+        />
+
+        {/* Remember Me & Forgot Password */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={formData.rememberMe}
+                onChange={handleInputChange('rememberMe')}
+                disabled={isLoading}
+                size="small"
+                sx={{ color: 'rgba(26,20,10,0.3)', '&.Mui-checked': { color: '#C9A33B' } }}
+              />
+            }
+            label={<Typography variant="body2" sx={{ color: 'rgba(26,20,10,0.65)' }}>Remember me</Typography>}
+          />
+          <Link
+            component={RouterLink}
+            to="/forgot-password"
+            variant="body2"
+            sx={{ textDecoration: 'none', color: '#9A7B1F', fontWeight: 600, '&:hover': { color: '#7A6018' } }}
+          >
+            Forgot password?
+          </Link>
+        </Box>
+
+        {/* Sign In */}
+        <Button
+          type="submit"
+          fullWidth
+          variant="contained"
+          size="large"
+          disabled={disabled}
+          endIcon={isLoading ? <CircularProgress size={18} color="inherit" /> : <ArrowForward />}
           sx={{
-            borderRadius: 3,
-            background: 'rgba(255, 255, 255, 0.95)',
-            backdropFilter: 'blur(10px)',
-            border: `1px solid ${theme.palette.grey[200]}`,
-            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)',
+            py: 1.35,
+            mb: 3,
+            borderRadius: 1.5,
+            textTransform: 'none',
+            fontSize: '0.98rem',
+            fontWeight: 600,
+            bgcolor: '#1A140A',
+            color: '#FCFAF4',
+            boxShadow: '0 10px 26px rgba(26,20,10,0.20)',
+            '&:hover': { bgcolor: '#2A2014', boxShadow: '0 12px 30px rgba(212,175,55,0.30)' },
+            '&.Mui-disabled': { bgcolor: '#DED7C8', color: '#fff' },
           }}
         >
-          <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
-            {/* Header */}
-            <Box sx={{ textAlign: 'center', mb: 4 }}>
-              <Typography
-                variant="h4"
-                sx={{
-                  fontWeight: 700,
-                  color: theme.palette.text.primary,
-                  mb: 1,
-                }}
-              >
-                Welcome Back
-              </Typography>
-              <Typography variant="body1" color="text.secondary">
-                Sign in to your PropVantage AI account
-              </Typography>
-            </Box>
+          {isLoading
+            ? 'Signing in…'
+            : rateLimitSeconds > 0
+              ? `Try again in ${rateLimitSeconds}s`
+              : isLocked
+                ? 'Account locked'
+                : 'Sign in'}
+        </Button>
 
-            {/* Error / Rate Limit / Lockout Display */}
-            {isLocked && (
-              <Alert severity="error" sx={{ mb: 2 }}>
-                Your account has been locked after multiple failed login attempts. Please try again later or contact your administrator.
-              </Alert>
-            )}
-            {rateLimitSeconds > 0 && (
-              <Alert severity="warning" sx={{ mb: 2 }}>
-                Too many attempts. Please wait {rateLimitSeconds} seconds before trying again.
-              </Alert>
-            )}
-            {!isLocked && rateLimitSeconds <= 0 && (errors.submit || authError) && (
-              <Alert severity="error" sx={{ mb: 3 }}>
-                {errors.submit || authError}
-              </Alert>
-            )}
-
-            {/* Login Form */}
-            <Box component="form" onSubmit={handleSubmit}>
-              {/* Email Field */}
-              <TextField
-                fullWidth
-                label="Email Address"
-                type="email"
-                placeholder="Enter your email"
-                value={formData.email}
-                onChange={handleInputChange('email')}
-                error={!!errors.email}
-                helperText={errors.email}
-                disabled={isLoading}
-                autoComplete="email"
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Email color={errors.email ? 'error' : 'action'} />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{ mb: 2 }}
-              />
-
-              {/* Password Field */}
-              <TextField
-                fullWidth
-                label="Password"
-                type={showPassword ? 'text' : 'password'}
-                placeholder="Enter your password"
-                value={formData.password}
-                onChange={handleInputChange('password')}
-                error={!!errors.password}
-                helperText={errors.password}
-                disabled={isLoading}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Lock color={errors.password ? 'error' : 'action'} />
-                    </InputAdornment>
-                  ),
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        onClick={() => setShowPassword(!showPassword)}
-                        edge="end"
-                        disabled={isLoading}
-                      >
-                        {showPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{ mb: 2 }}
-                autoComplete="current-password"
-              />
-
-              {/* Remember Me & Forgot Password */}
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={formData.rememberMe}
-                      onChange={handleInputChange('rememberMe')}
-                      disabled={isLoading}
-                    />
-                  }
-                  label={
-                    <Typography variant="body2" color="text.secondary">
-                      Remember me
-                    </Typography>
-                  }
-                />
-                <Link
-                  component={RouterLink}
-                  to="/forgot-password"
-                  variant="body2"
-                  sx={{ textDecoration: 'none' }}
-                >
-                  Forgot Password?
-                </Link>
-              </Box>
-
-              {/* Login Button */}
-              <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                size="large"
-                disabled={isLoading || rateLimitSeconds > 0 || isLocked}
-                startIcon={
-                  isLoading ? (
-                    <CircularProgress size={20} color="inherit" />
-                  ) : (
-                    <LoginIcon />
-                  )
-                }
-                sx={{
-                  py: 1.5,
-                  mb: 3,
-                  fontSize: '1rem',
-                  fontWeight: 600,
-                  background: 'linear-gradient(45deg, #667eea, #764ba2)',
-                  '&:hover': {
-                    background: 'linear-gradient(45deg, #5a6fd8, #6a4190)',
-                  },
-                }}
-              >
-                {isLoading
-                  ? 'Signing In...'
-                  : rateLimitSeconds > 0
-                    ? `Try again in ${rateLimitSeconds}s`
-                    : isLocked
-                      ? 'Account Locked'
-                      : 'Sign In'}
-              </Button>
-
-
-
-              {/* Register Link */}
-              <Divider sx={{ mb: 3 }}>
-                <Typography variant="body2" color="text.secondary">
-                  New to PropVantage AI?
-                </Typography>
-              </Divider>
-
-              <Button
-                component={RouterLink}
-                to="/register"
-                variant="outlined"
-                fullWidth
-                startIcon={<PersonAdd />}
-                sx={{
-                  py: 1.5,
-                  fontWeight: 500,
-                  borderColor: 'primary.main',
-                  color: 'primary.main',
-                  '&:hover': {
-                    borderColor: 'primary.dark',
-                    backgroundColor: 'primary.50',
-                  },
-                }}
-              >
-                Create New Account
-              </Button>
-            </Box>
-          </CardContent>
-        </Card>
-
-        {/* Footer */}
-        <Box sx={{ textAlign: 'center', mt: 4 }}>
-          <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
-            © {new Date().getFullYear()} PropVantage AI. All rights reserved.
+        {/* Register */}
+        <Divider sx={{ mb: 2.5, '&::before, &::after': { borderColor: '#EAE3D4' } }}>
+          <Typography variant="caption" sx={{ color: 'rgba(26,20,10,0.45)', px: 1, letterSpacing: '0.04em' }}>
+            New to PropVantage?
           </Typography>
-        </Box>
-      </Container>
+        </Divider>
+
+        <Button
+          component={RouterLink}
+          to="/register"
+          variant="outlined"
+          fullWidth
+          startIcon={<PersonAddAlt />}
+          sx={{
+            py: 1.25,
+            borderRadius: 1.5,
+            textTransform: 'none',
+            fontWeight: 600,
+            fontSize: '0.95rem',
+            color: '#1A140A',
+            borderColor: '#D9CFB8',
+            '&:hover': { borderColor: '#C9A33B', backgroundColor: 'rgba(212,175,55,0.06)' },
+          }}
+        >
+          Create a new account
+        </Button>
+      </Box>
     </Box>
   );
 };
