@@ -9,11 +9,11 @@ import { Add, DeleteOutline } from '@mui/icons-material';
 const DOW = [['Sun', 0], ['Mon', 1], ['Tue', 2], ['Wed', 3], ['Thu', 4], ['Fri', 5], ['Sat', 6]];
 
 /**
- * Edits a template's schedule + delivery (controlled).
- * @param {{ open, schedule, delivery, onScheduleChange, onDeliveryChange, onClose }} props
- *   onScheduleChange(patch); onDeliveryChange(patch)
+ * Edits a template's schedule + delivery + access (controlled).
+ * @param {{ open, schedule, delivery, access, onScheduleChange, onDeliveryChange, onAccessChange, onClose }} props
+ *   onScheduleChange(patch); onDeliveryChange(patch); onAccessChange(patch)
  */
-const ScheduleDeliveryDialog = ({ open, schedule = {}, delivery = {}, onScheduleChange, onDeliveryChange, onClose }) => {
+const ScheduleDeliveryDialog = ({ open, schedule = {}, delivery = {}, access = {}, onScheduleChange, onDeliveryChange, onAccessChange, onClose }) => {
   const recipients = Array.isArray(delivery.recipients) ? delivery.recipients : [];
 
   const setRecipient = (i, patch) => {
@@ -72,6 +72,12 @@ const ScheduleDeliveryDialog = ({ open, schedule = {}, delivery = {}, onSchedule
           onChange={(e) => onDeliveryChange({ mode: e.target.value })} sx={{ mb: 2 }}>
           <MenuItem value="review_then_send">Hold for review, then send after approval</MenuItem>
           <MenuItem value="auto_send">Send automatically (no review)</MenuItem>
+        </TextField>
+
+        <TextField select fullWidth size="small" label="Viewer access" value={access.gate || 'email'}
+          onChange={(e) => onAccessChange({ gate: e.target.value })} sx={{ mb: 2 }}>
+          <MenuItem value="email">Email gate (enter email to view)</MenuItem>
+          <MenuItem value="email_otp">Email + one-time code (more secure)</MenuItem>
         </TextField>
 
         <Typography variant="subtitle2" sx={{ mb: 1 }}>Stakeholder recipients</Typography>

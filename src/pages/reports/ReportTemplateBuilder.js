@@ -194,8 +194,10 @@ const ReportTemplateBuilder = () => {
         open={scheduleOpen}
         schedule={state.schedule}
         delivery={state.delivery}
+        access={state.access}
         onScheduleChange={(patch) => dispatch(actions.setSchedule(patch))}
         onDeliveryChange={(patch) => dispatch(actions.setDelivery(patch))}
+        onAccessChange={(patch) => dispatch(actions.setAccess(patch))}
         onClose={() => setScheduleOpen(false)}
       />
     </Box>

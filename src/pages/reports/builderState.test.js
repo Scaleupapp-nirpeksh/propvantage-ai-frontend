@@ -88,6 +88,12 @@ describe('builderReducer', () => {
     expect(s.delivery.recipients).toEqual([{ email: 'a@b.com', name: 'A' }]);
   });
 
+  it('has an access gate default and merges access patches', () => {
+    expect(initialBuilderState.access.gate).toBe('email');
+    const s = builderReducer(initialBuilderState, actions.setAccess({ gate: 'email_otp' }));
+    expect(s.access.gate).toBe('email_otp');
+  });
+
   it('round-trips schedule/delivery through hydrate + payload', () => {
     const tpl = {
       name: 'T', blocks: [],

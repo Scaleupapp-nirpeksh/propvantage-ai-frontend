@@ -10,6 +10,7 @@ export const initialBuilderState = {
   selectedBlockId: null,
   schedule: { enabled: false, frequency: 'monthly', dayOfWeek: 1, dayOfMonth: 1, time: '09:00', timezone: 'Asia/Kolkata' },
   delivery: { mode: 'review_then_send', recipients: [], reviewers: [] },
+  access: { gate: 'email', expiresAfterDays: 90 },
 };
 
 // Action type constants
@@ -18,7 +19,7 @@ export const T = {
   ADD_BLOCK: 'ADD_BLOCK', REMOVE_BLOCK: 'REMOVE_BLOCK', REORDER_BLOCKS: 'REORDER_BLOCKS',
   SELECT_BLOCK: 'SELECT_BLOCK', UPDATE_BLOCK: 'UPDATE_BLOCK',
   ADD_IMAGE_SLOT: 'ADD_IMAGE_SLOT', REMOVE_IMAGE_SLOT: 'REMOVE_IMAGE_SLOT',
-  SET_SCHEDULE: 'SET_SCHEDULE', SET_DELIVERY: 'SET_DELIVERY',
+  SET_SCHEDULE: 'SET_SCHEDULE', SET_DELIVERY: 'SET_DELIVERY', SET_ACCESS: 'SET_ACCESS',
 };
 
 // Action creators (callers pre-generate ids so the reducer stays pure/deterministic)
@@ -35,6 +36,7 @@ export const actions = {
   removeImageSlot: (id) => ({ type: T.REMOVE_IMAGE_SLOT, id }),
   setSchedule: (patch) => ({ type: T.SET_SCHEDULE, patch }),
   setDelivery: (patch) => ({ type: T.SET_DELIVERY, patch }),
+  setAccess: (patch) => ({ type: T.SET_ACCESS, patch }),
 };
 
 const reindex = (blocks) => blocks.map((b, i) => ({ ...b, order: i }));
@@ -85,6 +87,8 @@ export const builderReducer = (state, action) => {
       return { ...state, schedule: { ...state.schedule, ...action.patch } };
     case T.SET_DELIVERY:
       return { ...state, delivery: { ...state.delivery, ...action.patch } };
+    case T.SET_ACCESS:
+      return { ...state, access: { ...state.access, ...action.patch } };
     default:
       return state;
   }
@@ -104,6 +108,7 @@ export const templateToBuilderState = (template = {}) => ({
   selectedBlockId: null,
   schedule: { ...initialBuilderState.schedule, ...(template.schedule || {}) },
   delivery: { ...initialBuilderState.delivery, ...(template.delivery || {}) },
+  access: { ...initialBuilderState.access, ...(template.access || {}) },
 });
 
 /** Build the API payload (create/update) from builder state. */
@@ -116,6 +121,7 @@ export const buildTemplatePayload = (state) => ({
   imageSlots: state.imageSlots,
   schedule: state.schedule,
   delivery: state.delivery,
+  access: state.access,
 });
 
 /** Generate a unique block/slot id (browser crypto, with a safe fallback). */
