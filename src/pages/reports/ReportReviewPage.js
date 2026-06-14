@@ -96,6 +96,8 @@ const ReportReviewPage = () => {
           action={<>
             <Button color="inherit" size="small" onClick={() => navigator.clipboard?.writeText(shareUrl)}>Copy</Button>
             <Button color="inherit" size="small" startIcon={<OpenInNew />} href={shareUrl} target="_blank" rel="noreferrer">Open</Button>
+            <Button color="inherit" size="small" startIcon={<Send />} disabled={busy}
+              onClick={() => run(() => reportAPI.sendReport(id), 'Report sent to stakeholders')}>Send to stakeholders</Button>
           </>}>
           Approved — public link is live: {shareUrl}
         </Alert>
