@@ -34,6 +34,9 @@ const ChannelPartnerRegisterPage = React.lazy(() => import('./pages/auth/Channel
 // Not linked in navigation. Reachable only by direct URL.
 const PitchLandingPage = React.lazy(() => import('./pages/pitch/PitchLandingPage'));
 
+// Public report page — email-gated, fully public (no auth wrapper).
+const PublicReportPage = React.lazy(() => import('./pages/public/PublicReportPage'));
+
 // Dashboard Pages (Lazy loaded for performance) - UNCHANGED
 const BusinessHeadDashboard = React.lazy(() => import('./pages/dashboard/BusinessHeadDashboard'));
 const SalesExecutiveDashboard = React.lazy(() => import('./pages/dashboard/SalesExecutiveDashboard'));
@@ -410,6 +413,13 @@ const AppRoutes = () => {
       <Route path="/pitch/hubtown" element={
         <Suspense fallback={<LoadingFallback section="pitch" message="Loading..." />}>
           <PitchLandingPage />
+        </Suspense>
+      } />
+
+      {/* PUBLIC SHARED REPORT — fully public, email-gated inside the page */}
+      <Route path="/r/:slug" element={
+        <Suspense fallback={<LoadingFallback section="report" message="Loading report..." />}>
+          <PublicReportPage />
         </Suspense>
       } />
 
