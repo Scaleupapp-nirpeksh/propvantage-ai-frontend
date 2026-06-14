@@ -5,6 +5,7 @@ import { Box, Grid, Paper, Button, TextField, Stack, Snackbar, Alert } from '@mu
 import { Save, PlayArrow, ArrowBack } from '@mui/icons-material';
 import { PageHeader } from '../../components/common';
 import { reportAPI } from '../../services/api';
+import { reportShareUrl } from '../../utils/reportShare';
 import {
   builderReducer, initialBuilderState, actions, buildTemplatePayload, templateToBuilderState, makeId,
 } from './builderState';
@@ -25,6 +26,7 @@ const ReportTemplateBuilder = () => {
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [previewBlocks, setPreviewBlocks] = useState(null); // resolved snapshot blocks, or null
+  const [shareSlug, setShareSlug] = useState(null);
   const [toast, setToast] = useState(null);
 
   // Load catalog + (if editing) the template
@@ -88,6 +90,7 @@ const ReportTemplateBuilder = () => {
       await reportAPI.updateTemplate(id, buildTemplatePayload(state)); // ensure latest is persisted
       const res = await reportAPI.generate(id);
       setPreviewBlocks(res.data?.data?.blocks || []);
+      setShareSlug(res.data?.data?.publicSlug || null);
       setToast({ severity: 'success', msg: 'Preview generated with live data' });
     } catch (err) {
       setToast({ severity: 'error', msg: err.response?.data?.message || 'Generate failed' });
@@ -128,6 +131,20 @@ const ReportTemplateBuilder = () => {
         fullWidth size="small" label="Report name" sx={{ mb: 2 }}
         value={state.name} onChange={(e) => dispatch(actions.setField('name', e.target.value))}
       />
+
+      {shareSlug && (
+        <Alert
+          severity="success"
+          sx={{ mb: 2 }}
+          action={
+            <Button color="inherit" size="small" onClick={() => navigator.clipboard?.writeText(reportShareUrl(shareSlug))}>
+              Copy link
+            </Button>
+          }
+        >
+          Shareable link: <a href={reportShareUrl(shareSlug)} target="_blank" rel="noreferrer">{reportShareUrl(shareSlug)}</a>
+        </Alert>
+      )}
 
       <Grid container spacing={2}>
         <Grid item xs={12} md={3}>
