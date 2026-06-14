@@ -1,7 +1,7 @@
 // File: src/pages/auth/LoginPage.js
-// Description: Login form content rendered inside AuthLayout's form column.
-// Version: 4.0 - Uses theme-default MUI styling so it matches the rest of the app
-//   (blue primary, Inter, standard inputs/buttons). Auth logic unchanged.
+// Description: Login form rendered inside AuthLayout's immersive glass card.
+//   Label-above, solid-white high-contrast input fields on the navy glass.
+// Version: 5.0 — Immersive ("Option 3") presentation. Auth logic unchanged from v4.0.
 
 import React, { useState, useEffect } from 'react';
 import { Link as RouterLink, useNavigate, useLocation } from 'react-router-dom';
@@ -169,14 +169,26 @@ const LoginPage = () => {
 
   const disabled = isLoading || rateLimitSeconds > 0 || isLocked;
 
+  // ── presentation helpers (on-glass) ───────────────────────────────────────
+  const labelSx = { display: 'block', fontSize: '0.79rem', fontWeight: 600, color: 'rgba(255,255,255,0.9)', mb: 0.9 };
+  const fieldSx = {
+    '& .MuiOutlinedInput-root': { bgcolor: '#fff', borderRadius: '11px', boxShadow: '0 3px 10px rgba(0,0,0,0.18)' },
+    '& .MuiOutlinedInput-notchedOutline': { borderColor: 'transparent' },
+    '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'transparent' },
+    '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'primary.main', borderWidth: 2 },
+    '& .MuiOutlinedInput-input': { color: '#16202b' },
+    '& .MuiOutlinedInput-input::placeholder': { color: '#8a94a2', opacity: 1 },
+    '& .MuiFormHelperText-root': { color: '#ffb4ab', ml: 0.25, mt: 0.75 },
+  };
+
   return (
     <Box>
       {/* Header */}
-      <Typography variant="h4" sx={{ fontWeight: 700, color: 'text.primary', mb: 0.75 }}>
+      <Typography sx={{ fontSize: '1.5rem', fontWeight: 800, letterSpacing: '-0.01em', color: '#fff', mb: 0.5 }}>
         Welcome back
       </Typography>
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 3.5 }}>
-        Sign in to your PropVantage workspace.
+      <Typography sx={{ fontSize: '0.92rem', color: 'rgba(255,255,255,0.74)', mb: 3 }}>
+        Sign in to your workspace.
       </Typography>
 
       {/* Error / Rate Limit / Lockout Display */}
@@ -198,57 +210,65 @@ const LoginPage = () => {
 
       {/* Login Form */}
       <Box component="form" onSubmit={handleSubmit} noValidate>
-        <TextField
-          fullWidth
-          label="Email Address"
-          type="email"
-          placeholder="you@company.com"
-          value={formData.email}
-          onChange={handleInputChange('email')}
-          error={!!errors.email}
-          helperText={errors.email}
-          disabled={isLoading}
-          autoComplete="email"
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <EmailOutlined color={errors.email ? 'error' : 'action'} fontSize="small" />
-              </InputAdornment>
-            ),
-          }}
-          sx={{ mb: 2 }}
-        />
+        {/* Email */}
+        <Box sx={{ mb: 2 }}>
+          <Typography component="label" htmlFor="login-email" sx={labelSx}>Email address</Typography>
+          <TextField
+            id="login-email"
+            fullWidth
+            type="email"
+            placeholder="you@company.com"
+            value={formData.email}
+            onChange={handleInputChange('email')}
+            error={!!errors.email}
+            helperText={errors.email}
+            disabled={isLoading}
+            autoComplete="email"
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <EmailOutlined color={errors.email ? 'error' : 'action'} fontSize="small" />
+                </InputAdornment>
+              ),
+            }}
+            sx={fieldSx}
+          />
+        </Box>
 
-        <TextField
-          fullWidth
-          label="Password"
-          type={showPassword ? 'text' : 'password'}
-          placeholder="Enter your password"
-          value={formData.password}
-          onChange={handleInputChange('password')}
-          error={!!errors.password}
-          helperText={errors.password}
-          disabled={isLoading}
-          autoComplete="current-password"
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <LockOutlined color={errors.password ? 'error' : 'action'} fontSize="small" />
-              </InputAdornment>
-            ),
-            endAdornment: (
-              <InputAdornment position="end">
-                <IconButton onClick={() => setShowPassword(!showPassword)} edge="end" disabled={isLoading} size="small">
-                  {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
-                </IconButton>
-              </InputAdornment>
-            ),
-          }}
-          sx={{ mb: 1.5 }}
-        />
+        {/* Password */}
+        <Box sx={{ mb: 1.5 }}>
+          <Typography component="label" htmlFor="login-password" sx={labelSx}>Password</Typography>
+          <TextField
+            id="login-password"
+            fullWidth
+            type={showPassword ? 'text' : 'password'}
+            placeholder="Enter your password"
+            value={formData.password}
+            onChange={handleInputChange('password')}
+            error={!!errors.password}
+            helperText={errors.password}
+            disabled={isLoading}
+            autoComplete="current-password"
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <LockOutlined color={errors.password ? 'error' : 'action'} fontSize="small" />
+                </InputAdornment>
+              ),
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton onClick={() => setShowPassword(!showPassword)} edge="end" disabled={isLoading} size="small">
+                    {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
+            sx={fieldSx}
+          />
+        </Box>
 
         {/* Remember Me & Forgot Password */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.75 }}>
           <FormControlLabel
             control={
               <Checkbox
@@ -256,18 +276,16 @@ const LoginPage = () => {
                 onChange={handleInputChange('rememberMe')}
                 disabled={isLoading}
                 size="small"
-                color="primary"
               />
             }
-            label={<Typography variant="body2" color="text.secondary">Remember me</Typography>}
+            label={<Typography sx={{ fontSize: '0.86rem', color: 'rgba(255,255,255,0.82)' }}>Remember me</Typography>}
           />
           <Link
             component={RouterLink}
             to="/forgot-password"
-            variant="body2"
-            sx={{ textDecoration: 'none', fontWeight: 600 }}
+            sx={{ fontSize: '0.86rem', fontWeight: 600, textDecoration: 'none' }}
           >
-            Forgot Password?
+            Forgot password?
           </Link>
         </Box>
 
@@ -280,7 +298,7 @@ const LoginPage = () => {
           disableElevation
           disabled={disabled}
           startIcon={isLoading ? <CircularProgress size={18} color="inherit" /> : <LoginOutlined />}
-          sx={{ py: 1.25, mb: 3, fontSize: '1rem', fontWeight: 600 }}
+          sx={{ py: 1.3, fontSize: '1rem', fontWeight: 700, borderRadius: '11px', boxShadow: '0 14px 28px rgba(30,136,229,0.4)' }}
         >
           {isLoading
             ? 'Signing In...'
@@ -292,8 +310,8 @@ const LoginPage = () => {
         </Button>
 
         {/* Register */}
-        <Divider sx={{ mb: 2.5 }}>
-          <Typography variant="caption" color="text.secondary">New to PropVantage AI?</Typography>
+        <Divider sx={{ my: 2.75, '&::before, &::after': { borderColor: 'rgba(255,255,255,0.18)' } }}>
+          <Typography sx={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)' }}>New to PropVantage AI?</Typography>
         </Divider>
 
         <Button
@@ -302,7 +320,7 @@ const LoginPage = () => {
           variant="outlined"
           fullWidth
           startIcon={<PersonAddAlt />}
-          sx={{ py: 1.1, fontWeight: 600 }}
+          sx={{ py: 1.1, fontWeight: 700, borderRadius: '11px' }}
         >
           Create a New Account
         </Button>

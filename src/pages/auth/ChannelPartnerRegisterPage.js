@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  Box, TextField, MenuItem, Button, Typography, Alert, CircularProgress, Grid,
+  Box, TextField, MenuItem, Button, Typography, Alert, CircularProgress, Grid, Link, Divider,
 } from '@mui/material';
 import { useAuth } from '../../context/AuthContext';
 import { CP_CATEGORY_OPTIONS } from '../../constants/channelPartnerCategories';
@@ -92,10 +92,15 @@ const ChannelPartnerRegisterPage = () => {
   };
 
   return (
-    <Box component="form" onSubmit={submit} sx={{ maxWidth: 520, mx: 'auto' }}>
-      <Typography variant="h5" sx={{ fontWeight: 700, mb: 2 }}>
-        Register your channel partner organization
-      </Typography>
+    <Box component="form" onSubmit={submit}>
+      <Box sx={{ textAlign: 'center', mb: 4 }}>
+        <Typography sx={{ fontSize: '1.7rem', fontWeight: 800, letterSpacing: '-0.01em', color: '#fff', mb: 0.75 }}>
+          Register as a channel partner
+        </Typography>
+        <Typography sx={{ fontSize: '0.95rem', color: 'rgba(255,255,255,0.74)' }}>
+          Set up your channel-partner workspace in one step.
+        </Typography>
+      </Box>
 
       {inviteLoading && (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
@@ -149,9 +154,21 @@ const ChannelPartnerRegisterPage = () => {
         </Grid>
       </Grid>
       <Button type="submit" fullWidth variant="contained" size="large" disabled={loading}
-        startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null} sx={{ mt: 3 }}>
+        startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
+        sx={{ mt: 3, py: 1.3, fontWeight: 700, borderRadius: '11px' }}>
         {loading ? 'Creating account…' : 'Create channel partner account'}
       </Button>
+
+      <Divider sx={{ my: 3 }}>
+        <Typography sx={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)' }}>
+          Already have an account?
+        </Typography>
+      </Divider>
+      <Box sx={{ textAlign: 'center' }}>
+        <Link component={RouterLink} to="/login" sx={{ fontWeight: 700, textDecoration: 'none' }}>
+          Sign in to your account
+        </Link>
+      </Box>
     </Box>
   );
 };

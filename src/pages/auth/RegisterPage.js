@@ -7,9 +7,6 @@ import React, { useEffect, useState } from 'react';
 import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Box,
-  Container,
-  Card,
-  CardContent,
   TextField,
   Button,
   Typography,
@@ -26,9 +23,6 @@ import {
   MenuItem,
   Grid,
   Divider,
-  Avatar,
-  useTheme,
-  useMediaQuery,
 } from '@mui/material';
 import {
   Visibility,
@@ -42,7 +36,6 @@ import {
   ArrowBack,
   ArrowForward,
   CheckCircle,
-  BusinessCenter,
   PersonAdd,
   Language,
   AccountBalance,
@@ -51,69 +44,6 @@ import { useSnackbar } from 'notistack';
 
 import { useAuth } from '../../context/AuthContext';
 import { externalDeveloperInviteAPI } from '../../services/api';
-
-// PropVantage AI Logo Component (matching login page)
-const PropVantageLogo = ({ size = 'large' }) => {
-  const theme = useTheme();
-  
-  const logoSizes = {
-    small: { fontSize: '1.5rem', iconSize: 24 },
-    medium: { fontSize: '2rem', iconSize: 32 },
-    large: { fontSize: '2.5rem', iconSize: 40 },
-  };
-  
-  const currentSize = logoSizes[size];
-  
-  return (
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 2,
-        mb: 2,
-      }}
-    >
-      <Avatar
-        sx={{
-          bgcolor: theme.palette.primary.main,
-          width: currentSize.iconSize * 1.5,
-          height: currentSize.iconSize * 1.5,
-        }}
-      >
-        <BusinessCenter sx={{ fontSize: currentSize.iconSize }} />
-      </Avatar>
-      <Box sx={{ textAlign: 'center' }}>
-        <Typography
-          variant="h1"
-          sx={{
-            fontSize: currentSize.fontSize,
-            fontWeight: 700,
-            background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-            backgroundClip: 'text',
-            textFillColor: 'transparent',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            lineHeight: 1,
-          }}
-        >
-          PropVantage
-        </Typography>
-        <Typography
-          variant="body2"
-          sx={{
-            color: theme.palette.text.secondary,
-            fontWeight: 500,
-            letterSpacing: '0.1em',
-            mt: -0.5,
-          }}
-        >
-          AI POWERED CRM
-        </Typography>
-      </Box>
-    </Box>
-  );
-};
 
 // Multi-step form configuration
 const steps = ['Organization Details', 'Admin User Setup', 'Confirmation'];
@@ -218,8 +148,6 @@ const validateUserStep = (data) => {
 };
 
 const RegisterPage = () => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const inviteToken = searchParams.get('inviteToken') || '';
@@ -248,7 +176,7 @@ const RegisterPage = () => {
     phone: '',
     website: '',
     address: '',
-    
+
     // User data
     firstName: '',
     lastName: '',
@@ -306,7 +234,7 @@ const RegisterPage = () => {
       ...prev,
       [field]: value,
     }));
-    
+
     // Clear field error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({
@@ -742,184 +670,108 @@ const RegisterPage = () => {
   );
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        display: 'flex',
-        alignItems: 'center',
-        py: 3,
-      }}
-    >
-      <Container maxWidth="md">
-        {/* Logo */}
-        <PropVantageLogo size={isMobile ? 'medium' : 'large'} />
+    <Box>
+      {/* Header */}
+      <Box sx={{ textAlign: 'center', mb: 4 }}>
+        <Typography sx={{ fontSize: '1.7rem', fontWeight: 800, letterSpacing: '-0.01em', color: '#fff', mb: 0.75 }}>
+          Create your account
+        </Typography>
+        <Typography sx={{ fontSize: '0.95rem', color: 'rgba(255,255,255,0.74)' }}>
+          Set up your developer workspace in a few steps.
+        </Typography>
+      </Box>
 
-        {/* Registration Card */}
-        <Card
-          sx={{
-            borderRadius: 3,
-            background: 'rgba(255, 255, 255, 0.95)',
-            backdropFilter: 'blur(10px)',
-            border: `1px solid ${theme.palette.grey[200]}`,
-            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)',
-          }}
-        >
-          <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
-            {/* Header */}
-            <Box sx={{ textAlign: 'center', mb: 4 }}>
-              <Typography
-                variant="h4"
-                sx={{
-                  fontWeight: 700,
-                  color: theme.palette.text.primary,
-                  mb: 1,
-                }}
-              >
-                Create Your Account
-              </Typography>
-              <Typography variant="body1" color="text.secondary">
-                Join thousands of real estate professionals using PropVantage AI
-              </Typography>
-            </Box>
-
-            {/* SP4: External-developer invite banner */}
-            {inviteToken && (
-              <Box sx={{ mb: 3 }}>
-                {inviteLoading && (
-                  <Alert severity="info">Loading invite details…</Alert>
-                )}
-                {!inviteLoading && inviteInfo && (
-                  <Alert severity="success">
-                    You've been invited by <strong>{inviteInfo.invitedByOrgName || 'a Channel Partner'}</strong> to join the platform — completing this registration will activate a partnership with them.
-                  </Alert>
-                )}
-                {!inviteLoading && inviteError && (
-                  <Alert severity="warning">{inviteError}</Alert>
-                )}
-              </Box>
-            )}
-
-            {/* Stepper */}
-            <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
-              {steps.map((label) => (
-                <Step key={label}>
-                  <StepLabel>{label}</StepLabel>
-                </Step>
-              ))}
-            </Stepper>
-
-            {/* Error Display */}
-            {errors.submit && (
-              <Alert severity="error" sx={{ mb: 3 }}>
-                {errors.submit}
-              </Alert>
-            )}
-
-            {/* Form Content */}
-            <Box sx={{ mb: 4 }}>
-              {activeStep === 0 && renderOrganizationStep()}
-              {activeStep === 1 && renderUserStep()}
-              {activeStep === 2 && renderConfirmationStep()}
-            </Box>
-
-            {/* Navigation Buttons */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-              <Button
-                onClick={handleBack}
-                disabled={activeStep === 0 || isLoading}
-                startIcon={<ArrowBack />}
-                sx={{ 
-                  visibility: activeStep === 0 ? 'hidden' : 'visible',
-                  color: 'text.secondary',
-                }}
-              >
-                Back
-              </Button>
-
-              {activeStep === steps.length - 1 ? (
-                <Button
-                  variant="contained"
-                  onClick={handleSubmit}
-                  disabled={isLoading}
-                  startIcon={
-                    isLoading ? (
-                      <CircularProgress size={20} color="inherit" />
-                    ) : (
-                      <CheckCircle />
-                    )
-                  }
-                  sx={{
-                    px: 4,
-                    py: 1.5,
-                    fontSize: '1rem',
-                    fontWeight: 600,
-                    background: 'linear-gradient(45deg, #667eea, #764ba2)',
-                    '&:hover': {
-                      background: 'linear-gradient(45deg, #5a6fd8, #6a4190)',
-                    },
-                  }}
-                >
-                  {isLoading ? 'Creating Account...' : 'Create Account'}
-                </Button>
-              ) : (
-                <Button
-                  variant="contained"
-                  onClick={handleNext}
-                  disabled={isLoading}
-                  endIcon={<ArrowForward />}
-                  sx={{
-                    px: 4,
-                    py: 1.5,
-                    fontSize: '1rem',
-                    fontWeight: 600,
-                    background: 'linear-gradient(45deg, #667eea, #764ba2)',
-                    '&:hover': {
-                      background: 'linear-gradient(45deg, #5a6fd8, #6a4190)',
-                    },
-                  }}
-                >
-                  Next
-                </Button>
-              )}
-            </Box>
-
-            {/* Login Link */}
-            <Divider sx={{ mb: 3 }}>
-              <Typography variant="body2" color="text.secondary">
-                Already have an account?
-              </Typography>
-            </Divider>
-
-            <Button
-              component={RouterLink}
-              to="/login"
-              variant="outlined"
-              fullWidth
-              startIcon={<PersonAdd />}
-              sx={{
-                py: 1.5,
-                fontWeight: 500,
-                borderColor: 'primary.main',
-                color: 'primary.main',
-                '&:hover': {
-                  borderColor: 'primary.dark',
-                  backgroundColor: 'primary.50',
-                },
-              }}
-            >
-              Sign In to Existing Account
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Footer */}
-        <Box sx={{ textAlign: 'center', mt: 4 }}>
-          <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
-            © 2024 PropVantage AI. All rights reserved.
-          </Typography>
+      {/* SP4: External-developer invite banner */}
+      {inviteToken && (
+        <Box sx={{ mb: 3 }}>
+          {inviteLoading && (
+            <Alert severity="info">Loading invite details…</Alert>
+          )}
+          {!inviteLoading && inviteInfo && (
+            <Alert severity="success">
+              You've been invited by <strong>{inviteInfo.invitedByOrgName || 'a Channel Partner'}</strong> to join the platform — completing this registration will activate a partnership with them.
+            </Alert>
+          )}
+          {!inviteLoading && inviteError && (
+            <Alert severity="warning">{inviteError}</Alert>
+          )}
         </Box>
-      </Container>
+      )}
+
+      {/* Stepper */}
+      <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
+        {steps.map((label) => (
+          <Step key={label}>
+            <StepLabel>{label}</StepLabel>
+          </Step>
+        ))}
+      </Stepper>
+
+      {/* Error Display */}
+      {errors.submit && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {errors.submit}
+        </Alert>
+      )}
+
+      {/* Form Content */}
+      <Box sx={{ mb: 4 }}>
+        {activeStep === 0 && renderOrganizationStep()}
+        {activeStep === 1 && renderUserStep()}
+        {activeStep === 2 && renderConfirmationStep()}
+      </Box>
+
+      {/* Navigation Buttons */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
+        <Button
+          onClick={handleBack}
+          disabled={activeStep === 0 || isLoading}
+          startIcon={<ArrowBack />}
+          sx={{ visibility: activeStep === 0 ? 'hidden' : 'visible', color: 'rgba(255,255,255,0.8)' }}
+        >
+          Back
+        </Button>
+
+        {activeStep === steps.length - 1 ? (
+          <Button
+            variant="contained"
+            onClick={handleSubmit}
+            disabled={isLoading}
+            startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <CheckCircle />}
+            sx={{ px: 4, py: 1.4, fontSize: '1rem', fontWeight: 700, borderRadius: '11px' }}
+          >
+            {isLoading ? 'Creating Account...' : 'Create Account'}
+          </Button>
+        ) : (
+          <Button
+            variant="contained"
+            onClick={handleNext}
+            disabled={isLoading}
+            endIcon={<ArrowForward />}
+            sx={{ px: 4, py: 1.4, fontSize: '1rem', fontWeight: 700, borderRadius: '11px' }}
+          >
+            Next
+          </Button>
+        )}
+      </Box>
+
+      {/* Login Link */}
+      <Divider sx={{ mb: 3 }}>
+        <Typography sx={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)' }}>
+          Already have an account?
+        </Typography>
+      </Divider>
+
+      <Button
+        component={RouterLink}
+        to="/login"
+        variant="outlined"
+        fullWidth
+        startIcon={<PersonAdd />}
+        sx={{ py: 1.2, fontWeight: 600, borderRadius: '11px' }}
+      >
+        Sign In to Existing Account
+      </Button>
     </Box>
   );
 };

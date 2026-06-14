@@ -450,7 +450,7 @@ const AppRoutes = () => {
 
       <Route path="/register/developer" element={
         <PublicRoute>
-          <AuthLayout>
+          <AuthLayout wide>
             <RegisterPage />
           </AuthLayout>
         </PublicRoute>
@@ -458,7 +458,7 @@ const AppRoutes = () => {
 
       <Route path="/register/channel-partner" element={
         <PublicRoute>
-          <AuthLayout>
+          <AuthLayout wide>
             <Suspense fallback={<LoadingFallback message="Loading..." />}>
               <ChannelPartnerRegisterPage />
             </Suspense>

@@ -1,308 +1,396 @@
 // File: src/components/layout/AuthLayout.js
-// Description: Authentication shell for PropVantage AI. A cohesive full-height split
-//   that uses the APP's own design system (blue primary + amber-gold secondary, Inter).
-//   Left: a deep professional-blue brand panel with subtle gold accents. Right: a clean
-//   white column that hosts the auth form (styled with theme defaults for consistency).
-// Version: 4.0 — re-skinned to match the app theme (was off-brand charcoal/serif).
+// Description: Immersive authentication shell for PropVantage AI ("Option 3").
+//   A full-bleed property photograph with a deep brand-blue overlay, editorial copy,
+//   and a frosted navy glass card that hosts the auth form. On mobile the photo becomes
+//   a vibrant hero and the form rises as a rounded bottom sheet. A scoped on-glass theme
+//   keeps MUI form controls legible (white text, high-contrast white inputs, themed stepper).
+//
+//   Variants:
+//     • default ("focused") — copy + compact card (login / forgot / reset / register choice)
+//     • wide                — a single centered wide glass card for longer, multi-field flows
+//                             (developer / channel-partner registration)
+//     • bare                — passthrough (escape hatch; renders children on the app background)
+// Version: 5.1 — adds the `wide` variant so registration shares the immersive experience.
 
 import React from 'react';
-import { Box, Typography, useTheme, useMediaQuery } from '@mui/material';
-import { Apartment, TrendingUp, AutoAwesome, Insights } from '@mui/icons-material';
+import { Box, Typography, useTheme, useMediaQuery, ThemeProvider, createTheme } from '@mui/material';
+import { Apartment } from '@mui/icons-material';
 
-// Logo lockup — single source of truth, matches the app's blue + gold brand.
-const Logo = ({ onDark = true, compact = false }) => {
+const SKYLINE = `${process.env.PUBLIC_URL || ''}/images/auth-skyline.jpg`;
+
+// Brand lockup — Apartment mark + "PropVantage" wordmark (gold "Vantage").
+const Logo = ({ compact = false, center = false }) => {
   const theme = useTheme();
-  const gold = theme.palette.secondary.main; // #ffb300
-  const markSize = compact ? 38 : 44;
+  const gold = theme.palette.secondary.light;
+  const mark = compact ? 34 : 44;
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: center ? 'center' : 'flex-start', gap: compact ? 1.1 : 1.4 }}>
       <Box
         sx={{
-          width: markSize,
-          height: markSize,
-          borderRadius: 2,
+          width: mark,
+          height: mark,
           flexShrink: 0,
+          borderRadius: compact ? 2.25 : 2.75,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          bgcolor: onDark ? 'rgba(255,255,255,0.12)' : theme.palette.primary.main,
-          border: onDark ? '1px solid rgba(255,255,255,0.18)' : 'none',
-          boxShadow: onDark ? 'none' : '0 6px 16px rgba(30,136,229,0.30)',
+          bgcolor: 'rgba(255,255,255,0.13)',
+          border: '1px solid rgba(255,255,255,0.20)',
         }}
       >
-        <Apartment sx={{ fontSize: compact ? 20 : 24, color: '#fff' }} />
+        <Apartment sx={{ fontSize: compact ? 19 : 23, color: '#fff' }} />
       </Box>
       <Box sx={{ lineHeight: 1 }}>
         <Typography
           component="div"
-          sx={{
-            fontWeight: 800,
-            fontSize: compact ? '1.3rem' : '1.5rem',
-            letterSpacing: '-0.01em',
-            lineHeight: 1.05,
-            color: onDark ? '#fff' : theme.palette.text.primary,
-          }}
+          sx={{ fontWeight: 800, fontSize: compact ? '1.12rem' : '1.5rem', letterSpacing: '-0.01em', lineHeight: 1.05, color: '#fff' }}
         >
-          Prop<Box component="span" sx={{ color: onDark ? theme.palette.secondary.light : theme.palette.secondary.dark }}>Vantage</Box>
+          Prop<Box component="span" sx={{ color: gold }}>Vantage</Box>
         </Typography>
-        <Typography
-          component="div"
-          sx={{
-            mt: 0.35,
-            fontSize: '0.6rem',
-            fontWeight: 700,
-            letterSpacing: '0.26em',
-            textTransform: 'uppercase',
-            color: onDark ? 'rgba(255,255,255,0.62)' : theme.palette.text.secondary,
-          }}
-        >
-          AI-Powered Real Estate CRM
-        </Typography>
+        {!compact && (
+          <Typography
+            component="div"
+            sx={{ mt: 0.45, fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.26em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.62)' }}
+          >
+            AI-Powered Real Estate CRM
+          </Typography>
+        )}
       </Box>
     </Box>
   );
 };
 
-const VALUE_PROPS = [
-  { icon: TrendingUp, title: 'Sales pipeline', desc: 'Track every lead from first enquiry to final booking.' },
-  { icon: AutoAwesome, title: 'AI insights', desc: 'Recommendations that show your team where to focus next.' },
-  { icon: Insights, title: 'Revenue intelligence', desc: 'Live dashboards and predictive sales forecasting.' },
-];
-
-const ValueRow = ({ icon: Icon, title, desc, delay }) => {
-  const theme = useTheme();
-  return (
-    <Box
+// Editorial copy shown over the photo (left column on desktop, hero on mobile).
+const BrandCopy = ({ theme, mobile = false }) => (
+  <Box sx={{ maxWidth: mobile ? 'none' : 440 }}>
+    <Box sx={{ mb: mobile ? 3 : 6, animation: 'pvFadeUp 0.7s cubic-bezier(0.2,0.7,0.2,1) both' }}>
+      <Logo />
+    </Box>
+    <Typography
       sx={{
-        display: 'flex',
-        gap: 2,
-        py: 2,
-        borderTop: '1px solid rgba(255,255,255,0.12)',
+        fontSize: mobile ? '0.66rem' : '0.72rem',
+        fontWeight: 700,
+        letterSpacing: '0.26em',
+        textTransform: 'uppercase',
+        color: theme.palette.secondary.light,
+        mb: mobile ? 1.25 : 2,
         animation: 'pvFadeUp 0.7s cubic-bezier(0.2,0.7,0.2,1) both',
-        animationDelay: delay,
+        animationDelay: '0.05s',
       }}
     >
-      <Box
+      For developers of distinction
+    </Typography>
+    <Typography
+      sx={{
+        fontWeight: 800,
+        fontSize: mobile ? '1.9rem' : { md: '2.4rem', lg: '3rem' },
+        lineHeight: 1.1,
+        letterSpacing: '-0.02em',
+        color: '#fff',
+        m: 0,
+        textShadow: mobile ? '0 2px 18px rgba(7,18,33,0.55)' : 'none',
+        animation: 'pvFadeUp 0.75s cubic-bezier(0.2,0.7,0.2,1) both',
+        animationDelay: '0.12s',
+      }}
+    >
+      Where landmark developments are sold.
+    </Typography>
+    {!mobile && (
+      <Typography
         sx={{
-          width: 40,
-          height: 40,
-          borderRadius: '50%',
-          flexShrink: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          bgcolor: 'rgba(255,255,255,0.10)',
-          border: '1px solid rgba(255,255,255,0.16)',
+          mt: 2.25,
+          fontSize: '1.02rem',
+          lineHeight: 1.6,
+          color: 'rgba(255,255,255,0.82)',
+          maxWidth: 430,
+          animation: 'pvFadeUp 0.8s cubic-bezier(0.2,0.7,0.2,1) both',
+          animationDelay: '0.2s',
         }}
       >
-        <Icon sx={{ fontSize: 19, color: theme.palette.secondary.light }} />
-      </Box>
-      <Box>
-        <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#fff', mb: 0.25 }}>{title}</Typography>
-        <Typography sx={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.66)', lineHeight: 1.5 }}>{desc}</Typography>
-      </Box>
-    </Box>
-  );
-};
+        The intelligence layer behind premium real estate — projects, leads, payments
+        and revenue, in one refined workspace.
+      </Typography>
+    )}
+  </Box>
+);
 
-const AuthLayout = ({ children, title, subtitle }) => {
+const AuthLayout = ({ children, wide = false, bare = false }) => {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
-  const gold = theme.palette.secondary.light; // #ffca28-ish for accents on blue
 
-  return (
+  // Escape hatch — render children on the plain app background.
+  if (bare) {
+    return <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>{children}</Box>;
+  }
+
+  // Scoped theme so MUI controls rendered by the auth pages stay legible on the navy glass.
+  const components = {
+    MuiLink: {
+      styleOverrides: { root: { color: theme.palette.secondary.light, fontWeight: 600, textDecorationColor: 'rgba(255,202,40,0.45)' } },
+    },
+    MuiButton: {
+      styleOverrides: {
+        outlined: {
+          borderColor: 'rgba(255,255,255,0.42)',
+          color: '#fff',
+          '&:hover': { borderColor: '#fff', backgroundColor: 'rgba(255,255,255,0.08)' },
+        },
+      },
+    },
+    // Outlined inputs (login uses these, styled solid white)
+    MuiOutlinedInput: {
+      styleOverrides: {
+        root: {
+          backgroundColor: '#fff',
+          borderRadius: 11,
+          boxShadow: '0 3px 10px rgba(0,0,0,0.18)',
+          '& .MuiOutlinedInput-notchedOutline': { borderColor: 'transparent' },
+          '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'transparent' },
+          '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.primary.main, borderWidth: 2 },
+        },
+        input: { color: '#16202b' },
+      },
+    },
+    // Filled inputs (the register flows use these — solid white, label sits inside)
+    MuiFilledInput: {
+      styleOverrides: {
+        root: {
+          backgroundColor: '#fff',
+          borderRadius: 11,
+          overflow: 'hidden',
+          boxShadow: '0 3px 10px rgba(0,0,0,0.18)',
+          '&:hover': { backgroundColor: '#fff' },
+          '&.Mui-focused': { backgroundColor: '#fff' },
+          '&.Mui-disabled': { backgroundColor: 'rgba(255,255,255,0.85)' },
+          '&::before': { borderBottom: 'none !important' },
+          '&::after': { borderBottom: `2px solid ${theme.palette.primary.main}` },
+        },
+        input: { color: '#16202b' },
+      },
+    },
+    MuiInputLabel: {
+      styleOverrides: {
+        root: {
+          color: '#5f6b7a',
+          '&.Mui-focused': { color: theme.palette.primary.main },
+          '&.Mui-error': { color: theme.palette.error.main },
+        },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: { outlined: { borderColor: 'rgba(255,255,255,0.22)', backgroundColor: 'rgba(255,255,255,0.05)' } },
+    },
+    MuiCheckbox: {
+      styleOverrides: { root: { color: 'rgba(255,255,255,0.55)', '&.Mui-checked': { color: theme.palette.secondary.light } } },
+    },
+    // Stepper (developer registration) — legible on navy
+    MuiStepLabel: {
+      styleOverrides: {
+        label: {
+          color: 'rgba(255,255,255,0.55)',
+          '&.Mui-active': { color: '#fff', fontWeight: 700 },
+          '&.Mui-completed': { color: 'rgba(255,255,255,0.85)' },
+        },
+      },
+    },
+    MuiStepIcon: {
+      styleOverrides: {
+        root: {
+          color: 'rgba(255,255,255,0.22)',
+          '&.Mui-active': { color: theme.palette.secondary.light },
+          '&.Mui-completed': { color: theme.palette.secondary.main },
+        },
+        text: { fill: '#0d2748', fontWeight: 700 },
+      },
+    },
+    MuiStepConnector: {
+      styleOverrides: { line: { borderColor: 'rgba(255,255,255,0.2)' } },
+    },
+  };
+  // In the wide flows, default TextFields to the filled (label-inside) style.
+  if (wide) {
+    components.MuiTextField = { defaultProps: { variant: 'filled' } };
+  }
+  const glassOverrides = {
+    palette: { text: { primary: '#ffffff', secondary: 'rgba(255,255,255,0.74)' }, divider: 'rgba(255,255,255,0.20)' },
+    components,
+  };
+
+  // Shared frosted-navy glass surface.
+  const glassBg = wide
+    ? 'linear-gradient(165deg, rgba(16,34,62,0.88), rgba(9,20,38,0.82))'
+    : 'linear-gradient(165deg, rgba(16,34,62,0.82), rgba(9,20,38,0.74))';
+
+  // Focused card (login etc.): compact floating card on desktop, bottom sheet on mobile.
+  const FocusedCard = ({ sheet = false }) => (
     <Box
       sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        bgcolor: theme.palette.background.default,
-        '@keyframes pvFadeUp': {
-          from: { opacity: 0, transform: 'translateY(14px)' },
-          to: { opacity: 1, transform: 'translateY(0)' },
-        },
-        '@keyframes pvFadeIn': { from: { opacity: 0 }, to: { opacity: 1 } },
+        position: 'relative',
+        zIndex: 1,
+        color: '#fff',
+        background: glassBg,
+        backdropFilter: 'blur(22px) saturate(140%)',
+        WebkitBackdropFilter: 'blur(22px) saturate(140%)',
+        ...(sheet
+          ? {
+              width: '100%',
+              borderRadius: '28px 28px 0 0',
+              border: '1px solid rgba(255,255,255,0.18)',
+              borderBottom: 'none',
+              mt: 3,
+              px: 3,
+              pt: 3,
+              pb: 4.5,
+              boxShadow: '0 -16px 44px rgba(0,0,0,0.42)',
+              '&::before': {
+                content: '""',
+                display: 'block',
+                width: 42,
+                height: 4,
+                borderRadius: 4,
+                bgcolor: 'rgba(255,255,255,0.30)',
+                margin: '0 auto 18px',
+              },
+            }
+          : {
+              width: 412,
+              flex: 'none',
+              borderRadius: '20px',
+              border: '1px solid rgba(255,255,255,0.20)',
+              p: '36px 34px',
+              boxShadow: '0 30px 80px rgba(0,0,0,0.5)',
+              maxHeight: 'calc(100vh - 56px)',
+              overflowY: 'auto',
+              animation: 'pvFadeUp 0.75s cubic-bezier(0.2,0.7,0.2,1) both',
+              animationDelay: '0.15s',
+            }),
       }}
     >
-      {/* ── LEFT · blue brand panel (desktop only) ───────────────────────── */}
-      {isDesktop && (
+      {!sheet && (
+        <Box sx={{ mb: 2.5 }}>
+          <Logo compact />
+        </Box>
+      )}
+      {children}
+    </Box>
+  );
+
+  const root = {
+    position: 'relative',
+    minHeight: '100vh',
+    overflow: 'hidden',
+    display: 'flex',
+    alignItems: wide ? 'flex-start' : 'center',
+    background: 'linear-gradient(135deg, #0d2748, #0d47a1)', // fallback behind the photo
+    '@keyframes pvFadeUp': {
+      from: { opacity: 0, transform: 'translateY(14px)' },
+      to: { opacity: 1, transform: 'translateY(0)' },
+    },
+  };
+
+  return (
+    <ThemeProvider theme={(outer) => createTheme(outer, glassOverrides)}>
+      <Box sx={root}>
+        {/* Photograph */}
         <Box
+          aria-hidden
+          sx={{ position: 'absolute', inset: 0, backgroundImage: `url("${SKYLINE}")`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+        />
+        {/* Overlay */}
+        <Box
+          aria-hidden
           sx={{
-            position: 'relative',
-            flex: '1 1 56%',
-            maxWidth: '58%',
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            color: '#fff',
-            px: { md: 7, lg: 10 },
-            py: { md: 7, lg: 8 },
-            background: `linear-gradient(157deg, #0d47a1 0%, ${theme.palette.primary.dark} 52%, ${theme.palette.primary.main} 100%)`,
+            position: 'absolute',
+            inset: 0,
+            background: wide
+              ? 'linear-gradient(0deg, rgba(7,18,33,0.78), rgba(7,18,33,0.6))'
+              : 'linear-gradient(180deg, rgba(7,18,33,0.58) 0%, rgba(7,18,33,0.2) 26%, rgba(7,18,33,0) 50%)',
+            ...(wide
+              ? {}
+              : {
+                  [theme.breakpoints.up('md')]: {
+                    background:
+                      'linear-gradient(90deg, rgba(7,18,33,0.92) 0%, rgba(7,18,33,0.74) 38%, rgba(7,18,33,0.32) 72%, rgba(7,18,33,0.14) 100%), linear-gradient(0deg, rgba(7,18,33,0.55), transparent 50%)',
+                  },
+                }),
           }}
-        >
-          {/* atmosphere */}
-          <Box
-            aria-hidden
-            sx={{
-              position: 'absolute',
-              inset: 0,
-              pointerEvents: 'none',
-              background: [
-                'radial-gradient(56% 46% at 86% 4%, rgba(255,255,255,0.16), transparent 70%)',
-                `radial-gradient(46% 40% at -6% 104%, ${theme.palette.secondary.main}1f, transparent 70%)`,
-                'repeating-linear-gradient(90deg, rgba(255,255,255,0.04) 0 1px, transparent 1px 72px)',
-                'repeating-linear-gradient(0deg, rgba(255,255,255,0.03) 0 1px, transparent 1px 72px)',
-              ].join(','),
-            }}
-          />
-          <Box
-            aria-hidden
-            sx={{
-              position: 'absolute',
-              width: 720,
-              height: 720,
-              right: -260,
-              bottom: -300,
-              borderRadius: '50%',
-              border: '1px solid rgba(255,255,255,0.14)',
-              pointerEvents: 'none',
-              '&::after': {
-                content: '""',
-                position: 'absolute',
-                inset: 90,
-                borderRadius: '50%',
-                border: '1px solid rgba(255,255,255,0.10)',
-              },
-            }}
-          />
+        />
 
-          {/* top: logo */}
-          <Box sx={{ position: 'relative', zIndex: 1, animation: 'pvFadeUp 0.7s cubic-bezier(0.2,0.7,0.2,1) both' }}>
-            <Logo onDark />
-          </Box>
-
-          {/* middle: headline + value props */}
-          <Box sx={{ position: 'relative', zIndex: 1, maxWidth: 540, my: 4 }}>
-            <Typography
-              sx={{
-                fontSize: '0.72rem',
-                fontWeight: 700,
-                letterSpacing: '0.26em',
-                textTransform: 'uppercase',
-                color: gold,
-                mb: 2,
-                animation: 'pvFadeUp 0.7s cubic-bezier(0.2,0.7,0.2,1) both',
-                animationDelay: '0.05s',
-              }}
-            >
-              AI-Powered Revenue Intelligence
-            </Typography>
-            <Typography
-              sx={{
-                fontWeight: 800,
-                fontSize: { md: '2.4rem', lg: '2.9rem' },
-                lineHeight: 1.12,
-                letterSpacing: '-0.02em',
-                color: '#fff',
-                mb: 2.5,
-                animation: 'pvFadeUp 0.75s cubic-bezier(0.2,0.7,0.2,1) both',
-                animationDelay: '0.12s',
-              }}
-            >
-              Intelligence for the people who build{' '}
-              <Box component="span" sx={{ color: gold }}>landmarks.</Box>
-            </Typography>
-            <Typography
-              sx={{
-                fontSize: '1.02rem',
-                lineHeight: 1.6,
-                color: 'rgba(255,255,255,0.74)',
-                maxWidth: 460,
-                animation: 'pvFadeUp 0.8s cubic-bezier(0.2,0.7,0.2,1) both',
-                animationDelay: '0.2s',
-              }}
-            >
-              One command center for your projects, leads, payments and reporting —
-              with the precision your developments deserve.
-            </Typography>
-
-            <Box sx={{ mt: 3 }}>
-              {VALUE_PROPS.map((v, i) => (
-                <ValueRow key={v.title} {...v} delay={`${0.32 + i * 0.1}s`} />
-              ))}
-            </Box>
-          </Box>
-
-          {/* bottom: trust line */}
+        {wide ? (
+          /* ── WIDE: one centered glass card for longer, multi-field flows ── */
           <Box
             sx={{
               position: 'relative',
               zIndex: 1,
+              width: '100%',
               display: 'flex',
-              alignItems: 'center',
-              gap: 1.5,
-              animation: 'pvFadeIn 1s ease both',
-              animationDelay: '0.7s',
+              justifyContent: 'center',
+              px: { xs: 2, sm: 4 },
+              py: { xs: 4, md: 7 },
             }}
           >
-            <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: gold }} />
-            <Typography sx={{ fontSize: '0.72rem', letterSpacing: '0.22em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.66)' }}>
-              Trusted by leading developers
-            </Typography>
-          </Box>
-        </Box>
-      )}
-
-      {/* ── RIGHT · form column (white, theme-default styling) ────────────── */}
-      <Box
-        sx={{
-          flex: 1,
-          minWidth: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          position: 'relative',
-          px: { xs: 3, sm: 6 },
-          py: { xs: 6, sm: 8 },
-          bgcolor: theme.palette.background.paper,
-        }}
-      >
-        <Box
-          sx={{
-            width: '100%',
-            maxWidth: 408,
-            animation: 'pvFadeUp 0.7s cubic-bezier(0.2,0.7,0.2,1) both',
-            animationDelay: isDesktop ? '0.15s' : '0s',
-          }}
-        >
-          {!isDesktop && (
-            <Box sx={{ mb: 4 }}>
-              <Logo onDark={false} compact />
+            <Box
+              sx={{
+                width: '100%',
+                maxWidth: 720,
+                color: '#fff',
+                background: glassBg,
+                backdropFilter: 'blur(22px) saturate(140%)',
+                WebkitBackdropFilter: 'blur(22px) saturate(140%)',
+                border: '1px solid rgba(255,255,255,0.18)',
+                borderRadius: '22px',
+                p: { xs: 3, sm: 5 },
+                boxShadow: '0 30px 80px rgba(0,0,0,0.5)',
+                animation: 'pvFadeUp 0.7s cubic-bezier(0.2,0.7,0.2,1) both',
+              }}
+            >
+              <Box sx={{ mb: 4 }}>
+                <Logo center />
+              </Box>
+              {children}
             </Box>
-          )}
-
-          {title && (
-            <Typography variant="h4" sx={{ fontWeight: 700, color: 'text.primary', mb: 0.5 }}>
-              {title}
-            </Typography>
-          )}
-          {subtitle && (
-            <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-              {subtitle}
-            </Typography>
-          )}
-
-          {children}
-        </Box>
-
-        <Typography
-          variant="caption"
-          sx={{ position: 'absolute', bottom: 20, left: 0, right: 0, textAlign: 'center', color: 'text.secondary' }}
-        >
-          © {new Date().getFullYear()} PropVantage AI · Elite Real Estate CRM
-        </Typography>
+          </Box>
+        ) : isDesktop ? (
+          /* ── DESKTOP focused: copy on the left, glass card on the right ── */
+          <Box
+            sx={{
+              position: 'relative',
+              zIndex: 1,
+              width: '100%',
+              maxWidth: 1240,
+              mx: 'auto',
+              px: { md: 7, lg: 9 },
+              py: 6,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 6,
+            }}
+          >
+            <BrandCopy theme={theme} />
+            <FocusedCard />
+          </Box>
+        ) : (
+          /* ── MOBILE focused: photo hero up top, sign-in sheet at the bottom ── */
+          <Box
+            sx={{
+              position: 'relative',
+              zIndex: 1,
+              width: '100%',
+              minHeight: '100vh',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+            }}
+          >
+            <Box sx={{ px: 3, pt: '30px' }}>
+              <BrandCopy theme={theme} mobile />
+            </Box>
+            <FocusedCard sheet />
+          </Box>
+        )}
       </Box>
-    </Box>
+    </ThemeProvider>
   );
 };
 
