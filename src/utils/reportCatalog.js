@@ -1,7 +1,7 @@
 // Pure helpers for the report block catalog (builder palette).
 
 // Preferred display order; unknown categories are appended alphabetically after these.
-const CATEGORY_ORDER = ['Financial', 'Sales', 'Inventory', 'Team', 'Layout'];
+const CATEGORY_ORDER = ['Financial', 'Sales', 'Inventory', 'Channel Partners', 'Invoicing', 'Construction', 'Comparison', 'Operations', 'Team', 'AI', 'Layout'];
 
 /**
  * Group a flat catalog array into [{ category, blocks }], ordered by CATEGORY_ORDER

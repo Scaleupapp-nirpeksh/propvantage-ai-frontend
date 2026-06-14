@@ -30,3 +30,15 @@ describe('groupCatalogByCategory', () => {
     expect(groupCatalogByCategory(undefined)).toEqual([]);
   });
 });
+
+it('orders the expanded categories ahead of Layout and after the core ones', () => {
+  const catalog = [
+    { type: 'a', category: 'Layout', label: 'L' },
+    { type: 'b', category: 'Operations', label: 'O' },
+    { type: 'c', category: 'Financial', label: 'F' },
+    { type: 'd', category: 'Channel Partners', label: 'CP' },
+    { type: 'e', category: 'Comparison', label: 'Cmp' },
+  ];
+  const order = groupCatalogByCategory(catalog).map((g) => g.category);
+  expect(order).toEqual(['Financial', 'Channel Partners', 'Comparison', 'Operations', 'Layout']);
+});
