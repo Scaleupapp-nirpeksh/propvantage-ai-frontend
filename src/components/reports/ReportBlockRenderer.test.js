@@ -28,4 +28,17 @@ describe('ReportBlockRenderer', () => {
     );
     expect(screen.getByText('Total Revenue')).toBeInTheDocument();
   });
+
+  it('renders an AI narrative block', () => {
+    renderWithTheme(
+      <ReportBlockRenderer block={{ type: 'ai.narrative', kind: 'narrative', title: 'Summary', data: { text: 'Revenue is up 12%.' } }} />
+    );
+    expect(screen.getByText('Revenue is up 12%.')).toBeInTheDocument();
+  });
+  it('renders a friendly fallback when the narrative is empty', () => {
+    renderWithTheme(
+      <ReportBlockRenderer block={{ type: 'ai.narrative', kind: 'narrative', data: { text: '', error: 'AI not configured' } }} />
+    );
+    expect(screen.getByText(/narrative is unavailable/i)).toBeInTheDocument();
+  });
 });

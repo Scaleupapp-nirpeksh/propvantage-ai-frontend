@@ -10,6 +10,7 @@ import {
 import {
   ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, Legend,
 } from 'recharts';
+import { AutoAwesome } from '@mui/icons-material';
 import { KPICard } from '../common';
 
 const formatValue = (value, unit) => {
@@ -27,6 +28,21 @@ const ReportBlockRenderer = ({ block, images = [] }) => {
   const theme = useTheme();
   const colors = theme.custom?.chartColors || [theme.palette.primary.main];
   const { type, kind, title, config = {}, data = {} } = block || {};
+
+  if (type === 'ai.narrative') {
+    const text = data?.text;
+    return (
+      <Box sx={{ p: 2, borderRadius: 2, bgcolor: 'action.hover', borderLeft: `3px solid ${theme.palette.primary.main}` }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5, color: 'primary.main' }}>
+          <AutoAwesome fontSize="small" />
+          <Typography variant="caption" fontWeight={700}>{title || 'AI Summary'}</Typography>
+        </Box>
+        {text
+          ? <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>{text}</Typography>
+          : <Typography variant="body2" color="text.secondary">The AI narrative is unavailable for this report.</Typography>}
+      </Box>
+    );
+  }
 
   if (data && data.error) {
     return <Alert severity="warning" variant="outlined">{title || type}: couldn't load this data.</Alert>;
