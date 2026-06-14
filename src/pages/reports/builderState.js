@@ -8,6 +8,8 @@ export const initialBuilderState = {
   blocks: [],          // [{ id, type, title, config, order }]
   imageSlots: [],      // [{ id, label, s3Key, url }]
   selectedBlockId: null,
+  schedule: { enabled: false, frequency: 'monthly', dayOfWeek: 1, dayOfMonth: 1, time: '09:00', timezone: 'Asia/Kolkata' },
+  delivery: { mode: 'review_then_send', recipients: [], reviewers: [] },
 };
 
 // Action type constants
@@ -16,6 +18,7 @@ export const T = {
   ADD_BLOCK: 'ADD_BLOCK', REMOVE_BLOCK: 'REMOVE_BLOCK', REORDER_BLOCKS: 'REORDER_BLOCKS',
   SELECT_BLOCK: 'SELECT_BLOCK', UPDATE_BLOCK: 'UPDATE_BLOCK',
   ADD_IMAGE_SLOT: 'ADD_IMAGE_SLOT', REMOVE_IMAGE_SLOT: 'REMOVE_IMAGE_SLOT',
+  SET_SCHEDULE: 'SET_SCHEDULE', SET_DELIVERY: 'SET_DELIVERY',
 };
 
 // Action creators (callers pre-generate ids so the reducer stays pure/deterministic)
@@ -30,6 +33,8 @@ export const actions = {
   updateBlock: (id, patch) => ({ type: T.UPDATE_BLOCK, id, patch }),
   addImageSlot: (slot) => ({ type: T.ADD_IMAGE_SLOT, slot }),
   removeImageSlot: (id) => ({ type: T.REMOVE_IMAGE_SLOT, id }),
+  setSchedule: (patch) => ({ type: T.SET_SCHEDULE, patch }),
+  setDelivery: (patch) => ({ type: T.SET_DELIVERY, patch }),
 };
 
 const reindex = (blocks) => blocks.map((b, i) => ({ ...b, order: i }));
@@ -76,6 +81,10 @@ export const builderReducer = (state, action) => {
       return { ...state, imageSlots: [...state.imageSlots, action.slot] };
     case T.REMOVE_IMAGE_SLOT:
       return { ...state, imageSlots: state.imageSlots.filter((s) => s.id !== action.id) };
+    case T.SET_SCHEDULE:
+      return { ...state, schedule: { ...state.schedule, ...action.patch } };
+    case T.SET_DELIVERY:
+      return { ...state, delivery: { ...state.delivery, ...action.patch } };
     default:
       return state;
   }
@@ -93,6 +102,8 @@ export const templateToBuilderState = (template = {}) => ({
   }))),
   imageSlots: template.imageSlots || [],
   selectedBlockId: null,
+  schedule: { ...initialBuilderState.schedule, ...(template.schedule || {}) },
+  delivery: { ...initialBuilderState.delivery, ...(template.delivery || {}) },
 });
 
 /** Build the API payload (create/update) from builder state. */
@@ -103,6 +114,8 @@ export const buildTemplatePayload = (state) => ({
   theme: state.theme,
   blocks: state.blocks.map(({ id, type, title, config, order }) => ({ id, type, title, config, order })),
   imageSlots: state.imageSlots,
+  schedule: state.schedule,
+  delivery: state.delivery,
 });
 
 /** Generate a unique block/slot id (browser crypto, with a safe fallback). */

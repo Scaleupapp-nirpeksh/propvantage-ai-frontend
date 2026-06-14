@@ -72,4 +72,33 @@ describe('builderReducer', () => {
     expect(payload).not.toHaveProperty('selectedBlockId');
     expect(payload.blocks[0]).toMatchObject({ id: 'b1', type: 'kpi.revenue', order: 0 });
   });
+
+  it('has schedule and delivery defaults', () => {
+    expect(initialBuilderState.schedule.frequency).toBe('monthly');
+    expect(initialBuilderState.schedule.enabled).toBe(false);
+    expect(initialBuilderState.delivery.mode).toBe('review_then_send');
+    expect(initialBuilderState.delivery.recipients).toEqual([]);
+  });
+
+  it('merges schedule and delivery patches', () => {
+    let s = builderReducer(initialBuilderState, actions.setSchedule({ enabled: true, frequency: 'weekly', dayOfWeek: 3 }));
+    expect(s.schedule).toMatchObject({ enabled: true, frequency: 'weekly', dayOfWeek: 3, time: '09:00' });
+    s = builderReducer(s, actions.setDelivery({ mode: 'auto_send', recipients: [{ email: 'a@b.com', name: 'A' }] }));
+    expect(s.delivery.mode).toBe('auto_send');
+    expect(s.delivery.recipients).toEqual([{ email: 'a@b.com', name: 'A' }]);
+  });
+
+  it('round-trips schedule/delivery through hydrate + payload', () => {
+    const tpl = {
+      name: 'T', blocks: [],
+      schedule: { enabled: true, frequency: 'quarterly', time: '08:00' },
+      delivery: { mode: 'auto_send', recipients: [{ email: 'x@y.com' }] },
+    };
+    const s = templateToBuilderState(tpl);
+    expect(s.schedule.frequency).toBe('quarterly');
+    expect(s.delivery.recipients).toHaveLength(1);
+    const payload = buildTemplatePayload(s);
+    expect(payload.schedule.frequency).toBe('quarterly');
+    expect(payload.delivery.mode).toBe('auto_send');
+  });
 });
