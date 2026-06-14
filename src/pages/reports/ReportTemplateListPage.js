@@ -1,11 +1,33 @@
 // File: src/pages/reports/ReportTemplateListPage.js
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Button, Chip, Stack } from '@mui/material';
-import { Add, Summarize } from '@mui/icons-material';
+import { Box, Button, Chip, Stack, Typography, Tooltip } from '@mui/material';
+import { Add, Summarize, Schedule as ScheduleIcon } from '@mui/icons-material';
 import { PageHeader, DataTable, ConfirmDialog, EmptyState } from '../../components/common';
 import { reportAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+
+const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+// Human-readable cadence, e.g. "Weekly · Mon 09:00 (Kolkata)".
+const formatCadence = (schedule) => {
+  const s = schedule || {};
+  if (!s.enabled) return null;
+  const time = s.time || '09:00';
+  const tz = s.timezone ? ` (${s.timezone.split('/').pop().replace('_', ' ')})` : '';
+  if (s.frequency === 'weekly') return `Weekly · ${DOW[s.dayOfWeek ?? 1]} ${time}${tz}`;
+  if (s.frequency === 'monthly') return `Monthly · day ${s.dayOfMonth ?? 1} · ${time}${tz}`;
+  if (s.frequency === 'quarterly') return `Quarterly · ${time}${tz}`;
+  return `Scheduled · ${time}${tz}`;
+};
+
+const formatNextRun = (schedule) => {
+  const s = schedule || {};
+  if (!s.enabled || !s.nextRunAt) return '—';
+  return new Date(s.nextRunAt).toLocaleString('en-IN', {
+    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+  });
+};
 
 const ReportTemplateListPage = () => {
   const navigate = useNavigate();
@@ -50,6 +72,32 @@ const ReportTemplateListPage = () => {
   const columns = [
     { id: 'name', label: 'Template', sortable: false },
     { id: 'blocks', label: 'Blocks', render: (row) => (row.blocks || []).length },
+    {
+      id: 'schedule', label: 'Schedule',
+      render: (row) => {
+        const cadence = formatCadence(row.schedule);
+        return cadence
+          ? <Chip size="small" icon={<ScheduleIcon sx={{ fontSize: 15 }} />} label={cadence} color="primary" variant="outlined" />
+          : <Typography variant="body2" color="text.secondary">Manual</Typography>;
+      },
+    },
+    {
+      id: 'nextRun', label: 'Next run',
+      render: (row) => <Typography variant="body2" color="text.secondary">{formatNextRun(row.schedule)}</Typography>,
+    },
+    {
+      id: 'recipients', label: 'Recipients',
+      render: (row) => {
+        const list = row.delivery?.recipients || [];
+        if (!list.length) return <Typography variant="body2" color="text.secondary">—</Typography>;
+        const names = list.map((r) => r.name || r.email).filter(Boolean).join(', ');
+        return (
+          <Tooltip title={names}>
+            <Typography variant="body2">{list.length} recipient{list.length > 1 ? 's' : ''}</Typography>
+          </Tooltip>
+        );
+      },
+    },
     {
       id: 'status', label: 'Status',
       render: (row) => <Chip size="small" label={row.status || 'active'} color={row.status === 'archived' ? 'default' : 'success'} variant="outlined" />,

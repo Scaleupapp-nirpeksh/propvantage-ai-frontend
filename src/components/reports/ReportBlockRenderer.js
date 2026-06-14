@@ -1,17 +1,18 @@
 // File: src/components/reports/ReportBlockRenderer.js
 // Renders a resolved report block ({ type, kind, title, config, data }) to UI.
-// Shared by the builder preview and (Phase 2) the public report page.
+// Shared by the builder preview, the review page, and the public report page.
+// `themePreset` selects the report's visual theme (clean | midnight | warm).
 
 import React from 'react';
 import {
   Box, Card, CardContent, Typography, Divider, Table, TableBody, TableCell,
-  TableHead, TableRow, Alert, useTheme,
+  TableHead, TableRow, Alert,
 } from '@mui/material';
 import {
   ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, Legend,
 } from 'recharts';
 import { AutoAwesome } from '@mui/icons-material';
-import { KPICard } from '../common';
+import { getReportTheme } from '../../utils/reportThemes';
 
 const formatValue = (value, unit) => {
   const n = Number(value) || 0;
@@ -24,22 +25,24 @@ const formatValue = (value, unit) => {
   return n.toLocaleString('en-IN');
 };
 
-const ReportBlockRenderer = ({ block, images = [] }) => {
-  const theme = useTheme();
-  const colors = theme.custom?.chartColors || [theme.palette.primary.main];
+const ReportBlockRenderer = ({ block, images = [], themePreset }) => {
+  const t = getReportTheme(themePreset);
+  const colors = t.chartColors;
   const { type, kind, title, config = {}, data = {} } = block || {};
+
+  const cardSx = { bgcolor: t.surface, border: `1px solid ${t.surfaceBorder}`, borderRadius: 2 };
 
   if (type === 'ai.narrative') {
     const text = data?.text;
     return (
-      <Box sx={{ p: 2, borderRadius: 2, bgcolor: 'action.hover', borderLeft: `3px solid ${theme.palette.primary.main}` }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5, color: 'primary.main' }}>
+      <Box sx={{ p: 2, borderRadius: 2, bgcolor: t.accentSoft, borderLeft: `3px solid ${t.accent}` }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5, color: t.accent }}>
           <AutoAwesome fontSize="small" />
           <Typography variant="caption" fontWeight={700}>{title || 'AI Summary'}</Typography>
         </Box>
         {text
-          ? <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>{text}</Typography>
-          : <Typography variant="body2" color="text.secondary">The AI narrative is unavailable for this report.</Typography>}
+          ? <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', color: t.text }}>{text}</Typography>
+          : <Typography variant="body2" sx={{ color: t.subtext }}>The AI narrative is unavailable for this report.</Typography>}
       </Box>
     );
   }
@@ -49,16 +52,23 @@ const ReportBlockRenderer = ({ block, images = [] }) => {
   }
 
   if (kind === 'kpi') {
-    return <KPICard title={title || type} value={formatValue(data.value, data.unit)} />;
+    return (
+      <Box sx={{ p: 2.5, borderRadius: 2, ...cardSx }}>
+        <Typography sx={{ fontSize: '1.9rem', fontWeight: 800, lineHeight: 1.1, color: t.text }}>
+          {formatValue(data.value, data.unit)}
+        </Typography>
+        <Typography sx={{ fontSize: '0.82rem', color: t.subtext, mt: 0.5 }}>{title || type}</Typography>
+      </Box>
+    );
   }
 
   if (kind === 'chart') {
     const chartData = Array.isArray(data.data) ? data.data : [];
     const isPie = (data.chartKind || 'bar') === 'pie';
     return (
-      <Card elevation={0} sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 2 }}>
+      <Card elevation={0} sx={cardSx}>
         <CardContent>
-          <Typography variant="subtitle1" fontWeight={600} gutterBottom>{title || type}</Typography>
+          <Typography variant="subtitle1" fontWeight={600} gutterBottom sx={{ color: t.text }}>{title || type}</Typography>
           <Box sx={{ width: '100%', height: 280 }}>
             <ResponsiveContainer width="100%" height="100%">
               {isPie ? (
@@ -66,11 +76,13 @@ const ReportBlockRenderer = ({ block, images = [] }) => {
                   <Pie data={chartData} dataKey="value" nameKey="name" outerRadius={100} label>
                     {chartData.map((_, i) => <Cell key={i} fill={colors[i % colors.length]} />)}
                   </Pie>
-                  <Tooltip /><Legend />
+                  <Tooltip /><Legend wrapperStyle={{ color: t.subtext }} />
                 </PieChart>
               ) : (
                 <BarChart data={chartData}>
-                  <XAxis dataKey="name" /><YAxis /><Tooltip />
+                  <XAxis dataKey="name" tick={{ fill: t.subtext, fontSize: 12 }} />
+                  <YAxis tick={{ fill: t.subtext, fontSize: 12 }} />
+                  <Tooltip />
                   <Bar dataKey="value" fill={colors[0]} radius={[4, 4, 0, 0]} />
                 </BarChart>
               )}
@@ -85,14 +97,16 @@ const ReportBlockRenderer = ({ block, images = [] }) => {
     const rows = Array.isArray(data.rows) ? data.rows : [];
     const cols = rows.length ? Object.keys(rows[0]) : [];
     return (
-      <Card elevation={0} sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 2 }}>
+      <Card elevation={0} sx={cardSx}>
         <CardContent>
-          <Typography variant="subtitle1" fontWeight={600} gutterBottom>{title || type}</Typography>
+          <Typography variant="subtitle1" fontWeight={600} gutterBottom sx={{ color: t.text }}>{title || type}</Typography>
           <Table size="small">
-            <TableHead><TableRow>{cols.map((c) => <TableCell key={c}>{c}</TableCell>)}</TableRow></TableHead>
+            <TableHead>
+              <TableRow>{cols.map((c) => <TableCell key={c} sx={{ color: t.subtext, borderColor: t.surfaceBorder, fontWeight: 700 }}>{c}</TableCell>)}</TableRow>
+            </TableHead>
             <TableBody>
               {rows.map((r, i) => (
-                <TableRow key={i}>{cols.map((c) => <TableCell key={c}>{String(r[c])}</TableCell>)}</TableRow>
+                <TableRow key={i}>{cols.map((c) => <TableCell key={c} sx={{ color: t.text, borderColor: t.surfaceBorder }}>{String(r[c])}</TableCell>)}</TableRow>
               ))}
             </TableBody>
           </Table>
@@ -107,10 +121,10 @@ const ReportBlockRenderer = ({ block, images = [] }) => {
     return (
       <Box sx={{
         position: 'relative', borderRadius: 3, overflow: 'hidden', minHeight: 200,
-        p: 4, color: cover ? 'common.white' : 'text.primary',
+        p: 4, color: cover ? 'common.white' : t.text,
         background: cover
           ? `linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.45)), url(${cover.url}) center/cover`
-          : theme.palette.action.hover,
+          : t.accentSoft,
       }}>
         <Typography variant="h4" fontWeight={700}>{config.title || title || 'Report'}</Typography>
         {config.subtitle ? <Typography variant="h6">{config.subtitle}</Typography> : null}
@@ -130,10 +144,10 @@ const ReportBlockRenderer = ({ block, images = [] }) => {
     );
   }
   if (type === 'text.note') {
-    return <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>{config.text ?? data.text ?? ''}</Typography>;
+    return <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', color: t.text }}>{config.text ?? data.text ?? ''}</Typography>;
   }
   if (type === 'layout.divider') {
-    return <Divider sx={{ my: 2 }} />;
+    return <Divider sx={{ my: 2, borderColor: t.surfaceBorder }} />;
   }
 
   return <Alert severity="info" variant="outlined">Unsupported block: {type}</Alert>;

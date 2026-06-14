@@ -117,7 +117,7 @@ const ReportReviewPage = () => {
                     {canOverride && <Tooltip title="Override value"><IconButton size="small" onClick={() => setOverrideBlock(block)}><EditNote fontSize="small" /></IconButton></Tooltip>}
                     {canFlag && <Tooltip title="Flag for correction"><IconButton size="small" onClick={() => setFlagBlock(block)}><Flag fontSize="small" /></IconButton></Tooltip>}
                   </Box>
-                  <ReportBlockRenderer block={block} images={instance?.images || []} />
+                  <ReportBlockRenderer block={block} images={instance?.images || []} themePreset={instance?.theme?.preset} />
                 </Paper>
               );
             })}
