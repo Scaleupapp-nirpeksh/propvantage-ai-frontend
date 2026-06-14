@@ -28,8 +28,10 @@ const ReportInstanceListPage = () => {
     { id: 'opens', label: 'Unique opens', render: (r) => r.stats?.uniqueViewers ?? 0 },
     { id: 'views', label: 'Total views', render: (r) => r.stats?.totalViews ?? 0 },
     {
-      id: 'review', label: 'Status',
-      render: (r) => <Chip size="small" variant="outlined" label={r.review?.status || 'draft'} />,
+      id: 'review', label: 'Review',
+      render: (r) => <Chip size="small" variant="outlined"
+        color={r.review?.status === 'approved' ? 'success' : r.review?.status === 'in_review' ? 'info' : 'default'}
+        label={(r.review?.status || 'draft').replace('_', ' ')} />,
     },
     { id: 'createdAt', label: 'Generated', render: (r) => (r.createdAt ? new Date(r.createdAt).toLocaleString('en-IN') : '—') },
   ];
@@ -48,7 +50,7 @@ const ReportInstanceListPage = () => {
           description='Open a template and click "Generate preview" to produce a shareable, tracked report.' />
       ) : (
         <DataTable columns={columns} rows={instances} loading={loading} rowKey="_id"
-          onRowClick={(row) => navigate(`/reports/generated/${row._id}`)} />
+          onRowClick={(row) => navigate(`/reports/generated/${row._id}/review`)} />
       )}
     </Box>
   );
