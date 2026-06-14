@@ -1612,6 +1612,15 @@ export const leadershipAPI = {
   getProjectComparison: (params = {}) => api.get('/leadership/project-comparison', { params }),
 };
 
+// Interceptor-free instance for PUBLIC endpoints (anonymous viewers have no token;
+// must not trigger the auth 401-refresh flow on the shared `api` instance).
+const publicApi = axios.create({ baseURL: BASE_URL, timeout: 30000 });
+
+export const publicReportAPI = {
+  getMeta: (slug) => publicApi.get(`/public/reports/${slug}`),
+  access: (slug, email) => publicApi.post(`/public/reports/${slug}/access`, { email }),
+};
+
 // ─── Reports (Leadership Report Builder) ───────────────────────────────
 export const reportAPI = {
   // Block catalog for the builder palette
@@ -1635,6 +1644,11 @@ export const reportAPI = {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
   },
+
+  // Generated instances + open-rate analytics
+  listInstances: (params = {}) => api.get('/reports/instances', { params }),
+  getInstance: (id) => api.get(`/reports/instances/${id}`),
+  getInstanceAnalytics: (id) => api.get(`/reports/instances/${id}/analytics`),
 };
 
 // =============================================================================
