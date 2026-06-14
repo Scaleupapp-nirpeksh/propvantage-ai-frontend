@@ -1618,7 +1618,7 @@ const publicApi = axios.create({ baseURL: BASE_URL, timeout: 30000 });
 
 export const publicReportAPI = {
   getMeta: (slug) => publicApi.get(`/public/reports/${slug}`),
-  access: (slug, email) => publicApi.post(`/public/reports/${slug}/access`, { email }),
+  access: (slug, body) => publicApi.post(`/public/reports/${slug}/access`, body),
 };
 
 // ─── Reports (Leadership Report Builder) ───────────────────────────────

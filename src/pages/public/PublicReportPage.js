@@ -1,6 +1,6 @@
 // File: src/pages/public/PublicReportPage.js
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import {
   Box, Container, Paper, TextField, Button, Typography, CircularProgress, Stack, Alert,
 } from '@mui/material';
@@ -11,6 +11,8 @@ import ReportBlockRenderer from '../../components/reports/ReportBlockRenderer';
 
 const PublicReportPage = () => {
   const { slug } = useParams();
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get('t');
   const [status, setStatus] = useState('loading'); // loading | gate | viewing | error
   const [meta, setMeta] = useState(null);
   const [report, setReport] = useState(null);
@@ -34,12 +36,26 @@ const PublicReportPage = () => {
 
   useEffect(() => { loadMeta(); }, [loadMeta]);
 
+  useEffect(() => {
+    if (!token || status === 'viewing') return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await publicReportAPI.access(slug, { token });
+        if (!cancelled) { setReport(res.data?.data || null); setStatus('viewing'); }
+      } catch (err) {
+        // Invalid/expired token → fall back to the email gate (status stays 'gate' once meta loads).
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [token, slug, status]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email) return;
     setSubmitting(true); setError(null);
     try {
-      const res = await publicReportAPI.access(slug, email);
+      const res = await publicReportAPI.access(slug, { email });
       setReport(res.data?.data || null);
       setStatus('viewing');
     } catch (err) {
