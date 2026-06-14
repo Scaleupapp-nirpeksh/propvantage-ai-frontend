@@ -1657,6 +1657,7 @@ export const reportAPI = {
   addOverride: (id, data) => api.post(`/reports/instances/${id}/overrides`, data),
   addFlag: (id, data) => api.post(`/reports/instances/${id}/flags`, data),
   resolveFlag: (id, flagId) => api.patch(`/reports/instances/${id}/flags/${flagId}`),
+  sendReport: (id) => api.post(`/reports/instances/${id}/send`),
 };
 
 // =============================================================================
