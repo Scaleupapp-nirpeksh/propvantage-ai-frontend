@@ -2,7 +2,7 @@
 import React, { useReducer, useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Box, Grid, Paper, Button, TextField, Stack, Snackbar, Alert } from '@mui/material';
-import { Save, PlayArrow, ArrowBack } from '@mui/icons-material';
+import { Save, PlayArrow, ArrowBack, Schedule } from '@mui/icons-material';
 import { PageHeader } from '../../components/common';
 import { reportAPI } from '../../services/api';
 import { reportShareUrl } from '../../utils/reportShare';
@@ -14,6 +14,7 @@ import BuilderCanvas from '../../components/reports/BuilderCanvas';
 import BlockConfigPanel from '../../components/reports/BlockConfigPanel';
 import ThemePicker from '../../components/reports/ThemePicker';
 import ImageUploader from '../../components/reports/ImageUploader';
+import ScheduleDeliveryDialog from '../../components/reports/ScheduleDeliveryDialog';
 
 const ReportTemplateBuilder = () => {
   const { id } = useParams();
@@ -28,6 +29,7 @@ const ReportTemplateBuilder = () => {
   const [previewBlocks, setPreviewBlocks] = useState(null); // resolved snapshot blocks, or null
   const [shareSlug, setShareSlug] = useState(null);
   const [toast, setToast] = useState(null);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
 
   // Load catalog + (if editing) the template
   useEffect(() => {
@@ -120,6 +122,7 @@ const ReportTemplateBuilder = () => {
             <Button variant="outlined" startIcon={<PlayArrow />} onClick={handleGenerate} disabled={generating || loading}>
               {generating ? 'Generating…' : 'Generate preview'}
             </Button>
+            <Button startIcon={<Schedule />} onClick={() => setScheduleOpen(true)}>Schedule & delivery</Button>
             <Button variant="contained" startIcon={<Save />} onClick={handleSave} disabled={saving || loading}>
               {saving ? 'Saving…' : 'Save'}
             </Button>
@@ -186,6 +189,15 @@ const ReportTemplateBuilder = () => {
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
         {toast ? <Alert severity={toast.severity} onClose={() => setToast(null)}>{toast.msg}</Alert> : undefined}
       </Snackbar>
+
+      <ScheduleDeliveryDialog
+        open={scheduleOpen}
+        schedule={state.schedule}
+        delivery={state.delivery}
+        onScheduleChange={(patch) => dispatch(actions.setSchedule(patch))}
+        onDeliveryChange={(patch) => dispatch(actions.setDelivery(patch))}
+        onClose={() => setScheduleOpen(false)}
+      />
     </Box>
   );
 };
