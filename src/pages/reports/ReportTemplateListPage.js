@@ -84,7 +84,7 @@ const ReportTemplateListPage = () => {
           icon={Summarize}
           title="No report templates yet"
           description="Create a template to compose a one-page leadership report."
-          action={canManage ? { label: 'New Template', onClick: () => navigate('/reports/templates/new'), icon: Add } : undefined}
+          action={canManage ? { label: 'New Template', onClick: () => navigate('/reports/templates/new'), icon: <Add /> } : undefined}
         />
       ) : (
         <DataTable
