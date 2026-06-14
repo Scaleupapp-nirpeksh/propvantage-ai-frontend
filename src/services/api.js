@@ -1649,6 +1649,14 @@ export const reportAPI = {
   listInstances: (params = {}) => api.get('/reports/instances', { params }),
   getInstance: (id) => api.get(`/reports/instances/${id}`),
   getInstanceAnalytics: (id) => api.get(`/reports/instances/${id}/analytics`),
+
+  // Review & approval workflow
+  submitReview: (id) => api.post(`/reports/instances/${id}/submit-review`),
+  approveReport: (id, notes) => api.post(`/reports/instances/${id}/approve`, { notes }),
+  requestChanges: (id, notes) => api.post(`/reports/instances/${id}/request-changes`, { notes }),
+  addOverride: (id, data) => api.post(`/reports/instances/${id}/overrides`, data),
+  addFlag: (id, data) => api.post(`/reports/instances/${id}/flags`, data),
+  resolveFlag: (id, flagId) => api.patch(`/reports/instances/${id}/flags/${flagId}`),
 };
 
 // =============================================================================
