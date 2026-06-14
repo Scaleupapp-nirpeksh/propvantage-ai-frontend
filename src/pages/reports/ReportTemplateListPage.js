@@ -29,6 +29,48 @@ const formatNextRun = (schedule) => {
   });
 };
 
+// Column defs for the templates table. IMPORTANT: DataTable calls render(value, row)
+// where value === row[col.id] — always read fields off the 2nd arg (`row`), never the 1st.
+// Exported so it can be unit-tested against DataTable with edge-case rows.
+export const buildColumns = () => [
+  { id: 'name', label: 'Template', sortable: false },
+  { id: 'blocks', label: 'Blocks', render: (_v, row) => (row.blocks || []).length },
+  {
+    id: 'schedule', label: 'Schedule',
+    render: (_v, row) => {
+      const cadence = formatCadence(row.schedule);
+      return cadence
+        ? <Chip size="small" icon={<ScheduleIcon sx={{ fontSize: 15 }} />} label={cadence} color="primary" variant="outlined" />
+        : <Typography variant="body2" color="text.secondary">Manual</Typography>;
+    },
+  },
+  {
+    id: 'nextRun', label: 'Next run',
+    render: (_v, row) => <Typography variant="body2" color="text.secondary">{formatNextRun(row.schedule)}</Typography>,
+  },
+  {
+    id: 'recipients', label: 'Recipients',
+    render: (_v, row) => {
+      const list = row.delivery?.recipients || [];
+      if (!list.length) return <Typography variant="body2" color="text.secondary">—</Typography>;
+      const names = list.map((r) => r.name || r.email).filter(Boolean).join(', ');
+      return (
+        <Tooltip title={names}>
+          <Typography variant="body2">{list.length} recipient{list.length > 1 ? 's' : ''}</Typography>
+        </Tooltip>
+      );
+    },
+  },
+  {
+    id: 'status', label: 'Status',
+    render: (_v, row) => <Chip size="small" label={row.status || 'active'} color={row.status === 'archived' ? 'default' : 'success'} variant="outlined" />,
+  },
+  {
+    id: 'updatedAt', label: 'Updated',
+    render: (_v, row) => (row.updatedAt ? new Date(row.updatedAt).toLocaleDateString('en-IN') : '—'),
+  },
+];
+
 const ReportTemplateListPage = () => {
   const navigate = useNavigate();
   const { checkPerm } = useAuth();
@@ -69,44 +111,7 @@ const ReportTemplateListPage = () => {
     }
   };
 
-  const columns = [
-    { id: 'name', label: 'Template', sortable: false },
-    { id: 'blocks', label: 'Blocks', render: (row) => (row.blocks || []).length },
-    {
-      id: 'schedule', label: 'Schedule',
-      render: (row) => {
-        const cadence = formatCadence(row.schedule);
-        return cadence
-          ? <Chip size="small" icon={<ScheduleIcon sx={{ fontSize: 15 }} />} label={cadence} color="primary" variant="outlined" />
-          : <Typography variant="body2" color="text.secondary">Manual</Typography>;
-      },
-    },
-    {
-      id: 'nextRun', label: 'Next run',
-      render: (row) => <Typography variant="body2" color="text.secondary">{formatNextRun(row.schedule)}</Typography>,
-    },
-    {
-      id: 'recipients', label: 'Recipients',
-      render: (row) => {
-        const list = row.delivery?.recipients || [];
-        if (!list.length) return <Typography variant="body2" color="text.secondary">—</Typography>;
-        const names = list.map((r) => r.name || r.email).filter(Boolean).join(', ');
-        return (
-          <Tooltip title={names}>
-            <Typography variant="body2">{list.length} recipient{list.length > 1 ? 's' : ''}</Typography>
-          </Tooltip>
-        );
-      },
-    },
-    {
-      id: 'status', label: 'Status',
-      render: (row) => <Chip size="small" label={row.status || 'active'} color={row.status === 'archived' ? 'default' : 'success'} variant="outlined" />,
-    },
-    {
-      id: 'updatedAt', label: 'Updated',
-      render: (row) => (row.updatedAt ? new Date(row.updatedAt).toLocaleDateString('en-IN') : '—'),
-    },
-  ];
+  const columns = buildColumns();
 
   return (
     <Box>
