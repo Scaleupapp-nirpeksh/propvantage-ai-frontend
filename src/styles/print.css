@@ -1,0 +1,18 @@
+/* File: src/styles/print.css
+   Isolates the report content for browser "Save as PDF". */
+@media print {
+  body * { visibility: hidden; }
+  #report-print-root, #report-print-root * { visibility: visible; }
+  #report-print-root {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+  }
+  .no-print { display: none !important; }
+  /* Avoid awkward breaks inside a block/card */
+  .report-block { break-inside: avoid; page-break-inside: avoid; }
+  @page { margin: 16mm; }
+}
