@@ -1,6 +1,7 @@
 // File: src/pages/auth/LoginPage.js
 // Description: Login form content rendered inside AuthLayout's form column.
-// Version: 3.0 - Redesigned presentation (architectural-luxury). Auth logic unchanged.
+// Version: 4.0 - Uses theme-default MUI styling so it matches the rest of the app
+//   (blue primary, Inter, standard inputs/buttons). Auth logic unchanged.
 
 import React, { useState, useEffect } from 'react';
 import { Link as RouterLink, useNavigate, useLocation } from 'react-router-dom';
@@ -23,31 +24,12 @@ import {
   VisibilityOff,
   EmailOutlined,
   LockOutlined,
-  ArrowForward,
+  LoginOutlined,
   PersonAddAlt,
 } from '@mui/icons-material';
 import { useSnackbar } from 'notistack';
 
 import { useAuth } from '../../context/AuthContext';
-
-const DISPLAY = '"Playfair Display", Georgia, serif';
-
-// Refined field styling shared by both inputs.
-const fieldSx = {
-  mb: 2,
-  '& .MuiOutlinedInput-root': {
-    borderRadius: 1.5,
-    backgroundColor: '#fff',
-    fontSize: '0.95rem',
-    transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
-    '& fieldset': { borderColor: '#E6DFD0' },
-    '&:hover fieldset': { borderColor: '#CBBE99' },
-    '&.Mui-focused fieldset': { borderColor: '#C9A33B', borderWidth: '1.5px' },
-    '&.Mui-focused': { boxShadow: '0 0 0 4px rgba(212,175,55,0.10)' },
-  },
-  '& .MuiInputLabel-root': { color: 'rgba(26,20,10,0.55)' },
-  '& .MuiInputLabel-root.Mui-focused': { color: '#9A7B1F' },
-};
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -190,35 +172,26 @@ const LoginPage = () => {
   return (
     <Box>
       {/* Header */}
-      <Typography
-        sx={{
-          fontFamily: DISPLAY,
-          fontWeight: 600,
-          fontSize: '2rem',
-          lineHeight: 1.1,
-          color: '#1A140A',
-          mb: 0.75,
-        }}
-      >
+      <Typography variant="h4" sx={{ fontWeight: 700, color: 'text.primary', mb: 0.75 }}>
         Welcome back
       </Typography>
-      <Typography sx={{ color: 'rgba(26,20,10,0.6)', fontSize: '0.95rem', mb: 3.5 }}>
+      <Typography variant="body1" color="text.secondary" sx={{ mb: 3.5 }}>
         Sign in to your PropVantage workspace.
       </Typography>
 
       {/* Error / Rate Limit / Lockout Display */}
       {isLocked && (
-        <Alert severity="error" sx={{ mb: 2, borderRadius: 1.5 }}>
+        <Alert severity="error" sx={{ mb: 2 }}>
           Your account has been locked after multiple failed login attempts. Please try again later or contact your administrator.
         </Alert>
       )}
       {rateLimitSeconds > 0 && (
-        <Alert severity="warning" sx={{ mb: 2, borderRadius: 1.5 }}>
+        <Alert severity="warning" sx={{ mb: 2 }}>
           Too many attempts. Please wait {rateLimitSeconds} seconds before trying again.
         </Alert>
       )}
       {!isLocked && rateLimitSeconds <= 0 && (errors.submit || authError) && (
-        <Alert severity="error" sx={{ mb: 2, borderRadius: 1.5 }}>
+        <Alert severity="error" sx={{ mb: 2 }}>
           {errors.submit || authError}
         </Alert>
       )}
@@ -227,7 +200,7 @@ const LoginPage = () => {
       <Box component="form" onSubmit={handleSubmit} noValidate>
         <TextField
           fullWidth
-          label="Email address"
+          label="Email Address"
           type="email"
           placeholder="you@company.com"
           value={formData.email}
@@ -239,11 +212,11 @@ const LoginPage = () => {
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <EmailOutlined sx={{ fontSize: 20, color: errors.email ? 'error.main' : 'rgba(26,20,10,0.4)' }} />
+                <EmailOutlined color={errors.email ? 'error' : 'action'} fontSize="small" />
               </InputAdornment>
             ),
           }}
-          sx={fieldSx}
+          sx={{ mb: 2 }}
         />
 
         <TextField
@@ -260,24 +233,18 @@ const LoginPage = () => {
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <LockOutlined sx={{ fontSize: 20, color: errors.password ? 'error.main' : 'rgba(26,20,10,0.4)' }} />
+                <LockOutlined color={errors.password ? 'error' : 'action'} fontSize="small" />
               </InputAdornment>
             ),
             endAdornment: (
               <InputAdornment position="end">
-                <IconButton
-                  onClick={() => setShowPassword(!showPassword)}
-                  edge="end"
-                  disabled={isLoading}
-                  size="small"
-                  sx={{ color: 'rgba(26,20,10,0.45)' }}
-                >
+                <IconButton onClick={() => setShowPassword(!showPassword)} edge="end" disabled={isLoading} size="small">
                   {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
                 </IconButton>
               </InputAdornment>
             ),
           }}
-          sx={{ ...fieldSx, mb: 1 }}
+          sx={{ mb: 1.5 }}
         />
 
         {/* Remember Me & Forgot Password */}
@@ -289,18 +256,18 @@ const LoginPage = () => {
                 onChange={handleInputChange('rememberMe')}
                 disabled={isLoading}
                 size="small"
-                sx={{ color: 'rgba(26,20,10,0.3)', '&.Mui-checked': { color: '#C9A33B' } }}
+                color="primary"
               />
             }
-            label={<Typography variant="body2" sx={{ color: 'rgba(26,20,10,0.65)' }}>Remember me</Typography>}
+            label={<Typography variant="body2" color="text.secondary">Remember me</Typography>}
           />
           <Link
             component={RouterLink}
             to="/forgot-password"
             variant="body2"
-            sx={{ textDecoration: 'none', color: '#9A7B1F', fontWeight: 600, '&:hover': { color: '#7A6018' } }}
+            sx={{ textDecoration: 'none', fontWeight: 600 }}
           >
-            Forgot password?
+            Forgot Password?
           </Link>
         </Box>
 
@@ -310,36 +277,23 @@ const LoginPage = () => {
           fullWidth
           variant="contained"
           size="large"
+          disableElevation
           disabled={disabled}
-          endIcon={isLoading ? <CircularProgress size={18} color="inherit" /> : <ArrowForward />}
-          sx={{
-            py: 1.35,
-            mb: 3,
-            borderRadius: 1.5,
-            textTransform: 'none',
-            fontSize: '0.98rem',
-            fontWeight: 600,
-            bgcolor: '#1A140A',
-            color: '#FCFAF4',
-            boxShadow: '0 10px 26px rgba(26,20,10,0.20)',
-            '&:hover': { bgcolor: '#2A2014', boxShadow: '0 12px 30px rgba(212,175,55,0.30)' },
-            '&.Mui-disabled': { bgcolor: '#DED7C8', color: '#fff' },
-          }}
+          startIcon={isLoading ? <CircularProgress size={18} color="inherit" /> : <LoginOutlined />}
+          sx={{ py: 1.25, mb: 3, fontSize: '1rem', fontWeight: 600 }}
         >
           {isLoading
-            ? 'Signing in…'
+            ? 'Signing In...'
             : rateLimitSeconds > 0
               ? `Try again in ${rateLimitSeconds}s`
               : isLocked
-                ? 'Account locked'
-                : 'Sign in'}
+                ? 'Account Locked'
+                : 'Sign In'}
         </Button>
 
         {/* Register */}
-        <Divider sx={{ mb: 2.5, '&::before, &::after': { borderColor: '#EAE3D4' } }}>
-          <Typography variant="caption" sx={{ color: 'rgba(26,20,10,0.45)', px: 1, letterSpacing: '0.04em' }}>
-            New to PropVantage?
-          </Typography>
+        <Divider sx={{ mb: 2.5 }}>
+          <Typography variant="caption" color="text.secondary">New to PropVantage AI?</Typography>
         </Divider>
 
         <Button
@@ -348,18 +302,9 @@ const LoginPage = () => {
           variant="outlined"
           fullWidth
           startIcon={<PersonAddAlt />}
-          sx={{
-            py: 1.25,
-            borderRadius: 1.5,
-            textTransform: 'none',
-            fontWeight: 600,
-            fontSize: '0.95rem',
-            color: '#1A140A',
-            borderColor: '#D9CFB8',
-            '&:hover': { borderColor: '#C9A33B', backgroundColor: 'rgba(212,175,55,0.06)' },
-          }}
+          sx={{ py: 1.1, fontWeight: 600 }}
         >
-          Create a new account
+          Create a New Account
         </Button>
       </Box>
     </Box>
