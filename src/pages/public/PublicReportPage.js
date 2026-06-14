@@ -17,6 +17,8 @@ const PublicReportPage = () => {
   const [meta, setMeta] = useState(null);
   const [report, setReport] = useState(null);
   const [email, setEmail] = useState('');
+  const [otp, setOtp] = useState('');
+  const [codeSent, setCodeSent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
@@ -50,16 +52,23 @@ const PublicReportPage = () => {
     return () => { cancelled = true; };
   }, [token, slug, status]);
 
+  const isOtp = meta?.gate === 'email_otp';
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email) return;
     setSubmitting(true); setError(null);
     try {
-      const res = await publicReportAPI.access(slug, { email });
-      setReport(res.data?.data || null);
-      setStatus('viewing');
+      if (isOtp && !codeSent) {
+        await publicReportAPI.requestOtp(slug, email);
+        setCodeSent(true);
+      } else {
+        const res = await publicReportAPI.access(slug, isOtp ? { email, otp } : { email });
+        setReport(res.data?.data || null);
+        setStatus('viewing');
+      }
     } catch (err) {
-      setError(err.response?.data?.message || 'Could not open the report. Check your email and try again.');
+      setError(err.response?.data?.message || 'Could not open the report. Check your details and try again.');
     } finally {
       setSubmitting(false);
     }
@@ -94,9 +103,13 @@ const PublicReportPage = () => {
                 fullWidth type="email" size="small" label="Your email" required
                 value={email} onChange={(e) => setEmail(e.target.value)} sx={{ mb: 2 }}
               />
+              {isOtp && codeSent && (
+                <TextField fullWidth size="small" label="6-digit code" value={otp}
+                  onChange={(e) => setOtp(e.target.value)} sx={{ mb: 2 }} inputProps={{ inputMode: 'numeric', maxLength: 6 }} />
+              )}
               {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
               <Button fullWidth type="submit" variant="contained" disabled={submitting}>
-                {submitting ? 'Opening…' : 'View report'}
+                {submitting ? 'Please wait…' : (isOtp && !codeSent ? 'Send code' : 'View report')}
               </Button>
             </Box>
           </Stack>
