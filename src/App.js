@@ -202,6 +202,7 @@ const ReportTemplateListPage = React.lazy(() => import('./pages/reports/ReportTe
 const ReportTemplateBuilder = React.lazy(() => import('./pages/reports/ReportTemplateBuilder'));
 const ReportInstanceListPage = React.lazy(() => import('./pages/reports/ReportInstanceListPage'));
 const ReportInstanceAnalyticsPage = React.lazy(() => import('./pages/reports/ReportInstanceAnalyticsPage'));
+const ReportReviewPage = React.lazy(() => import('./pages/reports/ReportReviewPage'));
 
 // Error Pages - UNCHANGED
 const NotFoundPage = React.lazy(() => import('./pages/error/NotFoundPage'));
@@ -1128,6 +1129,11 @@ const AppRoutes = () => {
       <Route path="/reports/generated" element={
         <ProtectedRoute requiredPermission="reports:view">
           <DashboardLayout><Suspense fallback={<LoadingFallback />}><ReportInstanceListPage /></Suspense></DashboardLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/reports/generated/:id/review" element={
+        <ProtectedRoute requiredPermission="reports:view">
+          <DashboardLayout><Suspense fallback={<LoadingFallback />}><ReportReviewPage /></Suspense></DashboardLayout>
         </ProtectedRoute>
       } />
       <Route path="/reports/generated/:id" element={
