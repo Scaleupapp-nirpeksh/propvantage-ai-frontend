@@ -200,6 +200,7 @@ const ChatPage = React.lazy(() => import('./pages/chat/ChatPage'));
 // Reports (Leadership Report Builder)
 const ReportTemplateListPage = React.lazy(() => import('./pages/reports/ReportTemplateListPage'));
 const ReportTemplateBuilder = React.lazy(() => import('./pages/reports/ReportTemplateBuilder'));
+const ReportAgentPage = React.lazy(() => import('./pages/reports/ReportAgentPage'));
 const ReportInstanceListPage = React.lazy(() => import('./pages/reports/ReportInstanceListPage'));
 const ReportInstanceAnalyticsPage = React.lazy(() => import('./pages/reports/ReportInstanceAnalyticsPage'));
 const ReportReviewPage = React.lazy(() => import('./pages/reports/ReportReviewPage'));
@@ -1112,7 +1113,7 @@ const AppRoutes = () => {
         <ProtectedRoute requiredPermission="reports:manage">
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback />}>
-              <ReportTemplateBuilder />
+              <ReportAgentPage />
             </Suspense>
           </DashboardLayout>
         </ProtectedRoute>
