@@ -1637,6 +1637,9 @@ export const reportAPI = {
   // Ad-hoc generate (preview)
   generate: (id) => api.post(`/reports/templates/${id}/generate`),
 
+  // Resolve an unsaved definition → live blocks (canvas preview)
+  preview: (definition) => api.post('/reports/preview', definition),
+
   // Image upload (hero/gallery/logo) → returns { url, s3Key }
   uploadImage: (file) => {
     const formData = new FormData();
@@ -1659,6 +1662,13 @@ export const reportAPI = {
   addFlag: (id, data) => api.post(`/reports/instances/${id}/flags`, data),
   resolveFlag: (id, flagId) => api.patch(`/reports/instances/${id}/flags/${flagId}`),
   sendReport: (id) => api.post(`/reports/instances/${id}/send`),
+};
+
+// ─── Report Agent (conversational builder) ─────────────────────────────
+export const reportAgentAPI = {
+  // body: { sessionId?, message } → { sessionId, reply, definition, previewBlocks }
+  message: (body) => api.post('/reports/agent/message', body),
+  getSession: (id) => api.get(`/reports/agent/sessions/${id}`),
 };
 
 // =============================================================================
