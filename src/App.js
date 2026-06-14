@@ -200,6 +200,8 @@ const ChatPage = React.lazy(() => import('./pages/chat/ChatPage'));
 // Reports (Leadership Report Builder)
 const ReportTemplateListPage = React.lazy(() => import('./pages/reports/ReportTemplateListPage'));
 const ReportTemplateBuilder = React.lazy(() => import('./pages/reports/ReportTemplateBuilder'));
+const ReportInstanceListPage = React.lazy(() => import('./pages/reports/ReportInstanceListPage'));
+const ReportInstanceAnalyticsPage = React.lazy(() => import('./pages/reports/ReportInstanceAnalyticsPage'));
 
 // Error Pages - UNCHANGED
 const NotFoundPage = React.lazy(() => import('./pages/error/NotFoundPage'));
@@ -1121,6 +1123,16 @@ const AppRoutes = () => {
               <ReportTemplateBuilder />
             </Suspense>
           </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/reports/generated" element={
+        <ProtectedRoute requiredPermission="reports:view">
+          <DashboardLayout><Suspense fallback={<LoadingFallback />}><ReportInstanceListPage /></Suspense></DashboardLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/reports/generated/:id" element={
+        <ProtectedRoute requiredPermission="reports:view">
+          <DashboardLayout><Suspense fallback={<LoadingFallback />}><ReportInstanceAnalyticsPage /></Suspense></DashboardLayout>
         </ProtectedRoute>
       } />
 

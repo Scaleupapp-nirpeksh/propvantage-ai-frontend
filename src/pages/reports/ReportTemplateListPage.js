@@ -1,7 +1,7 @@
 // File: src/pages/reports/ReportTemplateListPage.js
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Button, Chip } from '@mui/material';
+import { Box, Button, Chip, Stack } from '@mui/material';
 import { Add, Summarize } from '@mui/icons-material';
 import { PageHeader, DataTable, ConfirmDialog, EmptyState } from '../../components/common';
 import { reportAPI } from '../../services/api';
@@ -67,11 +67,16 @@ const ReportTemplateListPage = () => {
         subtitle="Build and manage leadership report templates"
         icon={Summarize}
         loading={loading}
-        actions={canManage && (
-          <Button variant="contained" startIcon={<Add />} onClick={() => navigate('/reports/templates/new')}>
-            New Template
-          </Button>
-        )}
+        actions={
+          <Stack direction="row" spacing={1}>
+            <Button onClick={() => navigate('/reports/generated')}>Generated reports</Button>
+            {canManage && (
+              <Button variant="contained" startIcon={<Add />} onClick={() => navigate('/reports/templates/new')}>
+                New Template
+              </Button>
+            )}
+          </Stack>
+        }
       />
 
       {!loading && templates.length === 0 ? (
