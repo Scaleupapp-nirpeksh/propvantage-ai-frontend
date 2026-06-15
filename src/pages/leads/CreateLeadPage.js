@@ -1,6 +1,6 @@
 // File: src/pages/leads/CreateLeadPage.js
 // Description: Production-grade lead creation page with model-aligned data capture
-// Version: 1.2 - FIXED Interaction enum values to match backend model
+// Version: 2.0 - 3-tab wizard aligned to the 2026-06 lead model refactor
 // Location: src/pages/leads/CreateLeadPage.js
 
 import React, { useState, useEffect } from 'react';
@@ -36,6 +36,7 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
+  Divider,
 } from '@mui/material';
 import {
   ArrowBack,
@@ -43,60 +44,37 @@ import {
   Phone,
   Email,
   Business,
-  LocationOn,
   Schedule,
   Save,
   CheckCircle,
   NavigateNext,
   Home,
-  Assignment,
   ContactPhone,
   ExpandMore,
 } from '@mui/icons-material';
 import { useSnackbar } from 'notistack';
 
 import { useAuth } from '../../context/AuthContext';
-import { leadAPI, projectAPI } from '../../services/api';
+import { leadAPI, projectAPI, amenityAPI } from '../../services/api';
 import ChannelPartnerAttributionFields from '../../components/channel-partners/ChannelPartnerAttributionFields';
+import { BUDGET_RANGES, budgetRangeToNumbers, priorityFromTimeline } from '../../utils/leadForm';
 
 // =============================================================================
-// CONSTANTS - ALIGNED WITH LEAD MODEL
+// CONSTANTS - ALIGNED WITH LEAD MODEL (2026-06 refactor)
 // =============================================================================
 
 const LEAD_SOURCES = [
-  'Website',
-  'Property Portal', 
+  'Channel Partner',
+  'Management',
+  'Direct',
   'Referral',
-  'Walk-in',
-  'Social Media',
-  'Advertisement',
-  'Cold Call',
-  'Other'
-];
-
-const LEAD_PRIORITIES = [
-  'Critical',
-  'High', 
-  'Medium',
-  'Low',
-  'Very Low'
-];
-
-const LEAD_STATUSES = [
-  'New',
-  'Contacted',
-  'Qualified',
-  'Site Visit Scheduled',
-  'Site Visit Completed',
-  'Negotiating',
-  'Booked',
-  'Lost',
-  'Unqualified'
+  'Marketing',
+  'Cold Calling',
 ];
 
 const PROPERTY_TYPES = [
   '1 BHK',
-  '2 BHK', 
+  '2 BHK',
   '3 BHK',
   '4 BHK',
   '5+ BHK',
@@ -110,18 +88,6 @@ const PROPERTY_TYPES = [
   'Warehouse'
 ];
 
-const BUDGET_RANGES = [
-  'Under ₹25L',
-  '₹25L - ₹50L',
-  '₹50L - ₹75L', 
-  '₹75L - ₹1Cr',
-  '₹1Cr - ₹1.5Cr',
-  '₹1.5Cr - ₹2Cr',
-  '₹2Cr - ₹3Cr',
-  '₹3Cr - ₹5Cr',
-  'Above ₹5Cr'
-];
-
 // Timeline options matching model enum exactly
 const TIMELINE_OPTIONS = [
   { value: 'immediate', label: 'Immediate (Within 1 month)' },
@@ -131,47 +97,43 @@ const TIMELINE_OPTIONS = [
   { value: '12+_months', label: 'More than 12 Months' }
 ];
 
-// Floor preferences matching model
+// Floor preferences — category-only labels (no specific floor number)
 const FLOOR_PREFERENCES = [
   { value: 'any', label: 'Any Floor' },
-  { value: 'low', label: 'Lower Floors (1-5)' },
-  { value: 'medium', label: 'Middle Floors (6-15)' },
-  { value: 'high', label: 'Higher Floors (15+)' }
+  { value: 'low', label: 'Lower Floors' },
+  { value: 'medium', label: 'Mid Floors' },
+  { value: 'high', label: 'Higher Floors' },
 ];
 
 // Facing directions matching model
 const FACING_DIRECTIONS = [
-  'Any', 'North', 'South', 'East', 'West', 
+  'Any', 'North', 'South', 'East', 'West',
   'North-East', 'North-West', 'South-East', 'South-West'
 ];
 
-// Common amenities
-const COMMON_AMENITIES = [
-  'Swimming Pool', 'Gymnasium', 'Clubhouse', 'Children\'s Play Area',
-  'Landscaped Gardens', 'Security', 'Power Backup', 'Elevator',
-  'Parking', 'Intercom', 'Maintenance', 'Water Supply'
-];
-
-// Budget source options matching model
+// Budget source options matching model (2 options)
 const BUDGET_SOURCES = [
-  { value: 'self_reported', label: 'Self Reported' },
-  { value: 'pre_approved', label: 'Pre-approved by Bank' },
-  { value: 'loan_approved', label: 'Loan Already Approved' },
-  { value: 'verified', label: 'Verified by Documents' }
+  { value: 'self_funded', label: 'Self Funded' },
+  { value: 'bank_loan', label: 'Bank Loan' },
 ];
 
-// FIXED: Follow-up types matching Interaction model enum (Capitalized)
+// Follow-up types — lowercase values (backend enum is lowercase)
 const FOLLOW_UP_TYPES = [
-  { value: 'Call', label: 'Phone Call' },
-  { value: 'Email', label: 'Email' },
-  { value: 'WhatsApp', label: 'WhatsApp' },
-  { value: 'Site Visit', label: 'Site Visit' },
-  { value: 'Meeting', label: 'In-person Meeting' },
-  { value: 'SMS', label: 'SMS' },
-  { value: 'Note', label: 'Note/Memo' }
+  { value: 'call', label: 'Call' },
+  { value: 'email', label: 'Email' },
+  { value: 'meeting', label: 'Meeting' },
+  { value: 'text', label: 'Text' },
 ];
 
-// Form steps configuration
+// Map derived priority → MUI color for the live badge
+const PRIORITY_COLORS = {
+  High: 'error',
+  Medium: 'warning',
+  Low: 'info',
+  'Very Low': 'default',
+};
+
+// Form steps configuration (3 tabs)
 const STEPS = [
   {
     label: 'Contact Information',
@@ -180,17 +142,12 @@ const STEPS = [
   },
   {
     label: 'Requirements',
-    description: 'Property preferences and budget',
+    description: 'Project, budget, and property preferences',
     icon: <Home />,
   },
   {
-    label: 'Lead Details',
-    description: 'Priority, project assignment, and notes',
-    icon: <Assignment />,
-  },
-  {
-    label: 'Follow-up & Confirmation',
-    description: 'Schedule and finalize lead creation',
+    label: 'Lead Summary and Follow up',
+    description: 'Review and schedule follow-up',
     icon: <Schedule />,
   },
 ];
@@ -199,28 +156,11 @@ const STEPS = [
 // HELPER FUNCTIONS
 // =============================================================================
 
-// Extract budget numbers from range string
-const extractBudgetNumbers = (range) => {
-  const ranges = {
-    'Under ₹25L': { min: 0, max: 2500000 },
-    '₹25L - ₹50L': { min: 2500000, max: 5000000 },
-    '₹50L - ₹75L': { min: 5000000, max: 7500000 },
-    '₹75L - ₹1Cr': { min: 7500000, max: 10000000 },
-    '₹1Cr - ₹1.5Cr': { min: 10000000, max: 15000000 },
-    '₹1.5Cr - ₹2Cr': { min: 15000000, max: 20000000 },
-    '₹2Cr - ₹3Cr': { min: 20000000, max: 30000000 },
-    '₹3Cr - ₹5Cr': { min: 30000000, max: 50000000 },
-    'Above ₹5Cr': { min: 50000000, max: 100000000 }
-  };
-  
-  return ranges[range] || { min: '', max: '' };
-};
-
 // Determine qualification status based on form data
 const determineQualificationStatus = (data) => {
   if (data.budget.min && data.requirements.timeline && data.requirements.unitType) {
     return 'Qualified';
-  } else if (data.budget.budgetSource !== 'self_reported') {
+  } else if (data.budget.budgetSource !== 'self_funded') {
     return 'In Progress';
   }
   return 'Not Qualified';
@@ -232,10 +172,6 @@ const validateContactInfo = (data) => {
 
   if (!data.firstName?.trim()) {
     errors.firstName = 'First name is required';
-  }
-
-  if (!data.lastName?.trim()) {
-    errors.lastName = 'Last name is required';
   }
 
   if (!data.phone?.trim()) {
@@ -252,6 +188,21 @@ const validateContactInfo = (data) => {
     errors.source = 'Lead source is required';
   }
 
+  // When sourced via a channel partner and the toggle is on, require a valid split.
+  if (data.source === 'Channel Partner' && data.addSourceDetails) {
+    const cpa = data.channelPartnerAttribution;
+    if (cpa?.viaChannelPartner) {
+      const validPartners = (cpa.partners || []).filter(
+        (p) => p.channelPartner && Number(p.sharePct) > 0
+      );
+      const sum = validPartners.reduce((a, p) => a + Number(p.sharePct), 0);
+      if (validPartners.length === 0 || Math.abs(sum - 100) > 0.01) {
+        errors.channelPartner =
+          'Select at least one channel partner with shares totalling 100%.';
+      }
+    }
+  }
+
   return {
     isValid: Object.keys(errors).length === 0,
     errors,
@@ -261,6 +212,10 @@ const validateContactInfo = (data) => {
 const validateRequirements = (data) => {
   const errors = {};
 
+  if (!data.project) {
+    errors.project = 'Primary project interest is required';
+  }
+
   if (!data.interestedPropertyTypes?.length) {
     errors.interestedPropertyTypes = 'Please select at least one property type';
   }
@@ -269,25 +224,12 @@ const validateRequirements = (data) => {
     errors.budgetRange = 'Budget range is required';
   }
 
-  return {
-    isValid: Object.keys(errors).length === 0,
-    errors,
-  };
-};
-
-const validateLeadDetails = (data) => {
-  const errors = {};
-
-  if (!data.priority) {
-    errors.priority = 'Priority is required';
+  if (!data.requirements.timeline) {
+    errors.timeline = 'Occupancy timeline is required (it sets the lead priority)';
   }
 
-  if (!data.status) {
-    errors.status = 'Initial status is required';
-  }
-
-  if (!data.project) {
-    errors.project = 'Primary project interest is required';
+  if (!data.assignedTo) {
+    errors.assignedTo = 'Please assign this lead to a team member';
   }
 
   return {
@@ -311,6 +253,7 @@ const CreateLeadPage = () => {
   const [errors, setErrors] = useState({});
   const [projects, setProjects] = useState([]);
   const [salesTeam, setSalesTeam] = useState([]);
+  const [catalogAmenities, setCatalogAmenities] = useState([]);
   const [loadingData, setLoadingData] = useState(true);
 
   // Form data - ALIGNED WITH LEAD MODEL
@@ -321,46 +264,46 @@ const CreateLeadPage = () => {
     phone: '',
     email: '',
     source: '',
-    sourceDetails: '',
-    
+
+    // Source detail toggle + structured source detail (per source)
+    addSourceDetails: false,
+    sourceDetail: {
+      text: '',
+      management: { contactName: '', note: '' },
+    },
+
     // Budget Structure - matching model exactly
-    budgetRange: '', // For display purposes
+    budgetRange: '', // For display purposes; drives budget.min/max
     budget: {
       min: '',
       max: '',
-      budgetSource: 'self_reported',
+      budgetSource: 'self_funded',
       currency: 'INR'
     },
-    
+
     // Requirements Structure - matching model exactly
     requirements: {
       timeline: '', // enum: ['immediate', '1-3_months', '3-6_months', '6-12_months', '12+_months']
       unitType: '', // Primary unit type they're interested in
       floor: {
         preference: 'any', // enum: ['low', 'medium', 'high', 'any']
-        specific: '' // specific floor number if any
       },
       facing: 'Any', // enum values from model
-      amenities: [], // array of preferred amenities
-      specialRequirements: '' // any special requirements
+      amenities: [], // array of preferred amenity names (string[])
     },
-    
+
     // Additional fields for better capture
     interestedPropertyTypes: [], // For UI purposes - will map to unitType
-    preferredLocation: '',
-    interestedProjects: [],
-    
+
     // Lead Details
-    priority: 'Medium',
-    status: 'New',
     assignedTo: user?.id || '',
     project: '', // Required by backend
     notes: '',
-    
-    // FIXED: Follow-up with correct Interaction model enum values (Capitalized)
+
+    // Follow-up (lowercase enum values)
     scheduleFollowUp: false,
     followUpDate: null,
-    followUpType: 'Call', // FIXED: Changed from 'call' to 'Call' to match Interaction model
+    followUpType: 'call',
     followUpNotes: '',
 
     // AI enrichment research sources (optional)
@@ -383,14 +326,21 @@ const CreateLeadPage = () => {
   const loadInitialData = async () => {
     try {
       setLoadingData(true);
-      
-      const [projectsResponse] = await Promise.allSettled([
-        projectAPI.getProjects()
+
+      const [projectsResponse, amenitiesResponse] = await Promise.allSettled([
+        projectAPI.getProjects(),
+        amenityAPI.getAmenities(),
       ]);
 
       if (projectsResponse.status === 'fulfilled') {
         const projectsData = projectsResponse.value.data;
         setProjects(projectsData.data || projectsData || []);
+      }
+
+      if (amenitiesResponse.status === 'fulfilled') {
+        const amenitiesData = amenitiesResponse.value.data;
+        const list = amenitiesData?.data || amenitiesData || [];
+        setCatalogAmenities(list.map((a) => a.name).filter(Boolean));
       }
 
       setSalesTeam([
@@ -415,7 +365,7 @@ const CreateLeadPage = () => {
   // Handle input changes
   const handleInputChange = (field) => (event) => {
     let value;
-    
+
     if (event?.target) {
       value = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
     } else {
@@ -426,7 +376,7 @@ const CreateLeadPage = () => {
       ...prev,
       [field]: value,
     }));
-    
+
     if (errors[field]) {
       setErrors(prev => ({
         ...prev,
@@ -479,16 +429,59 @@ const CreateLeadPage = () => {
     }));
   };
 
+  // Amenities: add a freeSolo value, creating it in the catalog if it's new.
+  const handleAmenitiesChange = async (rawValues) => {
+    // Normalize the "+ Add \"X\"" affordance back to its plain name, trim, dedupe.
+    const normalized = [];
+    const seen = new Set();
+    rawValues.forEach((val) => {
+      const match = typeof val === 'string' ? /^\+ Add "(.*)"$/.exec(val) : null;
+      const name = (match ? match[1] : val).trim();
+      if (name && !seen.has(name)) {
+        seen.add(name);
+        normalized.push(name);
+      }
+    });
+
+    // Find any value that's not already in the catalog (a brand-new amenity).
+    const known = new Set(catalogAmenities);
+    const created = normalized.find((name) => !known.has(name));
+
+    // Optimistically set the selection.
+    setFormData(prev => ({
+      ...prev,
+      requirements: { ...prev.requirements, amenities: normalized },
+    }));
+
+    if (!created) return;
+
+    try {
+      const res = await amenityAPI.createAmenity(created);
+      const saved = res.data?.data || res.data;
+      const savedName = saved?.name || created;
+
+      // Make sure the canonical name is in both the catalog and the selection.
+      setCatalogAmenities(prev => (prev.includes(savedName) ? prev : [...prev, savedName]));
+      setFormData(prev => {
+        const amenities = prev.requirements.amenities.map((a) => (a === created ? savedName : a));
+        return { ...prev, requirements: { ...prev.requirements, amenities } };
+      });
+    } catch (error) {
+      console.error('Error creating amenity:', error);
+      enqueueSnackbar('Could not save the new amenity to the catalog, but it is added to this lead.', {
+        variant: 'warning',
+      });
+    }
+  };
+
   // Navigation handlers
   const handleNext = () => {
     let validation;
-    
+
     if (activeStep === 0) {
       validation = validateContactInfo(formData);
     } else if (activeStep === 1) {
       validation = validateRequirements(formData);
-    } else if (activeStep === 2) {
-      validation = validateLeadDetails(formData);
     }
 
     if (validation && !validation.isValid) {
@@ -507,6 +500,8 @@ const CreateLeadPage = () => {
 
   // Form submission - ALIGNED WITH LEAD MODEL
   const handleSubmit = async () => {
+    const source = formData.source;
+
     // Validate the channel-partner commission split before submitting.
     const cpa = formData.channelPartnerAttribution;
     if (cpa?.viaChannelPartner) {
@@ -542,59 +537,81 @@ const CreateLeadPage = () => {
         enrichmentArticleUrls.length
       );
 
+      // Budget min/max derived from the selected range (max may be null for 50Cr+).
+      const budgetNumbers = budgetRangeToNumbers(formData.budgetRange);
+
+      // Structured source detail — only what's relevant to the chosen source.
+      let sourceDetailPayload;
+      if (formData.addSourceDetails) {
+        if (source === 'Channel Partner') {
+          // CP details flow through channelPartnerAttribution, not sourceDetail.
+          sourceDetailPayload = undefined;
+        } else if (source === 'Management') {
+          const contactName = formData.sourceDetail.management.contactName.trim();
+          const note = formData.sourceDetail.management.note.trim();
+          sourceDetailPayload =
+            contactName || note
+              ? {
+                  management: {
+                    contactName: contactName || undefined,
+                    note: note || undefined,
+                  },
+                }
+              : undefined;
+        } else {
+          const text = formData.sourceDetail.text.trim();
+          sourceDetailPayload = text ? { text } : undefined;
+        }
+      }
+
       // Prepare lead data matching model structure exactly
       const leadData = {
         // Required fields
         project: formData.project,
         firstName: formData.firstName.trim(),
         phone: formData.phone.trim(),
-        
+
         // Contact Information
         lastName: formData.lastName.trim(),
         email: formData.email.trim() || undefined,
         source: formData.source,
-        sourceDetails: formData.sourceDetails.trim() || undefined,
-        
-        // Lead Status & Assignment
-        priority: formData.priority,
-        status: formData.status,
-        assignedTo: formData.assignedTo || undefined,
-        
-        // Budget structure matching model exactly
+        sourceDetail: sourceDetailPayload,
+
+        // Assignment (required — no `|| undefined`)
+        assignedTo: formData.assignedTo,
+
+        // Budget structure matching model exactly (min/max derived from the range)
         budget: {
-          min: formData.budget.min ? parseInt(formData.budget.min) : undefined,
-          max: formData.budget.max ? parseInt(formData.budget.max) : undefined,
+          min: budgetNumbers.min === '' ? undefined : budgetNumbers.min,
+          max: budgetNumbers.max,
           budgetSource: formData.budget.budgetSource,
           currency: formData.budget.currency,
           isValidated: false,
           lastUpdated: new Date(),
           updatedBy: user?.id || user?._id || undefined
         },
-        
+
         // Requirements structure matching model exactly
         requirements: {
           timeline: formData.requirements.timeline || undefined,
           unitType: formData.requirements.unitType || undefined,
           floor: {
             preference: formData.requirements.floor.preference,
-            specific: formData.requirements.floor.specific ? 
-              parseInt(formData.requirements.floor.specific) : undefined
           },
           facing: formData.requirements.facing,
           amenities: formData.requirements.amenities,
-          specialRequirements: formData.requirements.specialRequirements.trim() || undefined
         },
-        
+
         // Additional notes
         notes: formData.notes.trim() || undefined,
 
         // Channel partner attribution (only when provided)
         ...((() => {
-          const cpa = formData.channelPartnerAttribution;
-          const validPartners = (cpa?.partners || []).filter(
+          const cpaInner = formData.channelPartnerAttribution;
+          const validPartners = (cpaInner?.partners || []).filter(
             (p) => p.channelPartner && Number(p.sharePct) > 0
           );
-          return cpa?.viaChannelPartner && validPartners.length > 0
+          return cpaInner?.viaChannelPartner && validPartners.length > 0
             ? {
                 channelPartnerAttribution: {
                   viaChannelPartner: true,
@@ -611,19 +628,19 @@ const CreateLeadPage = () => {
         // AI enrichment research sources (only sent when at least one URL is provided)
         ...(hasResearchSources ? { enrichment: { sources: enrichmentSources } } : {}),
 
-        // FIXED: Follow-up with correct Interaction model enum values (Capitalized)
+        // Follow-up (lowercase enum values sent as-is)
         followUpSchedule: formData.scheduleFollowUp ? {
           nextFollowUpDate: formData.followUpDate,
-          followUpType: formData.followUpType, // Now uses capitalized values like 'Call', 'Meeting'
+          followUpType: formData.followUpType,
           notes: formData.followUpNotes.trim() || undefined,
           isOverdue: false,
           overdueBy: 0,
           remindersSent: 0
         } : undefined,
-        
+
         // Set qualification status based on data completeness
         qualificationStatus: determineQualificationStatus(formData),
-        
+
         // Initialize engagement metrics
         engagementMetrics: {
           totalInteractions: 0,
@@ -635,7 +652,7 @@ const CreateLeadPage = () => {
       console.log('🚀 Creating lead with model-aligned data:', leadData);
 
       const response = await leadAPI.createLead(leadData);
-      
+
       console.log('✅ Lead created successfully:', response.data);
 
       enqueueSnackbar('Lead created successfully!', {
@@ -648,17 +665,17 @@ const CreateLeadPage = () => {
 
     } catch (error) {
       console.error('❌ Error creating lead:', error);
-      
+
       let errorMessage = 'Failed to create lead. Please try again.';
-      
+
       if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       }
-      
+
       if (error.response?.data?.errors) {
         setErrors(error.response.data.errors);
       }
-      
+
       enqueueSnackbar(errorMessage, {
         variant: 'error',
         autoHideDuration: 6000,
@@ -671,6 +688,94 @@ const CreateLeadPage = () => {
   // =============================================================================
   // RENDER FUNCTIONS
   // =============================================================================
+
+  // The source-detail block rendered when "Add source details" is ON.
+  const renderSourceDetailFields = () => {
+    if (!formData.addSourceDetails) return null;
+
+    if (formData.source === 'Channel Partner') {
+      return (
+        <Grid item xs={12}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+            Channel partner
+          </Typography>
+          <ChannelPartnerAttributionFields
+            value={formData.channelPartnerAttribution}
+            onChange={(val) => {
+              setFormData((prev) => ({ ...prev, channelPartnerAttribution: val }));
+              if (errors.channelPartner) {
+                setErrors((prev) => ({ ...prev, channelPartner: '' }));
+              }
+            }}
+          />
+          {errors.channelPartner && (
+            <Typography variant="caption" color="error" sx={{ mt: 0.5, display: 'block' }}>
+              {errors.channelPartner}
+            </Typography>
+          )}
+        </Grid>
+      );
+    }
+
+    if (formData.source === 'Management') {
+      return (
+        <>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              label="Promoter / investor / management contact"
+              placeholder="Name of the contact"
+              value={formData.sourceDetail.management.contactName}
+              onChange={(e) => setFormData(prev => ({
+                ...prev,
+                sourceDetail: {
+                  ...prev.sourceDetail,
+                  management: { ...prev.sourceDetail.management, contactName: e.target.value },
+                },
+              }))}
+              disabled={isLoading}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              label="Note (optional)"
+              placeholder="Any context about this referral"
+              value={formData.sourceDetail.management.note}
+              onChange={(e) => setFormData(prev => ({
+                ...prev,
+                sourceDetail: {
+                  ...prev.sourceDetail,
+                  management: { ...prev.sourceDetail.management, note: e.target.value },
+                },
+              }))}
+              disabled={isLoading}
+            />
+          </Grid>
+        </>
+      );
+    }
+
+    // Any other source → free-text source details
+    return (
+      <Grid item xs={12}>
+        <TextField
+          fullWidth
+          label="Source details"
+          placeholder="Specific details about the source (optional)"
+          value={formData.sourceDetail.text}
+          onChange={(e) => setFormData(prev => ({
+            ...prev,
+            sourceDetail: { ...prev.sourceDetail, text: e.target.value },
+          }))}
+          disabled={isLoading}
+          multiline
+          rows={2}
+          helperText="e.g., 'From John's referral' or 'Facebook ad campaign'"
+        />
+      </Grid>
+    );
+  };
 
   const renderContactInformation = () => (
     <Grid container spacing={3}>
@@ -704,7 +809,7 @@ const CreateLeadPage = () => {
         <TextField
           fullWidth
           label="Last Name"
-          placeholder="Enter last name"
+          placeholder="Enter last name (optional)"
           value={formData.lastName}
           onChange={handleInputChange('lastName')}
           error={!!errors.lastName}
@@ -777,31 +882,81 @@ const CreateLeadPage = () => {
         </FormControl>
       </Grid>
 
-      <Grid item xs={12} sm={6}>
-        <TextField
-          fullWidth
-          label="Source Details"
-          placeholder="Specific details about the source (optional)"
-          value={formData.sourceDetails}
-          onChange={handleInputChange('sourceDetails')}
-          disabled={isLoading}
-          helperText="e.g., 'From John's referral' or 'Facebook ad campaign'"
+      <Grid item xs={12}>
+        <FormControlLabel
+          control={
+            <Switch
+              checked={formData.addSourceDetails}
+              onChange={handleInputChange('addSourceDetails')}
+              disabled={isLoading || !formData.source}
+            />
+          }
+          label="Add source details"
         />
       </Grid>
 
+      {renderSourceDetailFields()}
+
+      {/* Research Sources — moved here from the old Lead Details step */}
       <Grid item xs={12}>
-        <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-          Channel partner
-        </Typography>
-        <ChannelPartnerAttributionFields
-          value={formData.channelPartnerAttribution}
-          onChange={(val) =>
-            setFormData((prev) => ({ ...prev, channelPartnerAttribution: val }))
-          }
-        />
+        <Accordion>
+          <AccordionSummary expandIcon={<ExpandMore />}>
+            <Box>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                Research sources (optional)
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Add public links and the AI will build a short brief on this lead in the background.
+              </Typography>
+            </Box>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="LinkedIn profile URL"
+                  placeholder="https://www.linkedin.com/in/..."
+                  value={formData.researchSources.linkedinUrl}
+                  onChange={(e) => handleResearchSourceChange('linkedinUrl', e.target.value)}
+                  disabled={isLoading}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Company website URL"
+                  placeholder="https://company.com"
+                  value={formData.researchSources.companyWebsite}
+                  onChange={(e) => handleResearchSourceChange('companyWebsite', e.target.value)}
+                  disabled={isLoading}
+                />
+              </Grid>
+              {formData.researchSources.articleUrls.map((url, index) => (
+                <Grid item xs={12} key={index}>
+                  <TextField
+                    fullWidth
+                    label={`News article URL ${index + 1}`}
+                    placeholder="https://..."
+                    value={url}
+                    onChange={(e) => handleArticleUrlChange(index, e.target.value)}
+                    disabled={isLoading}
+                  />
+                </Grid>
+              ))}
+              <Grid item xs={12}>
+                <Button size="small" onClick={addArticleUrlField} disabled={isLoading}>
+                  + Add another article
+                </Button>
+              </Grid>
+            </Grid>
+          </AccordionDetails>
+        </Accordion>
       </Grid>
     </Grid>
   );
+
+  const derivedPriority = priorityFromTimeline(formData.requirements.timeline);
 
   const renderRequirements = () => (
     <Grid container spacing={3}>
@@ -809,6 +964,45 @@ const CreateLeadPage = () => {
         <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: 'primary.main' }}>
           Property Requirements
         </Typography>
+      </Grid>
+
+      {/* Primary Project — moved here, required */}
+      <Grid item xs={12}>
+        <FormControl fullWidth error={!!errors.project}>
+          <Autocomplete
+            options={projects}
+            value={projects.find(project => project._id === formData.project) || null}
+            onChange={(event, newValue) => handleInputChange('project')(newValue?._id || '')}
+            getOptionLabel={(option) => option.name || ''}
+            disabled={isLoading || loadingData}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Primary Project Interest"
+                placeholder="Select the main project they're interested in"
+                error={!!errors.project}
+                helperText={errors.project || 'Select the primary project this lead is interested in (required)'}
+              />
+            )}
+            renderOption={(props, option) => (
+              <Box component="li" {...props}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
+                  <Avatar sx={{ bgcolor: 'primary.main' }}>
+                    <Business />
+                  </Avatar>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                      {option.name}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {option.location?.city}, {option.location?.state}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Box>
+            )}
+          />
+        </FormControl>
       </Grid>
 
       {/* Property Types Selection */}
@@ -883,36 +1077,6 @@ const CreateLeadPage = () => {
         </FormControl>
       </Grid>
 
-      {/* Timeline Selection with Model Enums */}
-      <Grid item xs={12} sm={6}>
-        <FormControl fullWidth error={!!errors.timeline}>
-          <InputLabel>Occupancy Timeline</InputLabel>
-          <Select
-            value={formData.requirements.timeline}
-            onChange={(e) => setFormData(prev => ({
-              ...prev,
-              requirements: {
-                ...prev.requirements,
-                timeline: e.target.value
-              }
-            }))}
-            label="Occupancy Timeline"
-            disabled={isLoading}
-          >
-            {TIMELINE_OPTIONS.map(option => (
-              <MenuItem key={option.value} value={option.value}>
-                {option.label}
-              </MenuItem>
-            ))}
-          </Select>
-          {errors.timeline && (
-            <Typography variant="caption" color="error" sx={{ ml: 2, mt: 0.5 }}>
-              {errors.timeline}
-            </Typography>
-          )}
-        </FormControl>
-      </Grid>
-
       {/* Budget Range Selection */}
       <Grid item xs={12} sm={6}>
         <FormControl fullWidth error={!!errors.budgetRange}>
@@ -921,18 +1085,19 @@ const CreateLeadPage = () => {
             value={formData.budgetRange}
             onChange={(e) => {
               const range = e.target.value;
-              handleInputChange('budgetRange')(e);
-              
-              // Auto-extract min/max from range
-              const budgetNumbers = extractBudgetNumbers(range);
+              const budgetNumbers = budgetRangeToNumbers(range);
               setFormData(prev => ({
                 ...prev,
+                budgetRange: range,
                 budget: {
                   ...prev.budget,
                   min: budgetNumbers.min,
-                  max: budgetNumbers.max
-                }
+                  max: budgetNumbers.max,
+                },
               }));
+              if (errors.budgetRange) {
+                setErrors(prev => ({ ...prev, budgetRange: '' }));
+              }
             }}
             label="Budget Range"
             disabled={isLoading}
@@ -976,49 +1141,6 @@ const CreateLeadPage = () => {
         </FormControl>
       </Grid>
 
-      {/* Specific Budget Min/Max */}
-      <Grid item xs={12} sm={6}>
-        <TextField
-          fullWidth
-          label="Minimum Budget"
-          placeholder="Enter minimum budget"
-          value={formData.budget.min}
-          onChange={(e) => setFormData(prev => ({
-            ...prev,
-            budget: {
-              ...prev.budget,
-              min: e.target.value
-            }
-          }))}
-          disabled={isLoading}
-          type="number"
-          InputProps={{
-            startAdornment: <InputAdornment position="start">₹</InputAdornment>,
-          }}
-        />
-      </Grid>
-
-      <Grid item xs={12} sm={6}>
-        <TextField
-          fullWidth
-          label="Maximum Budget"
-          placeholder="Enter maximum budget"
-          value={formData.budget.max}
-          onChange={(e) => setFormData(prev => ({
-            ...prev,
-            budget: {
-              ...prev.budget,
-              max: e.target.value
-            }
-          }))}
-          disabled={isLoading}
-          type="number"
-          InputProps={{
-            startAdornment: <InputAdornment position="start">₹</InputAdornment>,
-          }}
-        />
-      </Grid>
-
       {/* Floor Preferences */}
       <Grid item xs={12} sm={6}>
         <FormControl fullWidth>
@@ -1047,27 +1169,50 @@ const CreateLeadPage = () => {
         </FormControl>
       </Grid>
 
-      {/* Specific Floor Number */}
+      {/* Occupancy Timeline + live priority badge */}
       <Grid item xs={12} sm={6}>
-        <TextField
-          fullWidth
-          label="Specific Floor (Optional)"
-          placeholder="Enter specific floor number"
-          value={formData.requirements.floor.specific}
-          onChange={(e) => setFormData(prev => ({
-            ...prev,
-            requirements: {
-              ...prev.requirements,
-              floor: {
-                ...prev.requirements.floor,
-                specific: e.target.value
+        <FormControl fullWidth error={!!errors.timeline}>
+          <InputLabel>Occupancy Timeline</InputLabel>
+          <Select
+            value={formData.requirements.timeline}
+            onChange={(e) => {
+              const value = e.target.value;
+              setFormData(prev => ({
+                ...prev,
+                requirements: {
+                  ...prev.requirements,
+                  timeline: value
+                }
+              }));
+              if (errors.timeline) {
+                setErrors(prev => ({ ...prev, timeline: '' }));
               }
-            }
-          }))}
-          disabled={isLoading}
-          type="number"
-          helperText="Leave empty if no specific floor preference"
-        />
+            }}
+            label="Occupancy Timeline"
+            disabled={isLoading}
+          >
+            {TIMELINE_OPTIONS.map(option => (
+              <MenuItem key={option.value} value={option.value}>
+                {option.label}
+              </MenuItem>
+            ))}
+          </Select>
+          {errors.timeline && (
+            <Typography variant="caption" color="error" sx={{ ml: 2, mt: 0.5 }}>
+              {errors.timeline}
+            </Typography>
+          )}
+        </FormControl>
+        <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Chip
+            size="small"
+            label={`Priority: ${derivedPriority}`}
+            color={PRIORITY_COLORS[derivedPriority] || 'default'}
+          />
+        </Box>
+        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+          Priority is set automatically from the occupancy timeline.
+        </Typography>
       </Grid>
 
       {/* Facing Direction */}
@@ -1095,40 +1240,33 @@ const CreateLeadPage = () => {
         </FormControl>
       </Grid>
 
-      {/* Preferred Location */}
-      <Grid item xs={12} sm={6}>
-        <TextField
-          fullWidth
-          label="Preferred Location"
-          placeholder="Enter preferred location"
-          value={formData.preferredLocation}
-          onChange={handleInputChange('preferredLocation')}
-          disabled={isLoading}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <LocationOn color="action" />
-              </InputAdornment>
-            ),
-          }}
-        />
-      </Grid>
-
-      {/* Preferred Amenities */}
+      {/* Preferred Amenities — catalog autocomplete with "+ add" */}
       <Grid item xs={12}>
         <FormControl fullWidth>
           <Autocomplete
             multiple
-            options={COMMON_AMENITIES}
+            freeSolo
+            options={catalogAmenities}
             value={formData.requirements.amenities}
-            onChange={(event, newValue) => setFormData(prev => ({
-              ...prev,
-              requirements: {
-                ...prev.requirements,
-                amenities: newValue
-              }
-            }))}
+            onChange={(event, newValue) => handleAmenitiesChange(newValue)}
             disabled={isLoading}
+            filterOptions={(options, params) => {
+              const filtered = options.filter((option) =>
+                option.toLowerCase().includes(params.inputValue.toLowerCase())
+              );
+              const exists = options.some(
+                (option) => option.toLowerCase() === params.inputValue.toLowerCase()
+              );
+              if (params.inputValue !== '' && !exists) {
+                filtered.push(`+ Add "${params.inputValue}"`);
+              }
+              return filtered;
+            }}
+            getOptionLabel={(option) => {
+              // Strip the "+ Add" affordance label when an option is committed.
+              const match = /^\+ Add "(.*)"$/.exec(option);
+              return match ? match[1] : option;
+            }}
             renderTags={(value, getTagProps) =>
               value.map((option, index) => (
                 <Chip
@@ -1144,168 +1282,17 @@ const CreateLeadPage = () => {
               <TextField
                 {...params}
                 label="Preferred Amenities (Optional)"
-                placeholder="Select preferred amenities"
-                helperText="Select amenities that are important to the lead"
+                placeholder="Select or add amenities"
+                helperText="Pick from the catalog, or type a new one and press Enter to add it"
               />
             )}
           />
         </FormControl>
       </Grid>
 
-      {/* Special Requirements */}
+      {/* Assign To — moved here, required */}
       <Grid item xs={12}>
-        <TextField
-          fullWidth
-          label="Special Requirements"
-          placeholder="Any special requirements or preferences..."
-          value={formData.requirements.specialRequirements}
-          onChange={(e) => setFormData(prev => ({
-            ...prev,
-            requirements: {
-              ...prev.requirements,
-              specialRequirements: e.target.value
-            }
-          }))}
-          disabled={isLoading}
-          multiline
-          rows={2}
-          helperText="e.g., Pet-friendly, Vastu compliant, Near Metro, etc."
-        />
-      </Grid>
-
-      {/* Additional Interested Projects */}
-      <Grid item xs={12}>
-        <FormControl fullWidth>
-          <Autocomplete
-            multiple
-            options={projects}
-            value={formData.interestedProjects}
-            onChange={(event, newValue) => handleArrayFieldChange('interestedProjects', newValue)}
-            getOptionLabel={(option) => option.name || ''}
-            disabled={isLoading || loadingData}
-            renderTags={(value, getTagProps) =>
-              value.map((option, index) => (
-                <Chip
-                  variant="outlined"
-                  label={option.name}
-                  {...getTagProps({ index })}
-                  key={option._id}
-                />
-              ))
-            }
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Additional Interested Projects (Optional)"
-                placeholder="Select other projects they've shown interest in"
-                helperText="Besides the primary project, what other projects are they considering?"
-              />
-            )}
-          />
-        </FormControl>
-      </Grid>
-    </Grid>
-  );
-
-  const renderLeadDetails = () => (
-    <Grid container spacing={3}>
-      <Grid item xs={12}>
-        <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: 'primary.main' }}>
-          Lead Management Details
-        </Typography>
-        <Alert severity="info" sx={{ mb: 3 }}>
-          <Typography variant="body2">
-            Select the primary project this lead is most interested in. This is required for lead tracking and assignment.
-          </Typography>
-        </Alert>
-      </Grid>
-
-      <Grid item xs={12} sm={6}>
-        <FormControl fullWidth error={!!errors.priority}>
-          <InputLabel>Priority</InputLabel>
-          <Select
-            value={formData.priority}
-            onChange={handleInputChange('priority')}
-            label="Priority"
-            disabled={isLoading}
-          >
-            {LEAD_PRIORITIES.map(priority => (
-              <MenuItem key={priority} value={priority}>
-                {priority}
-              </MenuItem>
-            ))}
-          </Select>
-          {errors.priority && (
-            <Typography variant="caption" color="error" sx={{ ml: 2, mt: 0.5 }}>
-              {errors.priority}
-            </Typography>
-          )}
-        </FormControl>
-      </Grid>
-
-      <Grid item xs={12} sm={6}>
-        <FormControl fullWidth error={!!errors.status}>
-          <InputLabel>Initial Status</InputLabel>
-          <Select
-            value={formData.status}
-            onChange={handleInputChange('status')}
-            label="Initial Status"
-            disabled={isLoading}
-          >
-            {LEAD_STATUSES.map(status => (
-              <MenuItem key={status} value={status}>
-                {status}
-              </MenuItem>
-            ))}
-          </Select>
-          {errors.status && (
-            <Typography variant="caption" color="error" sx={{ ml: 2, mt: 0.5 }}>
-              {errors.status}
-            </Typography>
-          )}
-        </FormControl>
-      </Grid>
-
-      <Grid item xs={12}>
-        <FormControl fullWidth error={!!errors.project}>
-          <Autocomplete
-            options={projects}
-            value={projects.find(project => project._id === formData.project) || null}
-            onChange={(event, newValue) => handleInputChange('project')(newValue?._id || '')}
-            getOptionLabel={(option) => option.name || ''}
-            disabled={isLoading || loadingData}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="🏢 Primary Project Interest"
-                placeholder="Select the main project they're interested in"
-                error={!!errors.project}
-                helperText={errors.project || 'Select the primary project this lead is interested in (required)'}
-              />
-            )}
-            renderOption={(props, option) => (
-              <Box component="li" {...props}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
-                  <Avatar sx={{ bgcolor: 'primary.main' }}>
-                    <Business />
-                  </Avatar>
-                  <Box sx={{ flex: 1 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                      {option.name}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {option.location?.city}, {option.location?.state}
-                    </Typography>
-                  </Box>
-                </Box>
-              </Box>
-            )}
-          />
-        </FormControl>
-      </Grid>
-
-      <Grid item xs={12}>
-        <FormControl fullWidth>
+        <FormControl fullWidth error={!!errors.assignedTo}>
           <Autocomplete
             options={salesTeam}
             value={salesTeam.find(member => member._id === formData.assignedTo) || null}
@@ -1316,8 +1303,9 @@ const CreateLeadPage = () => {
               <TextField
                 {...params}
                 label="Assign To"
-                placeholder="Select sales team member (optional)"
-                helperText="Assign this lead to a sales team member"
+                placeholder="Select sales team member"
+                error={!!errors.assignedTo}
+                helperText={errors.assignedTo || 'Assign this lead to a sales team member (required)'}
               />
             )}
             renderOption={(props, option) => (
@@ -1339,6 +1327,7 @@ const CreateLeadPage = () => {
         </FormControl>
       </Grid>
 
+      {/* Notes — moved here, optional, at the bottom */}
       <Grid item xs={12}>
         <TextField
           fullWidth
@@ -1352,74 +1341,103 @@ const CreateLeadPage = () => {
           helperText="Include any relevant information about the lead's preferences, conversation details, etc."
         />
       </Grid>
-
-      <Grid item xs={12}>
-        <Accordion>
-          <AccordionSummary expandIcon={<ExpandMore />}>
-            <Box>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                Research sources (optional)
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Add public links and the AI will build a short brief on this lead in the background.
-              </Typography>
-            </Box>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="LinkedIn profile URL"
-                  placeholder="https://www.linkedin.com/in/..."
-                  value={formData.researchSources.linkedinUrl}
-                  onChange={(e) => handleResearchSourceChange('linkedinUrl', e.target.value)}
-                  disabled={isLoading}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Company website URL"
-                  placeholder="https://company.com"
-                  value={formData.researchSources.companyWebsite}
-                  onChange={(e) => handleResearchSourceChange('companyWebsite', e.target.value)}
-                  disabled={isLoading}
-                />
-              </Grid>
-              {formData.researchSources.articleUrls.map((url, index) => (
-                <Grid item xs={12} key={index}>
-                  <TextField
-                    fullWidth
-                    label={`News article URL ${index + 1}`}
-                    placeholder="https://..."
-                    value={url}
-                    onChange={(e) => handleArticleUrlChange(index, e.target.value)}
-                    disabled={isLoading}
-                  />
-                </Grid>
-              ))}
-              <Grid item xs={12}>
-                <Button size="small" onClick={addArticleUrlField} disabled={isLoading}>
-                  + Add another article
-                </Button>
-              </Grid>
-            </Grid>
-          </AccordionDetails>
-        </Accordion>
-      </Grid>
-
     </Grid>
   );
 
-  const renderFollowUpConfirmation = () => (
+  // Summary helpers
+  const selectedProject = projects.find(p => p._id === formData.project);
+  const assignee = salesTeam.find(member => member._id === formData.assignedTo);
+  const sourceDetailSummary = () => {
+    if (!formData.addSourceDetails) return '';
+    if (formData.source === 'Channel Partner') return 'Via channel partner';
+    if (formData.source === 'Management') return formData.sourceDetail.management.contactName;
+    return formData.sourceDetail.text;
+  };
+
+  const renderSummaryAndFollowUp = () => (
     <Grid container spacing={3}>
       <Grid item xs={12}>
         <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: 'primary.main' }}>
-          Follow-up & Confirmation
+          Lead Summary and Follow up
         </Typography>
       </Grid>
 
+      {/* Read-only summary */}
+      <Grid item xs={12}>
+        <Paper sx={{ p: 3, bgcolor: 'primary.50', border: '1px solid', borderColor: 'primary.200' }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: 'primary.main' }}>
+            <CheckCircle sx={{ mr: 1, verticalAlign: 'middle' }} />
+            Lead Summary
+          </Typography>
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <Typography variant="body2" color="text.secondary">Contact:</Typography>
+              <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                {formData.firstName} {formData.lastName}
+              </Typography>
+              <Typography variant="body2">
+                {formData.phone} {formData.email && `• ${formData.email}`}
+              </Typography>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Typography variant="body2" color="text.secondary">Source:</Typography>
+              <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                {formData.source || 'Not selected'}
+              </Typography>
+              {sourceDetailSummary() && (
+                <Typography variant="body2">{sourceDetailSummary()}</Typography>
+              )}
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Typography variant="body2" color="text.secondary">Primary Project:</Typography>
+              <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                {selectedProject?.name || 'Not selected'}
+              </Typography>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Typography variant="body2" color="text.secondary">Budget Range:</Typography>
+              <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                {formData.budgetRange || 'Not selected'}
+              </Typography>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Typography variant="body2" color="text.secondary">Timeline &amp; Priority:</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                  {TIMELINE_OPTIONS.find(t => t.value === formData.requirements.timeline)?.label || 'Not selected'}
+                </Typography>
+                <Chip
+                  size="small"
+                  label={derivedPriority}
+                  color={PRIORITY_COLORS[derivedPriority] || 'default'}
+                />
+              </Box>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Typography variant="body2" color="text.secondary">Assigned To:</Typography>
+              <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                {assignee ? `${assignee.firstName} ${assignee.lastName}` : 'Unassigned'}
+              </Typography>
+            </Grid>
+            {formData.requirements.amenities.length > 0 && (
+              <Grid item xs={12}>
+                <Typography variant="body2" color="text.secondary">Amenities:</Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                  {formData.requirements.amenities.map((a) => (
+                    <Chip key={a} size="small" variant="outlined" label={a} />
+                  ))}
+                </Box>
+              </Grid>
+            )}
+          </Grid>
+        </Paper>
+      </Grid>
+
+      <Grid item xs={12}>
+        <Divider />
+      </Grid>
+
+      {/* Follow-up */}
       <Grid item xs={12}>
         <FormControlLabel
           control={
@@ -1429,7 +1447,7 @@ const CreateLeadPage = () => {
               disabled={isLoading}
             />
           }
-          label="Schedule immediate follow-up"
+          label="Schedule follow-up"
         />
       </Grid>
 
@@ -1440,7 +1458,7 @@ const CreateLeadPage = () => {
               fullWidth
               label="Follow-up Date & Time"
               type="datetime-local"
-              value={formData.followUpDate ? 
+              value={formData.followUpDate ?
                 new Date(formData.followUpDate.getTime() - formData.followUpDate.getTimezoneOffset() * 60000)
                   .toISOString().slice(0, 16) : ''
               }
@@ -1454,7 +1472,6 @@ const CreateLeadPage = () => {
           </Grid>
 
           <Grid item xs={12} sm={6}>
-            {/* FIXED: Follow-up Type with correct Interaction model enum values */}
             <FormControl fullWidth>
               <InputLabel>Follow-up Type</InputLabel>
               <Select
@@ -1475,8 +1492,8 @@ const CreateLeadPage = () => {
           <Grid item xs={12}>
             <TextField
               fullWidth
-              label="Follow-up Notes"
-              placeholder="Add notes for the follow-up..."
+              label="Follow-up Agenda"
+              placeholder="What should be covered in the follow-up..."
               value={formData.followUpNotes}
               onChange={handleInputChange('followUpNotes')}
               disabled={isLoading}
@@ -1486,64 +1503,6 @@ const CreateLeadPage = () => {
           </Grid>
         </>
       )}
-
-      <Grid item xs={12}>
-        <Paper sx={{ p: 3, bgcolor: 'primary.50', border: '1px solid', borderColor: 'primary.200' }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: 'primary.main' }}>
-            <CheckCircle sx={{ mr: 1, verticalAlign: 'middle' }} />
-            Lead Summary
-          </Typography>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
-              <Typography variant="body2" color="text.secondary">Contact:</Typography>
-              <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                {formData.firstName} {formData.lastName}
-              </Typography>
-              <Typography variant="body2">
-                {formData.phone} {formData.email && `• ${formData.email}`}
-              </Typography>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Typography variant="body2" color="text.secondary">Requirements:</Typography>
-              <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                {formData.budgetRange}
-              </Typography>
-              <Typography variant="body2">
-                {formData.interestedPropertyTypes.join(', ')}
-              </Typography>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Typography variant="body2" color="text.secondary">Primary Project:</Typography>
-              <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                {projects.find(p => p._id === formData.project)?.name || 'Not selected'}
-              </Typography>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Typography variant="body2" color="text.secondary">Source & Priority:</Typography>
-              <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                {formData.source} • {formData.priority} Priority
-              </Typography>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Typography variant="body2" color="text.secondary">Assigned To:</Typography>
-              <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                {salesTeam.find(member => member._id === formData.assignedTo)?.firstName || 'Unassigned'} {salesTeam.find(member => member._id === formData.assignedTo)?.lastName || ''}
-              </Typography>
-            </Grid>
-            {formData.scheduleFollowUp && (
-              <Grid item xs={12} sm={6}>
-                <Typography variant="body2" color="text.secondary">Follow-up:</Typography>
-                <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                  {FOLLOW_UP_TYPES.find(type => type.value === formData.followUpType)?.label || formData.followUpType}
-                </Typography>
-                <Typography variant="body2">
-                  {formData.followUpDate ? new Date(formData.followUpDate).toLocaleString() : 'No date set'}
-                </Typography>
-              </Grid>
-            )}
-          </Grid>
-        </Paper>
-      </Grid>
     </Grid>
   );
 
@@ -1645,8 +1604,7 @@ const CreateLeadPage = () => {
               {/* Step Content */}
               {activeStep === 0 && renderContactInformation()}
               {activeStep === 1 && renderRequirements()}
-              {activeStep === 2 && renderLeadDetails()}
-              {activeStep === 3 && renderFollowUpConfirmation()}
+              {activeStep === 2 && renderSummaryAndFollowUp()}
 
               {/* Navigation Buttons */}
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
