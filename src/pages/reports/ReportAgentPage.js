@@ -1,45 +1,124 @@
 // File: src/pages/reports/ReportAgentPage.js
 // Conversational report builder: a live report canvas driven by a chat dock.
+// Supports create (new) and edit-existing (/:id/edit). Schedule & send via dialog.
 // Built entirely in the app design system (MUI / Inter / blue+gold).
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
-  Box, Paper, TextField, Button, Typography, Chip, Popover,
+  Box, Paper, TextField, Button, Typography, Chip, Popover, CircularProgress,
 } from '@mui/material';
-import { AutoAwesome, Save, ArrowBack, Palette } from '@mui/icons-material';
+import { AutoAwesome, Save, ArrowBack, Palette, Schedule } from '@mui/icons-material';
 import { useSnackbar } from 'notistack';
 import { reportAPI } from '../../services/api';
 import ReportBlockRenderer from '../../components/reports/ReportBlockRenderer';
 import ReportChatDock from '../../components/reports/ReportChatDock';
 import ReportDesignControls from '../../components/reports/ReportDesignControls';
+import ScheduleDeliveryDialog from '../../components/reports/ScheduleDeliveryDialog';
 import { getReportTheme } from '../../utils/reportThemes';
 import useReportAgent from './useReportAgent';
+import { initialBuilderState } from './builderState';
 
 const ReportAgentPage = () => {
   const navigate = useNavigate();
+  const { id } = useParams();
+  const isEdit = Boolean(id);
   const { enqueueSnackbar } = useSnackbar();
   const { messages, definition, previewBlocks, isLoading, sendMessage, setDefinition, repreview } = useReportAgent();
   const [saving, setSaving] = useState(false);
   const [themeAnchor, setThemeAnchor] = useState(null);
 
+  // Edit-existing state
+  const [templateId, setTemplateId] = useState(id || null);
+  const [schedule, setSchedule] = useState(null);
+  const [delivery, setDelivery] = useState(null);
+  const [access, setAccess] = useState(null);
+  const [imageSlots, setImageSlots] = useState([]);
+  const [loading, setLoading] = useState(isEdit);
+
+  // Schedule dialog
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+
   const tokens = getReportTheme(definition.theme?.preset);
   // Show resolved preview blocks (with data) when available; before the first turn the canvas is empty.
   const blocks = previewBlocks.length ? previewBlocks : [];
+
+  // Load template on mount when editing an existing report
+  useEffect(() => {
+    if (!isEdit) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await reportAPI.getTemplate(id);
+        const tpl = res.data?.data || {};
+        if (cancelled) return;
+        setDefinition({
+          name: tpl.name || '',
+          scope: tpl.scope || { mode: 'portfolio' },
+          theme: { preset: 'clean', ...(tpl.theme || {}) },
+          blocks: tpl.blocks || [],
+        });
+        setSchedule({ ...initialBuilderState.schedule, ...(tpl.schedule || {}) });
+        setDelivery({ ...initialBuilderState.delivery, ...(tpl.delivery || {}) });
+        setAccess({ ...initialBuilderState.access, ...(tpl.access || {}) });
+        setImageSlots(tpl.imageSlots || []);
+        setTemplateId(id);
+      } catch (err) {
+        enqueueSnackbar(err.response?.data?.message || 'Failed to load report', { variant: 'error' });
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, isEdit]);
+
+  // After the definition is seeded on edit, resolve a live preview once.
+  useEffect(() => {
+    if (isEdit && !loading && definition.blocks?.length) { repreview(); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading]);
+
+  // Single source of truth for create + update + schedule persistence
+  const buildPayload = () => ({
+    name: definition.name || 'Untitled report',
+    scope: definition.scope,
+    theme: definition.theme,
+    blocks: definition.blocks,
+    imageSlots,
+    ...(schedule ? { schedule } : {}),
+    ...(delivery ? { delivery } : {}),
+    ...(access ? { access } : {}),
+  });
 
   const handleSave = async () => {
     if (!definition.blocks?.length) { enqueueSnackbar('Ask the agent to build something first.', { variant: 'info' }); return; }
     setSaving(true);
     try {
-      const payload = {
-        name: definition.name || 'Untitled report',
-        scope: definition.scope, theme: definition.theme, blocks: definition.blocks,
-      };
-      const res = await reportAPI.createTemplate(payload);
-      enqueueSnackbar('Report saved.', { variant: 'success' });
-      navigate(`/reports/templates/${res.data?.data?._id}/edit`);
+      if (templateId) {
+        await reportAPI.updateTemplate(templateId, buildPayload());
+        enqueueSnackbar('Report saved.', { variant: 'success' });
+      } else {
+        const res = await reportAPI.createTemplate(buildPayload());
+        const newId = res.data?.data?._id;
+        setTemplateId(newId);
+        enqueueSnackbar('Report saved.', { variant: 'success' });
+        if (newId) navigate(`/reports/templates/${newId}/edit`, { replace: true });
+      }
     } catch (err) {
       enqueueSnackbar(err.response?.data?.message || 'Save failed', { variant: 'error' });
     } finally { setSaving(false); }
+  };
+
+  const openSchedule = async () => {
+    if (!templateId) {
+      if (!definition.blocks?.length) { enqueueSnackbar('Build and save the report first.', { variant: 'info' }); return; }
+      await handleSave();
+    }
+    // Ensure defaults exist for a brand-new report
+    setSchedule((s) => s || { ...initialBuilderState.schedule });
+    setDelivery((d) => d || { ...initialBuilderState.delivery });
+    setAccess((a) => a || { ...initialBuilderState.access });
+    setScheduleOpen(true);
   };
 
   const handleThemeChange = (patch) => {
@@ -50,6 +129,15 @@ const ReportAgentPage = () => {
     setThemeAnchor(null);
     repreview();
   };
+
+  // Loading guard while fetching template on edit
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 'calc(100vh - 120px)' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)' }}>
@@ -80,6 +168,7 @@ const ReportAgentPage = () => {
         >
           <ReportDesignControls theme={definition.theme} onChange={handleThemeChange} />
         </Popover>
+        <Button startIcon={<Schedule />} onClick={openSchedule}>Schedule &amp; send</Button>
         <Button variant="contained" startIcon={<Save />} onClick={handleSave} disabled={saving}>
           {saving ? 'Saving…' : 'Save'}
         </Button>
@@ -110,6 +199,28 @@ const ReportAgentPage = () => {
 
       {/* Chat dock */}
       <ReportChatDock messages={messages} isLoading={isLoading} onSend={(t) => sendMessage(t)} />
+
+      {/* Schedule & send dialog */}
+      <ScheduleDeliveryDialog
+        open={scheduleOpen}
+        schedule={schedule || initialBuilderState.schedule}
+        delivery={delivery || initialBuilderState.delivery}
+        access={access || initialBuilderState.access}
+        onScheduleChange={(patch) => setSchedule((s) => ({ ...(s || initialBuilderState.schedule), ...patch }))}
+        onDeliveryChange={(patch) => setDelivery((d) => ({ ...(d || initialBuilderState.delivery), ...patch }))}
+        onAccessChange={(patch) => setAccess((a) => ({ ...(a || initialBuilderState.access), ...patch }))}
+        onClose={async () => {
+          setScheduleOpen(false);
+          if (templateId) {
+            try {
+              await reportAPI.updateTemplate(templateId, buildPayload());
+              enqueueSnackbar('Schedule saved.', { variant: 'success' });
+            } catch (err) {
+              enqueueSnackbar(err.response?.data?.message || 'Could not save schedule', { variant: 'error' });
+            }
+          }
+        }}
+      />
     </Box>
   );
 };
