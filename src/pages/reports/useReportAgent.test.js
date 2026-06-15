@@ -1,9 +1,12 @@
 // src/pages/reports/useReportAgent.test.js
 import { renderHook, act } from '@testing-library/react';
-import { reportAgentAPI } from '../../services/api';
+import { reportAgentAPI, reportAPI } from '../../services/api';
 import useReportAgent from './useReportAgent';
 
-jest.mock('../../services/api', () => ({ reportAgentAPI: { message: jest.fn() } }));
+jest.mock('../../services/api', () => ({
+  reportAgentAPI: { message: jest.fn() },
+  reportAPI: { preview: jest.fn() },
+}));
 
 describe('useReportAgent', () => {
   beforeEach(() => jest.clearAllMocks());
@@ -26,7 +29,7 @@ describe('useReportAgent', () => {
 
     await act(async () => { await result.current.sendMessage('show revenue'); });
 
-    expect(reportAgentAPI.message).toHaveBeenCalledWith({ sessionId: null, message: 'show revenue' });
+    expect(reportAgentAPI.message).toHaveBeenCalledWith(expect.objectContaining({ sessionId: null, message: 'show revenue' }));
     expect(result.current.messages).toEqual([
       { role: 'user', content: 'show revenue' },
       { role: 'assistant', content: 'Added revenue.' },
@@ -42,7 +45,7 @@ describe('useReportAgent', () => {
     const { result } = renderHook(() => useReportAgent());
     await act(async () => { await result.current.sendMessage('one'); });
     await act(async () => { await result.current.sendMessage('two'); });
-    expect(reportAgentAPI.message).toHaveBeenLastCalledWith({ sessionId: 's1', message: 'two' });
+    expect(reportAgentAPI.message).toHaveBeenLastCalledWith(expect.objectContaining({ sessionId: 's1', message: 'two' }));
   });
 
   it('surfaces an error turn without throwing', async () => {
@@ -52,6 +55,15 @@ describe('useReportAgent', () => {
     expect(result.current.error).toBe('boom');
     expect(result.current.messages[1].role).toBe('assistant'); // a friendly error turn was appended
     expect(result.current.isLoading).toBe(false);
+  });
+
+  it('repreview re-resolves the canvas from the current definition', async () => {
+    reportAPI.preview.mockResolvedValue({ data: { data: { blocks: [{ id: 'b', type: 'kpi.revenue', kind: 'kpi', data: { value: 5, unit: 'currency' } }] } } });
+    const { result } = renderHook(() => useReportAgent());
+    act(() => { result.current.setDefinition({ name: 'R', scope: { mode: 'portfolio' }, theme: { preset: 'clean' }, blocks: [{ id: 'b', type: 'kpi.revenue' }] }); });
+    await act(async () => { await result.current.repreview(); });
+    expect(reportAPI.preview).toHaveBeenCalled();
+    expect(result.current.previewBlocks[0].data).toEqual({ value: 5, unit: 'currency' });
   });
 
   it('ignores blank input and re-entrancy while loading', async () => {
