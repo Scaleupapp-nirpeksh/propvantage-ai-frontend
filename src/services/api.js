@@ -557,6 +557,13 @@ export const leadAPI = {
   updateScoringConfig: (configData) => api.put('/leads/scoring-config', configData),
 };
 
+// Org-scoped amenity catalog (2026-06 refactor) — powers the wizard autocomplete + "+ add".
+export const amenityAPI = {
+  getAmenities: () => api.get('/amenities'),
+  createAmenity: (name) => api.post('/amenities', { name }),
+  getAmenityDemand: () => api.get('/amenities/demand'),
+};
+
 // =============================================================================
 // 9. SALES MANAGEMENT SERVICES (/api/sales) - UNCHANGED
 // =============================================================================
