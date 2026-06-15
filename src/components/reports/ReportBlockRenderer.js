@@ -96,18 +96,28 @@ const ReportBlockRenderer = ({ block, images = [], themePreset, accentColor }) =
 
   if (kind === 'table') {
     const rows = Array.isArray(data.rows) ? data.rows : [];
-    const cols = rows.length ? Object.keys(rows[0]) : [];
+    // Prefer explicit column metadata (with units) from the block; otherwise fall back to raw
+    // keys (rendered as text) so any future/legacy table without metadata still displays.
+    const columns = Array.isArray(data.columns) && data.columns.length
+      ? data.columns
+      : (rows.length ? Object.keys(rows[0]).map((k) => ({ key: k, label: k, unit: null })) : []);
+    const isNumeric = (unit) => unit === 'currency' || unit === 'percent' || unit === 'count';
+    const cellText = (value, unit) => (isNumeric(unit) ? formatValue(value, unit) : String(value ?? ''));
     return (
       <Card elevation={0} sx={cardSx}>
         <CardContent>
           <Typography variant="subtitle1" fontWeight={600} gutterBottom sx={{ color: t.text }}>{title || type}</Typography>
           <Table size="small">
             <TableHead>
-              <TableRow>{cols.map((c) => <TableCell key={c} sx={{ color: t.subtext, borderColor: t.surfaceBorder, fontWeight: 700 }}>{c}</TableCell>)}</TableRow>
+              <TableRow>{columns.map((col) => (
+                <TableCell key={col.key} align={isNumeric(col.unit) ? 'right' : 'left'} sx={{ color: t.subtext, borderColor: t.surfaceBorder, fontWeight: 700 }}>{col.label}</TableCell>
+              ))}</TableRow>
             </TableHead>
             <TableBody>
               {rows.map((r, i) => (
-                <TableRow key={i}>{cols.map((c) => <TableCell key={c} sx={{ color: t.text, borderColor: t.surfaceBorder }}>{String(r[c])}</TableCell>)}</TableRow>
+                <TableRow key={i}>{columns.map((col) => (
+                  <TableCell key={col.key} align={isNumeric(col.unit) ? 'right' : 'left'} sx={{ color: t.text, borderColor: t.surfaceBorder }}>{cellText(r[col.key], col.unit)}</TableCell>
+                ))}</TableRow>
               ))}
             </TableBody>
           </Table>
