@@ -25,8 +25,9 @@ const formatValue = (value, unit) => {
   return n.toLocaleString('en-IN');
 };
 
-const ReportBlockRenderer = ({ block, images = [], themePreset }) => {
-  const t = getReportTheme(themePreset);
+const ReportBlockRenderer = ({ block, images = [], themePreset, accentColor }) => {
+  const base = getReportTheme(themePreset);
+  const t = accentColor ? { ...base, accent: accentColor, accentSoft: `${accentColor}14` } : base;
   const colors = t.chartColors;
   const { type, kind, title, config = {}, data = {} } = block || {};
 
@@ -35,7 +36,7 @@ const ReportBlockRenderer = ({ block, images = [], themePreset }) => {
   if (type === 'ai.narrative') {
     const text = data?.text;
     return (
-      <Box sx={{ p: 2, borderRadius: 2, bgcolor: t.accentSoft, borderLeft: `3px solid ${t.accent}` }}>
+      <Box sx={{ p: 2, borderRadius: 2, bgcolor: t.accentSoft }} style={{ borderLeft: `3px solid ${t.accent}` }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5, color: t.accent }}>
           <AutoAwesome fontSize="small" />
           <Typography variant="caption" fontWeight={700}>{title || 'AI Summary'}</Typography>

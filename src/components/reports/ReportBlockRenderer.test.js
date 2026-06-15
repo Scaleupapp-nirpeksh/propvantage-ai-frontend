@@ -41,4 +41,12 @@ describe('ReportBlockRenderer', () => {
     );
     expect(screen.getByText(/narrative is unavailable/i)).toBeInTheDocument();
   });
+
+  it('applies an accentColor override to the AI narrative accent', () => {
+    const { container } = renderWithTheme(
+      <ReportBlockRenderer block={{ type: 'ai.narrative', kind: 'narrative', title: 'S', data: { text: 'Hi' } }} themePreset="clean" accentColor="#e91e63" />
+    );
+    // the narrative left-accent bar uses the override
+    expect(container.innerHTML).toMatch(/#e91e63/i);
+  });
 });
