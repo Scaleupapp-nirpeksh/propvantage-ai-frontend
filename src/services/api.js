@@ -539,6 +539,10 @@ export const leadAPI = {
   // Re-run AI enrichment for a lead. `sources` is { linkedinUrl, companyWebsite, articleUrls[] }
   enrichLead: (id, sources) => api.post(`/leads/${id}/enrich`, { sources }),
 
+  // Status transitions (backend enforces the state machine) + assignment
+  changeStatus: (id, status, note) => api.patch(`/leads/${id}/status`, { status, note }),
+  assignLead: (id, assignedTo) => api.put(`/leads/${id}/assign`, { assignedTo }),
+
   // Lead interactions (confirmed in backend)
   addInteraction: (leadId, interactionData) => api.post(`/leads/${leadId}/interactions`, interactionData),
   getInteractions: (leadId) => api.get(`/leads/${leadId}/interactions`),
