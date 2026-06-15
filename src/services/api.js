@@ -561,6 +561,12 @@ export const leadAPI = {
   updateScoringConfig: (configData) => api.put('/leads/scoring-config', configData),
 };
 
+// Global entity search (2026-06 refactor) — backs the Cmd+K search bar.
+// GET /api/search?q= → { success, query, results:{leads,projects,units,people:[{type,id,label,sublabel,url}]}, total }
+export const searchAPI = {
+  search: (q, params = {}) => api.get('/search', { params: { q, ...params } }),
+};
+
 // Org-scoped amenity catalog (2026-06 refactor) — powers the wizard autocomplete + "+ add".
 export const amenityAPI = {
   getAmenities: () => api.get('/amenities'),
