@@ -31,17 +31,25 @@ import {
   PauseCircle,
 } from '@mui/icons-material';
 
-// Lead statuses
+// Lead statuses (2026-06 refactor). Internal terminal value stays 'Booked';
+// the UI labels it "Booking". 'pending' is the CP intake-queue state.
 export const LEAD_STATUS = {
-  'New':                  { label: 'New',                  color: 'info',    icon: FiberNew },
-  'Contacted':            { label: 'Contacted',            color: 'warning', icon: Phone },
-  'Qualified':            { label: 'Qualified',            color: 'primary', icon: ThumbUp },
-  'Site Visit Scheduled': { label: 'Site Visit Scheduled', color: 'info',    icon: Schedule },
-  'Site Visit Completed': { label: 'Site Visit Completed', color: 'primary', icon: LocationOn },
-  'Negotiating':          { label: 'Negotiating',          color: 'warning', icon: Handshake },
-  'Booked':               { label: 'Booked',               color: 'success', icon: CheckCircle },
-  'Lost':                 { label: 'Lost',                 color: 'error',   icon: Cancel },
-  'Unqualified':          { label: 'Unqualified',          color: 'default', icon: Block },
+  'pending':              { label: 'Pending Review',       color: 'default',   icon: HourglassEmpty },
+  'New':                  { label: 'New',                  color: 'info',      icon: FiberNew },
+  'Qualified':            { label: 'Qualified',            color: 'primary',   icon: ThumbUp },
+  'Site Visit Completed': { label: 'Site Visit Completed', color: 'primary',   icon: LocationOn },
+  'Negotiating':          { label: 'Negotiating',          color: 'warning',   icon: Handshake },
+  'Booked':               { label: 'Booking',              color: 'success',   icon: CheckCircle },
+  'Lost':                 { label: 'Lost',                 color: 'error',     icon: Cancel },
+  'Revived':              { label: 'Revived',              color: 'secondary', icon: PlayArrow },
+};
+
+// Lead priority (2026-06 refactor — replaces Hot/Warm/Cold "temperature").
+export const LEAD_PRIORITY = {
+  'High':     { label: 'High',     color: 'error' },
+  'Medium':   { label: 'Medium',   color: 'warning' },
+  'Low':      { label: 'Low',      color: 'info' },
+  'Very Low': { label: 'Very Low', color: 'default' },
 };
 
 // Unit statuses
@@ -131,6 +139,7 @@ export const getStatusConfig = (type, status) => {
     payment: PAYMENT_STATUS,
     task: TASK_STATUS,
     approval: APPROVAL_STATUS,
+    priority: LEAD_PRIORITY,
   };
   return map[type]?.[status] || { label: status || '-', color: 'default', icon: null };
 };

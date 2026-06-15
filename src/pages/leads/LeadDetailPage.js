@@ -872,7 +872,7 @@ const LeadOverview = ({ lead }) => {
               <Handshake color="primary" />
               Channel Partner
             </Typography>
-            <ChannelPartnerAttributionSummary attribution={lead.channelPartnerAttribution} />
+            <ChannelPartnerAttributionSummary attribution={lead?.channelPartnerAttribution} />
           </CardContent>
         </Card>
       </Grid>
