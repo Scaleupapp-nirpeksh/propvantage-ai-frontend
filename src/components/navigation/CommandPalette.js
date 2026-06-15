@@ -3,16 +3,20 @@ import { useNavigate } from 'react-router-dom';
 import {
   Dialog, Box, TextField, Typography, List, ListItemButton,
   ListItemIcon, ListItemText, Chip, InputAdornment, Fade, alpha, useTheme,
+  CircularProgress,
 } from '@mui/material';
 import {
   Search, Dashboard, Business, People, AttachMoney, Analytics,
-  MonetizationOn, Settings, Add, TrendingUp, Receipt, Payment,
-  Assessment, PersonAdd, NoteAdd, Handshake, TaskAlt, ViewKanban,
+  MonetizationOn, Settings, TrendingUp, Receipt, Payment,
+  Assessment, Handshake, TaskAlt, ViewKanban,
   GroupWork, Assignment, Notifications, Leaderboard, Chat as ChatIcon,
-  Insights, AutoGraph, PsychologyAlt,
+  Insights, AutoGraph, Person, MeetingRoom,
 } from '@mui/icons-material';
+import { searchAPI } from '../../services/api';
 
-// Static page list
+// Static page list — kept as a secondary "Go to page" group (navigating to a
+// page by name is search, not an action). The static quick-ACTIONS list was
+// removed (2026-06 refactor) in favour of live entity search via /api/search.
 const PAGES = [
   { label: 'Dashboard', path: '/dashboard', icon: Dashboard, section: 'Pages' },
   { label: 'All Projects', path: '/projects', icon: Business, section: 'Pages' },
@@ -51,17 +55,26 @@ const PAGES = [
   { label: 'AI Analysis', path: '/competitive-analysis/analysis', icon: AutoGraph, section: 'Pages', beta: true },
 ];
 
-const ACTIONS = [
-  { label: 'Create New Lead', path: '/leads/create', icon: PersonAdd, section: 'Actions' },
-  { label: 'Create New Project', path: '/projects/create', icon: Add, section: 'Actions' },
-  { label: 'New Booking / Sale', path: '/sales/create', icon: NoteAdd, section: 'Actions' },
-  { label: 'Record Payment', path: '/payments/record', icon: Payment, section: 'Actions' },
-  { label: 'Generate Invoice', path: '/sales/invoices/generate', icon: Receipt, section: 'Actions' },
-  { label: 'Create New Task', path: '/tasks/create', icon: TaskAlt, section: 'Actions' },
-  { label: 'Add Competitor', path: '/competitive-analysis/competitors/new', icon: Add, section: 'Actions', beta: true },
-  { label: 'Run AI Research', path: '/competitive-analysis/research', icon: PsychologyAlt, section: 'Actions', beta: true },
-  { label: 'Import Competitor CSV', path: '/competitive-analysis/import', icon: NoteAdd, section: 'Actions', beta: true },
+// Icon per entity-result group.
+const ENTITY_ICONS = {
+  leads: People,
+  projects: Business,
+  units: MeetingRoom,
+  people: Person,
+};
+
+// Display order + headers for the live entity groups.
+const ENTITY_GROUPS = [
+  { key: 'leads', label: 'Leads' },
+  { key: 'projects', label: 'Projects' },
+  { key: 'units', label: 'Units' },
+  { key: 'people', label: 'People' },
 ];
+
+const EMPTY_RESULTS = { leads: [], projects: [], units: [], people: [] };
+
+const SEARCH_DEBOUNCE_MS = 250;
+const MIN_QUERY_LEN = 2;
 
 const RECENT_KEY = 'propvantage_recent_pages';
 
@@ -80,71 +93,160 @@ const addRecentPage = (path, label) => {
 };
 
 /**
- * Cmd+K command palette for searching pages and quick actions.
+ * Cmd+K command palette: live natural-language-ish entity search.
+ *
+ * Wired to GET /api/search — typing a name/keyword surfaces grouped live
+ * results (Leads / Projects / Units / People) that navigate to the entity on
+ * select. The local PAGES list is kept only as a secondary "Pages" nav group.
  */
 const CommandPalette = ({ open, onClose }) => {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [results, setResults] = useState(EMPTY_RESULTS);
+  const [searching, setSearching] = useState(false);
   const navigate = useNavigate();
   const theme = useTheme();
   const inputRef = useRef(null);
 
-  // Filter results
-  const results = useMemo(() => {
-    const q = query.toLowerCase().trim();
-    if (!q) {
-      const recent = getRecentPages();
-      const recentItems = recent.map(r => {
-        const page = PAGES.find(p => p.path === r.path);
-        return page ? { ...page, section: 'Recent' } : { label: r.label, path: r.path, icon: Dashboard, section: 'Recent' };
-      });
-      return [...recentItems, ...ACTIONS.slice(0, 3)];
+  // Monotonic request counter — only the latest in-flight query's response is
+  // applied, so out-of-order/stale responses are ignored.
+  const reqIdRef = useRef(0);
+
+  // Debounced live entity search. Fires only for queries >= MIN_QUERY_LEN; for
+  // shorter queries we clear the entity results (the Pages group still filters
+  // locally below).
+  useEffect(() => {
+    const q = query.trim();
+    if (q.length < MIN_QUERY_LEN) {
+      reqIdRef.current += 1; // invalidate any in-flight response
+      setSearching(false);
+      setResults(EMPTY_RESULTS);
+      return;
     }
-    const all = [...PAGES, ...ACTIONS];
-    return all.filter(item => item.label.toLowerCase().includes(q)).slice(0, 10);
+
+    const myReqId = ++reqIdRef.current;
+    setSearching(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await searchAPI.search(q);
+        // Drop stale responses — a newer query has superseded this one.
+        if (myReqId !== reqIdRef.current) return;
+        setResults(res?.data?.results || EMPTY_RESULTS);
+      } catch {
+        if (myReqId !== reqIdRef.current) return;
+        setResults(EMPTY_RESULTS);
+      } finally {
+        if (myReqId === reqIdRef.current) setSearching(false);
+      }
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => clearTimeout(timer);
   }, [query]);
 
-  // Reset on open
+  // Reset on open.
   useEffect(() => {
     if (open) {
       setQuery('');
       setSelectedIndex(0);
+      setResults(EMPTY_RESULTS);
+      setSearching(false);
+      reqIdRef.current += 1;
       setTimeout(() => inputRef.current?.focus(), 100);
     }
   }, [open]);
 
-  // Keyboard navigation
+  // Pages filtered by the current query (secondary nav group). When the query
+  // is empty we show recently-visited pages instead.
+  const pageRows = useMemo(() => {
+    const q = query.toLowerCase().trim();
+    if (!q) {
+      return getRecentPages().map((r) => {
+        const page = PAGES.find((p) => p.path === r.path);
+        return page
+          ? { ...page, section: 'Recent' }
+          : { label: r.label, path: r.path, icon: Dashboard, section: 'Recent' };
+      });
+    }
+    return PAGES.filter((p) => p.label.toLowerCase().includes(q)).slice(0, 8);
+  }, [query]);
+
+  // Build the grouped, flattened list of visible rows. Each row is normalised
+  // to { key, label, sublabel, icon, target, beta, isPage } so keyboard nav and
+  // selection work uniformly across entity results and pages.
+  const groups = useMemo(() => {
+    const out = [];
+
+    ENTITY_GROUPS.forEach(({ key, label }) => {
+      const items = Array.isArray(results[key]) ? results[key] : [];
+      if (items.length === 0) return;
+      out.push({
+        header: label,
+        rows: items.map((item) => ({
+          key: `${key}-${item.id}`,
+          label: item.label,
+          sublabel: item.sublabel,
+          icon: ENTITY_ICONS[key] || Search,
+          target: item.url,
+          isPage: false,
+        })),
+      });
+    });
+
+    if (pageRows.length > 0) {
+      out.push({
+        header: pageRows[0].section === 'Recent' ? 'Recent' : 'Pages',
+        rows: pageRows.map((p) => ({
+          key: `page-${p.path}`,
+          label: p.label,
+          sublabel: undefined,
+          icon: p.icon || Dashboard,
+          target: p.path,
+          beta: p.beta,
+          isPage: true,
+          pageLabel: p.label,
+        })),
+      });
+    }
+
+    return out;
+  }, [results, pageRows]);
+
+  // Flattened visible rows (in render order) for keyboard up/down/Enter.
+  const flatRows = useMemo(() => groups.flatMap((g) => g.rows), [groups]);
+
+  // Keep the selection in-bounds whenever the visible list changes.
+  useEffect(() => {
+    setSelectedIndex((i) => {
+      if (flatRows.length === 0) return 0;
+      return Math.min(i, flatRows.length - 1);
+    });
+  }, [flatRows.length]);
+
+  const handleSelect = useCallback((row) => {
+    if (!row || !row.target) return;
+    if (row.isPage) addRecentPage(row.target, row.pageLabel || row.label);
+    navigate(row.target);
+    onClose();
+  }, [navigate, onClose]);
+
+  // Keyboard navigation across the flattened visible rows.
   const handleKeyDown = useCallback((e) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setSelectedIndex(i => Math.min(i + 1, results.length - 1));
+      setSelectedIndex((i) => Math.min(i + 1, flatRows.length - 1));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      setSelectedIndex(i => Math.max(i - 1, 0));
-    } else if (e.key === 'Enter' && results[selectedIndex]) {
+      setSelectedIndex((i) => Math.max(i - 1, 0));
+    } else if (e.key === 'Enter' && flatRows[selectedIndex]) {
       e.preventDefault();
-      const item = results[selectedIndex];
-      addRecentPage(item.path, item.label);
-      navigate(item.path);
-      onClose();
+      handleSelect(flatRows[selectedIndex]);
     }
-  }, [results, selectedIndex, navigate, onClose]);
+  }, [flatRows, selectedIndex, handleSelect]);
 
-  const handleSelect = (item) => {
-    addRecentPage(item.path, item.label);
-    navigate(item.path);
-    onClose();
-  };
-
-  // Group results by section
-  const sections = useMemo(() => {
-    const map = {};
-    results.forEach(r => {
-      if (!map[r.section]) map[r.section] = [];
-      map[r.section].push(r);
-    });
-    return map;
-  }, [results]);
+  const trimmedQuery = query.trim();
+  const hasQuery = trimmedQuery.length >= MIN_QUERY_LEN;
+  // Empty state only once a real (>=2 char) query has settled with no rows.
+  const showEmptyState = hasQuery && !searching && flatRows.length === 0;
 
   let flatIndex = 0;
 
@@ -171,7 +273,7 @@ const CommandPalette = ({ open, onClose }) => {
         <TextField
           inputRef={inputRef}
           fullWidth
-          placeholder="Search pages, actions..."
+          placeholder="Search leads, projects, people…"
           value={query}
           onChange={(e) => { setQuery(e.target.value); setSelectedIndex(0); }}
           onKeyDown={handleKeyDown}
@@ -185,6 +287,7 @@ const CommandPalette = ({ open, onClose }) => {
             ),
             endAdornment: (
               <InputAdornment position="end">
+                {searching && <CircularProgress size={16} sx={{ mr: 1.5 }} />}
                 <Chip label="ESC" size="small" sx={{ mr: 1, height: 22, fontSize: '0.688rem' }} />
               </InputAdornment>
             ),
@@ -194,28 +297,36 @@ const CommandPalette = ({ open, onClose }) => {
 
         {/* Results */}
         <Box sx={{ borderTop: '1px solid', borderColor: 'divider', maxHeight: 'calc(60vh - 60px)', overflow: 'auto' }}>
-          {results.length === 0 ? (
+          {showEmptyState ? (
             <Box sx={{ py: 4, textAlign: 'center' }}>
-              <Typography variant="body2" color="text.secondary">No results found</Typography>
+              <Typography variant="body2" color="text.secondary">
+                No results for “{trimmedQuery}”
+              </Typography>
+            </Box>
+          ) : flatRows.length === 0 ? (
+            <Box sx={{ py: 4, textAlign: 'center' }}>
+              <Typography variant="body2" color="text.secondary">
+                {searching ? 'Searching…' : 'Type to search leads, projects, units and people'}
+              </Typography>
             </Box>
           ) : (
             <List dense sx={{ py: 1 }}>
-              {Object.entries(sections).map(([section, items]) => (
-                <React.Fragment key={section}>
+              {groups.map((group) => (
+                <React.Fragment key={group.header}>
                   <Typography
                     variant="overline"
                     sx={{ px: 2, pt: 1, pb: 0.5, display: 'block', color: 'text.secondary' }}
                   >
-                    {section}
+                    {group.header}
                   </Typography>
-                  {items.map((item) => {
+                  {group.rows.map((row) => {
                     const idx = flatIndex++;
-                    const Icon = item.icon;
+                    const Icon = row.icon;
                     return (
                       <ListItemButton
-                        key={item.path + item.label}
+                        key={row.key}
                         selected={idx === selectedIndex}
-                        onClick={() => handleSelect(item)}
+                        onClick={() => handleSelect(row)}
                         sx={{
                           mx: 1,
                           borderRadius: 1.5,
@@ -226,17 +337,16 @@ const CommandPalette = ({ open, onClose }) => {
                         }}
                       >
                         <ListItemIcon sx={{ minWidth: 36 }}>
-                          <Icon sx={{ fontSize: 18, color: item.section === 'Actions' ? 'primary.main' : 'text.secondary' }} />
+                          <Icon sx={{ fontSize: 18, color: 'text.secondary' }} />
                         </ListItemIcon>
                         <ListItemText
-                          primary={item.label}
+                          primary={row.label}
+                          secondary={row.sublabel || undefined}
                           primaryTypographyProps={{ fontSize: '0.813rem', fontWeight: idx === selectedIndex ? 600 : 400 }}
+                          secondaryTypographyProps={{ fontSize: '0.719rem', color: 'text.secondary', noWrap: true }}
                         />
-                        {item.beta && (
+                        {row.beta && (
                           <Chip label="BETA" size="small" sx={{ height: 18, fontSize: '0.55rem', fontWeight: 700, bgcolor: 'warning.main', color: '#fff', mr: 0.5 }} />
-                        )}
-                        {item.section === 'Actions' && (
-                          <Chip label="Action" size="small" color="primary" sx={{ height: 20, fontSize: '0.625rem' }} />
                         )}
                       </ListItemButton>
                     );
