@@ -611,9 +611,9 @@ const LeadConversionTab = ({ data, loading }) => {
   const breakdown = conversionData.leadBreakdown || {};
 
   const pieData = [
-    { name: 'Hot', value: breakdown.hot || 0 },
-    { name: 'Warm', value: breakdown.warm || 0 },
-    { name: 'Cold', value: breakdown.cold || 0 },
+    { name: 'High', value: breakdown.hot || 0 },
+    { name: 'Medium', value: breakdown.warm || 0 },
+    { name: 'Low', value: breakdown.cold || 0 },
   ].filter(d => d.value > 0);
 
   const PIE_COLORS = ['#d32f2f', '#ed6c02', '#0288d1'];
@@ -654,12 +654,12 @@ const LeadConversionTab = ({ data, loading }) => {
       </Grid>
       <Grid item xs={12} sm={6} md={3}>
         <PredictiveKPICard
-          title="Hot Leads"
+          title="High Priority Leads"
           value={breakdown.hot || 0}
           icon={TrendingUp}
           color="error"
           loading={loading}
-          subtitle={`${breakdown.warm || 0} warm, ${breakdown.cold || 0} cold`}
+          subtitle={`${breakdown.warm || 0} medium, ${breakdown.cold || 0} low priority`}
         />
       </Grid>
 
@@ -667,7 +667,7 @@ const LeadConversionTab = ({ data, loading }) => {
       <Grid item xs={12} md={4}>
         <Card>
           <CardContent>
-            <Typography variant="h6" gutterBottom>Lead Temperature Breakdown</Typography>
+            <Typography variant="h6" gutterBottom>Lead Score Bands</Typography>
             {loading ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', height: 300, alignItems: 'center' }}><CircularProgress /></Box>
             ) : pieData.length === 0 ? (

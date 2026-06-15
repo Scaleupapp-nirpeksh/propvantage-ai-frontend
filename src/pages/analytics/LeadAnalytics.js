@@ -38,7 +38,7 @@ const TIME_PERIODS = [
 ];
 
 // Funnel order from top to bottom
-const FUNNEL_STAGES = ['New', 'Contacted', 'Qualified', 'Site Visit Scheduled', 'Site Visit Completed', 'Negotiating', 'Booked'];
+const FUNNEL_STAGES = ['New', 'Qualified', 'Site Visit Completed', 'Negotiating', 'Booked'];
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -353,7 +353,7 @@ const TeamProjectTab = ({ leads, loading }) => {
       if (!map[id]) map[id] = { id, name, total: 0, qualified: 0, booked: 0, lost: 0, avgScore: 0, scores: [] };
       map[id].total += 1;
       map[id].scores.push(lead.score || 0);
-      if (['Qualified', 'Site Visit Scheduled', 'Site Visit Completed', 'Negotiating', 'Booked'].includes(lead.status)) map[id].qualified += 1;
+      if (['Qualified', 'Site Visit Completed', 'Negotiating', 'Booked'].includes(lead.status)) map[id].qualified += 1;
       if (lead.status === 'Booked') map[id].booked += 1;
       if (lead.status === 'Lost') map[id].lost += 1;
     });
@@ -688,14 +688,14 @@ const LeadAnalytics = () => {
 
   // KPIs
   const totalLeads = filteredLeads.length;
-  const qualifiedCount = filteredLeads.filter(l => ['Qualified', 'Site Visit Scheduled', 'Site Visit Completed', 'Negotiating', 'Booked'].includes(l.status)).length;
+  const qualifiedCount = filteredLeads.filter(l => ['Qualified', 'Site Visit Completed', 'Negotiating', 'Booked'].includes(l.status)).length;
   const bookedCount = filteredLeads.filter(l => l.status === 'Booked').length;
   const qualRate = totalLeads > 0 ? ((qualifiedCount / totalLeads) * 100).toFixed(1) : '0';
   const convRate = totalLeads > 0 ? ((bookedCount / totalLeads) * 100).toFixed(1) : '0';
   const avgScore = totalLeads > 0 ? Math.round(filteredLeads.reduce((s, l) => s + (l.score || 0), 0) / totalLeads) : 0;
 
   // Filter config
-  const statusOptions = ['New', 'Contacted', 'Qualified', 'Site Visit Scheduled', 'Site Visit Completed', 'Negotiating', 'Booked', 'Lost', 'Unqualified'];
+  const statusOptions = ['New', 'Qualified', 'Site Visit Completed', 'Negotiating', 'Booked', 'Lost', 'Revived'];
   const filterConfig = [
     { key: 'search', type: 'search', label: 'Search', placeholder: 'Search leads...' },
     { key: 'period', type: 'select', label: 'Period', options: TIME_PERIODS },

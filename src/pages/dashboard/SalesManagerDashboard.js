@@ -1203,7 +1203,7 @@ const SalesManagerDashboard = () => {
               {dashboardData.kpis.hotLeads}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              Hot Leads
+              Priority Leads
             </Typography>
           </Paper>
         </Grid>

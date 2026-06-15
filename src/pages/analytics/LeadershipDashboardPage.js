@@ -289,7 +289,7 @@ const SalesPipelineSection = ({ data, loading, chartColors }) => {
   const s = data || {};
 
   const funnelData = useMemo(() => {
-    const order = ['New', 'Contacted', 'Qualified', 'Site Visit Scheduled', 'Site Visit Completed', 'Negotiating', 'Booked'];
+    const order = ['New', 'Qualified', 'Site Visit Completed', 'Negotiating', 'Booked'];
     return order.map((stage, i) => ({
       name: stage, count: safeVal(s.leadsByStatus?.[stage]), fill: chartColors[i % chartColors.length],
     }));
