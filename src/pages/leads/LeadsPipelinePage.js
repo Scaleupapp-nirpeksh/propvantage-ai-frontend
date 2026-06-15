@@ -1,6 +1,6 @@
 // File: src/pages/leads/LeadsPipelinePage.js
-// Description: Interactive Kanban-style sales pipeline with drag-and-drop lead management
-// Version: 1.0 - Complete pipeline visualization with real-time updates and analytics
+// Description: Interactive Kanban-style funnel with drag-and-drop lead management
+// Version: 1.0 - Complete funnel visualization with real-time updates and analytics
 // Location: src/pages/leads/LeadsPipelinePage.js
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -65,6 +65,7 @@ import { useSnackbar } from 'notistack';
 
 import { useAuth } from '../../context/AuthContext';
 import { leadAPI, projectAPI } from '../../services/api';
+import { LEAD_PRIORITY } from '../../constants/statusConfig';
 
 // Pipeline stage configuration
 const PIPELINE_STAGES = [
@@ -142,21 +143,12 @@ const getTimeAgo = (date) => {
   return `${diffDays}d ago`;
 };
 
-const getPriorityColor = (priority) => {
-  switch (priority?.toLowerCase()) {
-    case 'critical': return 'error';
-    case 'high': return 'warning';
-    case 'medium': return 'info';
-    case 'low': return 'success';
-    default: return 'default';
-  }
-};
 
 const getScoreColor = (score) => {
-  if (score >= 90) return '#f44336'; // Hot - Red
-  if (score >= 75) return '#ff9800'; // Warm - Orange
-  if (score >= 50) return '#2196f3'; // Moderate - Blue
-  return '#9e9e9e'; // Cold - Grey
+  if (score >= 90) return '#f44336'; // 90+
+  if (score >= 75) return '#ff9800'; // 75+
+  if (score >= 50) return '#2196f3'; // 50+
+  return '#9e9e9e'; // <50
 };
 
 // Lead Card Component
@@ -280,7 +272,7 @@ const LeadCard = ({ lead, onCardClick, onStatusChange, onQuickAction }) => {
           <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 1 }}>
             <Chip
               label={lead.priority}
-              color={getPriorityColor(lead.priority)}
+              color={(LEAD_PRIORITY[lead.priority] || {}).color || 'default'}
               size="small"
               variant="outlined"
               sx={{ height: 18, fontSize: '0.7rem' }}
@@ -788,7 +780,7 @@ const LeadsPipelinePage = () => {
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
         <CircularProgress size={50} />
         <Typography variant="h6" sx={{ ml: 2 }}>
-          Loading sales pipeline...
+          Loading funnel...
         </Typography>
       </Box>
     );
@@ -936,10 +928,10 @@ const LeadsPipelinePage = () => {
                   label="Priority"
                 >
                   <MenuItem value="">All Priorities</MenuItem>
-                  <MenuItem value="Critical">Critical</MenuItem>
                   <MenuItem value="High">High</MenuItem>
                   <MenuItem value="Medium">Medium</MenuItem>
                   <MenuItem value="Low">Low</MenuItem>
+                  <MenuItem value="Very Low">Very Low</MenuItem>
                 </Select>
               </FormControl>
 
