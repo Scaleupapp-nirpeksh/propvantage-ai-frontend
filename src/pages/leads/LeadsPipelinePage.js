@@ -27,7 +27,6 @@ import {
   FormControl,
   InputLabel,
   Select,
-  Divider,
   Badge,
   Zoom,
   useTheme,
@@ -36,27 +35,31 @@ import {
   ToggleButtonGroup,
   ToggleButton,
   Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Stack,
+  Autocomplete,
 } from '@mui/material';
 import {
   Add,
   Search,
   MoreVert,
   Phone,
-  Email,
   Person,
   Business,
   Warning,
   CheckCircle,
   Star,
   LocationOn,
-  AttachMoney,
-  Visibility,
   Edit,
   Refresh,
   Analytics,
   DragIndicator,
   SwapHoriz,
-  WhatsApp,
+  SwapVert,
+  PersonAdd,
   Clear,
   ViewKanban,
   TableRows,
@@ -64,8 +67,15 @@ import {
 import { useSnackbar } from 'notistack';
 
 import { useAuth } from '../../context/AuthContext';
-import { leadAPI, projectAPI } from '../../services/api';
+import { leadAPI, projectAPI, userAPI } from '../../services/api';
 import { LEAD_PRIORITY } from '../../constants/statusConfig';
+import { allowedNextStatuses, statusLabel } from '../../utils/leadStatusMachine';
+
+// Build a display name for an org user / assignee object.
+const userLabel = (u) => {
+  if (!u) return '';
+  return `${u.firstName || ''} ${u.lastName || ''}`.trim();
+};
 
 // Pipeline stage configuration
 const PIPELINE_STAGES = [
@@ -131,19 +141,6 @@ const formatCurrency = (amount) => {
   return `₹${amount?.toLocaleString() || 0}`;
 };
 
-const getTimeAgo = (date) => {
-  if (!date) return 'Never';
-  const now = new Date();
-  const past = new Date(date);
-  const diffMs = now - past;
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffHours < 24) return `${diffHours}h ago`;
-  return `${diffDays}d ago`;
-};
-
-
 const getScoreColor = (score) => {
   if (score >= 90) return '#f44336'; // 90+
   if (score >= 75) return '#ff9800'; // 75+
@@ -152,10 +149,12 @@ const getScoreColor = (score) => {
 };
 
 // Lead Card Component
-const LeadCard = ({ lead, onCardClick, onStatusChange, onQuickAction }) => {
+const LeadCard = ({ lead, onCardClick, onMenuAction }) => {
   const theme = useTheme();
   const [anchorEl, setAnchorEl] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
+
+  const projectName = lead.project?.name || lead.projectName || '';
 
   const handleMenuClick = (event) => {
     event.stopPropagation();
@@ -168,7 +167,7 @@ const LeadCard = ({ lead, onCardClick, onStatusChange, onQuickAction }) => {
 
   const handleAction = (action) => {
     handleMenuClose();
-    onQuickAction(action, lead);
+    onMenuAction(action, lead);
   };
 
   // Drag handlers
@@ -204,22 +203,17 @@ const LeadCard = ({ lead, onCardClick, onStatusChange, onQuickAction }) => {
         }}
       >
         <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-          {/* Card Header */}
+          {/* Card Header: avatar + name, score chip, three-dots */}
           <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 1 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
               <Avatar sx={{ width: 32, height: 32, fontSize: '0.875rem' }}>
                 {lead.firstName?.charAt(0)}{lead.lastName?.charAt(0)}
               </Avatar>
-              <Box>
-                <Typography variant="subtitle2" sx={{ fontWeight: 600, lineHeight: 1.2 }}>
-                  {lead.firstName} {lead.lastName}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {getTimeAgo(lead.createdAt)}
-                </Typography>
-              </Box>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, lineHeight: 1.2 }} noWrap>
+                {lead.firstName} {lead.lastName}
+              </Typography>
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
               <Chip
                 size="small"
                 label={lead.score || 0}
@@ -238,37 +232,7 @@ const LeadCard = ({ lead, onCardClick, onStatusChange, onQuickAction }) => {
             </Box>
           </Box>
 
-          {/* Contact Info */}
-          <Box sx={{ mb: 1.5 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
-              <Phone sx={{ fontSize: 12 }} />
-              {lead.phone}
-            </Typography>
-            {lead.email && (
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Email sx={{ fontSize: 12 }} />
-                {lead.email}
-              </Typography>
-            )}
-          </Box>
-
-          {/* Project & Budget */}
-          <Box sx={{ mb: 1.5 }}>
-            {lead.project?.name && (
-              <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
-                <Business sx={{ fontSize: 12 }} />
-                <strong>{lead.project.name}</strong>
-              </Typography>
-            )}
-            {lead.requirements?.budgetRange && (
-              <Typography variant="caption" color="primary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <AttachMoney sx={{ fontSize: 12 }} />
-                {lead.requirements.budgetRange}
-              </Typography>
-            )}
-          </Box>
-
-          {/* Tags & Priority */}
+          {/* Priority */}
           <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 1 }}>
             <Chip
               label={lead.priority}
@@ -277,36 +241,23 @@ const LeadCard = ({ lead, onCardClick, onStatusChange, onQuickAction }) => {
               variant="outlined"
               sx={{ height: 18, fontSize: '0.7rem' }}
             />
-            {lead.source && (
-              <Chip
-                label={lead.source}
-                size="small"
-                variant="outlined"
-                sx={{ height: 18, fontSize: '0.7rem' }}
-              />
-            )}
           </Box>
 
-          {/* Follow-up Alert */}
-          {lead.followUpSchedule?.isOverdue && (
-            <Alert severity="warning" sx={{ p: 0.5, fontSize: '0.75rem' }}>
-              <Typography variant="caption">
-                Follow-up overdue by {lead.followUpSchedule.overdueBy} days
+          {/* Project & Phone */}
+          <Box>
+            {projectName && (
+              <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
+                <Business sx={{ fontSize: 12 }} />
+                <strong>{projectName}</strong>
               </Typography>
-            </Alert>
-          )}
-
-          {/* Assigned To */}
-          {lead.assignedTo && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1 }}>
-              <Avatar sx={{ width: 16, height: 16, fontSize: '0.6rem' }}>
-                {lead.assignedTo.firstName?.charAt(0)}
-              </Avatar>
-              <Typography variant="caption" color="text.secondary">
-                {lead.assignedTo.firstName}
+            )}
+            {lead.phone && (
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Phone sx={{ fontSize: 12 }} />
+                {lead.phone}
               </Typography>
-            </Box>
-          )}
+            )}
+          </Box>
 
           {/* Drag Indicator */}
           <Box sx={{ display: 'flex', justifyContent: 'center', mt: 1, opacity: 0.3 }}>
@@ -321,26 +272,17 @@ const LeadCard = ({ lead, onCardClick, onStatusChange, onQuickAction }) => {
           onClose={handleMenuClose}
           onClick={(e) => e.stopPropagation()}
         >
-          <MenuItem onClick={() => handleAction('view')}>
-            <ListItemIcon><Visibility fontSize="small" /></ListItemIcon>
-            <ListItemText>View Details</ListItemText>
-          </MenuItem>
-          <MenuItem onClick={() => handleAction('call')}>
-            <ListItemIcon><Phone fontSize="small" /></ListItemIcon>
-            <ListItemText>Call Lead</ListItemText>
-          </MenuItem>
-          <MenuItem onClick={() => handleAction('email')}>
-            <ListItemIcon><Email fontSize="small" /></ListItemIcon>
-            <ListItemText>Send Email</ListItemText>
-          </MenuItem>
-          <MenuItem onClick={() => handleAction('whatsapp')}>
-            <ListItemIcon><WhatsApp fontSize="small" /></ListItemIcon>
-            <ListItemText>WhatsApp</ListItemText>
-          </MenuItem>
-          <Divider />
           <MenuItem onClick={() => handleAction('edit')}>
             <ListItemIcon><Edit fontSize="small" /></ListItemIcon>
             <ListItemText>Edit Lead</ListItemText>
+          </MenuItem>
+          <MenuItem onClick={() => handleAction('status')}>
+            <ListItemIcon><SwapVert fontSize="small" /></ListItemIcon>
+            <ListItemText>Change Status</ListItemText>
+          </MenuItem>
+          <MenuItem onClick={() => handleAction('assign')}>
+            <ListItemIcon><PersonAdd fontSize="small" /></ListItemIcon>
+            <ListItemText>Assign / Reassign</ListItemText>
           </MenuItem>
         </Menu>
       </Card>
@@ -348,8 +290,215 @@ const LeadCard = ({ lead, onCardClick, onStatusChange, onQuickAction }) => {
   );
 };
 
+// Change Status Dialog — mirrors the lead detail page: a Select of allowed next
+// statuses (raw value, labelled via statusLabel) + optional note. Saves via
+// leadAPI.changeStatus then refreshes the board.
+const ChangeStatusDialog = ({ open, lead, onClose, onRefresh }) => {
+  const { enqueueSnackbar } = useSnackbar();
+  const nextStatuses = allowedNextStatuses(lead?.status);
+  const [status, setStatus] = useState('');
+  const [note, setNote] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  // Reset the form each time the dialog opens.
+  useEffect(() => {
+    if (open) {
+      setStatus('');
+      setNote('');
+      setSaving(false);
+    }
+  }, [open]);
+
+  const handleSave = async () => {
+    if (!status) return;
+    try {
+      setSaving(true);
+      await leadAPI.changeStatus(lead._id, status, note.trim() || undefined);
+      enqueueSnackbar(`Status changed to "${statusLabel(status)}".`, { variant: 'success' });
+      onClose();
+      onRefresh();
+    } catch (error) {
+      enqueueSnackbar(
+        error.response?.data?.message || 'Failed to change status. Please try again.',
+        { variant: 'error' }
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle>Change Status</DialogTitle>
+      <DialogContent>
+        {nextStatuses.length === 0 ? (
+          <Alert severity="info" sx={{ mt: 1 }}>
+            No further transitions available.
+          </Alert>
+        ) : (
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              Current status: <strong>{statusLabel(lead?.status)}</strong>
+            </Typography>
+            <FormControl fullWidth>
+              <InputLabel id="pipeline-change-status-label">New Status</InputLabel>
+              <Select
+                labelId="pipeline-change-status-label"
+                value={status}
+                label="New Status"
+                onChange={(e) => setStatus(e.target.value)}
+              >
+                {nextStatuses.map((s) => (
+                  <MenuItem key={s} value={s}>{statusLabel(s)}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <TextField
+              fullWidth
+              label="Note (optional)"
+              placeholder="Add context for this status change..."
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              multiline
+              rows={3}
+            />
+          </Stack>
+        )}
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Cancel</Button>
+        {nextStatuses.length > 0 && (
+          <Button
+            onClick={handleSave}
+            variant="contained"
+            disabled={!status || saving}
+            startIcon={saving ? <CircularProgress size={16} /> : null}
+          >
+            Save
+          </Button>
+        )}
+      </DialogActions>
+    </Dialog>
+  );
+};
+
+// Assign / Reassign Dialog — Autocomplete of org users (robust envelope
+// handling), preselected to the current assignee. Saves via leadAPI.assignLead
+// then refreshes the board.
+const AssignLeadDialog = ({ open, lead, onClose, onRefresh }) => {
+  const { enqueueSnackbar } = useSnackbar();
+  const { user } = useAuth();
+  const [users, setUsers] = useState([]);
+  const [selected, setSelected] = useState(null);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    let active = true;
+    (async () => {
+      setLoadingUsers(true);
+      let team = [];
+      try {
+        const usersRes = await userAPI.getUsers({ limit: 200 });
+        const rawUsers =
+          usersRes?.data?.data?.users ||
+          usersRes?.data?.users ||
+          (Array.isArray(usersRes?.data?.data) ? usersRes.data.data : null) ||
+          (Array.isArray(usersRes?.data) ? usersRes.data : null) ||
+          [];
+        team = (Array.isArray(rawUsers) ? rawUsers : [])
+          .filter((u) => u && (u._id || u.id))
+          .map((u) => ({ _id: u._id || u.id, firstName: u.firstName || '', lastName: u.lastName || '', role: u.role || '' }));
+      } catch {
+        // Non-fatal — keep the current user as the only option below.
+      }
+      if (!team.length && user) {
+        team = [{ _id: user._id || user.id, firstName: user.firstName || '', lastName: user.lastName || '', role: user.role || '' }];
+      }
+      if (!active) return;
+      setUsers(team);
+      const currentId = lead?.assignedTo?._id || lead?.assignedTo?.id || lead?.assignedTo;
+      setSelected(team.find((u) => u._id === currentId) || null);
+      setLoadingUsers(false);
+    })();
+    return () => { active = false; };
+  }, [open, lead, user]);
+
+  const handleSave = async () => {
+    if (!selected?._id) return;
+    try {
+      setSaving(true);
+      await leadAPI.assignLead(lead._id, selected._id);
+      enqueueSnackbar(`Lead assigned to ${userLabel(selected) || 'selected user'}.`, { variant: 'success' });
+      onClose();
+      onRefresh();
+    } catch (error) {
+      enqueueSnackbar(
+        error.response?.data?.message || 'Failed to assign lead. Please try again.',
+        { variant: 'error' }
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle>Assign / Reassign Lead</DialogTitle>
+      <DialogContent>
+        <Stack spacing={2} sx={{ mt: 1 }}>
+          <Autocomplete
+            options={users}
+            loading={loadingUsers}
+            value={selected}
+            onChange={(e, value) => setSelected(value)}
+            isOptionEqualToValue={(option, value) => option._id === value._id}
+            getOptionLabel={(option) => {
+              const name = userLabel(option);
+              return option.role ? `${name} (${option.role})` : name;
+            }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Assign To"
+                placeholder="Select a team member"
+                InputProps={{
+                  ...params.InputProps,
+                  endAdornment: (
+                    <>
+                      {loadingUsers ? <CircularProgress color="inherit" size={16} /> : null}
+                      {params.InputProps.endAdornment}
+                    </>
+                  ),
+                }}
+              />
+            )}
+          />
+          {lead?.assignedTo && (
+            <Typography variant="caption" color="text.secondary">
+              Currently assigned to: {userLabel(lead.assignedTo) || 'Unknown'}
+            </Typography>
+          )}
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button
+          onClick={handleSave}
+          variant="contained"
+          disabled={!selected?._id || saving}
+          startIcon={saving ? <CircularProgress size={16} /> : null}
+        >
+          Save
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
 // Pipeline Column Component
-const PipelineColumn = ({ stage, leads, onDrop, onCardClick, onStatusChange, onQuickAction }) => {
+const PipelineColumn = ({ stage, leads, onDrop, onCardClick, onMenuAction }) => {
   const [isDragOver, setIsDragOver] = useState(false);
 
   const handleDragOver = (e) => {
@@ -500,8 +649,7 @@ const PipelineColumn = ({ stage, leads, onDrop, onCardClick, onStatusChange, onQ
               key={lead._id}
               lead={lead}
               onCardClick={onCardClick}
-              onStatusChange={onStatusChange}
-              onQuickAction={onQuickAction}
+              onMenuAction={onMenuAction}
             />
           ))
         )}
@@ -511,7 +659,7 @@ const PipelineColumn = ({ stage, leads, onDrop, onCardClick, onStatusChange, onQ
 };
 
 // Vertical layout: full-width section per stage, leads in a responsive grid
-const VerticalPipelineColumn = ({ stage, leads, onCardClick, onQuickAction, onDrop }) => {
+const VerticalPipelineColumn = ({ stage, leads, onCardClick, onMenuAction, onDrop }) => {
   const [isDragOver, setIsDragOver] = useState(false);
   const stageLeads = leads.filter((lead) => lead.status === stage.id);
   if (stageLeads.length === 0) return null;
@@ -571,8 +719,7 @@ const VerticalPipelineColumn = ({ stage, leads, onCardClick, onQuickAction, onDr
             <LeadCard
               lead={lead}
               onCardClick={onCardClick}
-              onStatusChange={() => {}}
-              onQuickAction={onQuickAction}
+              onMenuAction={onMenuAction}
             />
           </Grid>
         ))}
@@ -606,7 +753,11 @@ const LeadsPipelinePage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [updating, setUpdating] = useState(false);
-  
+
+  // Three-dots dialogs (shared page-level state, opened with the selected lead).
+  const [statusDialog, setStatusDialog] = useState({ open: false, lead: null });
+  const [assignDialog, setAssignDialog] = useState({ open: false, lead: null });
+
   // Filters
   const [filters, setFilters] = useState({
     search: '',
@@ -719,25 +870,17 @@ const LeadsPipelinePage = () => {
     navigate(`/leads/${leadId}`);
   };
 
-  // Handle quick actions
-  const handleQuickAction = (action, lead) => {
+  // Handle three-dots menu actions: Edit Lead, Change Status, Assign / Reassign.
+  const handleMenuAction = (action, lead) => {
     switch (action) {
-      case 'view':
-        navigate(`/leads/${lead._id}`);
-        break;
-      case 'call':
-        window.open(`tel:${lead.phone}`);
-        break;
-      case 'email':
-        if (lead.email) {
-          window.open(`mailto:${lead.email}`);
-        }
-        break;
-      case 'whatsapp':
-        window.open(`https://wa.me/${lead.phone?.replace(/[^0-9]/g, '')}`);
-        break;
       case 'edit':
         navigate(`/leads/${lead._id}/edit`);
+        break;
+      case 'status':
+        setStatusDialog({ open: true, lead });
+        break;
+      case 'assign':
+        setAssignDialog({ open: true, lead });
         break;
       default:
         console.log('Unknown action:', action);
@@ -973,7 +1116,7 @@ const LeadsPipelinePage = () => {
               stage={stage}
               leads={leads}
               onCardClick={handleCardClick}
-              onQuickAction={handleQuickAction}
+              onMenuAction={handleMenuAction}
               onDrop={handleDrop}
             />
           ))}
@@ -1003,8 +1146,7 @@ const LeadsPipelinePage = () => {
                 leads={leads}
                 onDrop={handleDrop}
                 onCardClick={handleCardClick}
-                onStatusChange={handleDrop}
-                onQuickAction={handleQuickAction}
+                onMenuAction={handleMenuAction}
               />
             </Box>
           ))}
@@ -1034,6 +1176,20 @@ const LeadsPipelinePage = () => {
           </Grid>
         </Grid>
       </Paper>
+
+      {/* Three-dots: Change Status / Assign dialogs (refresh re-fetches columns) */}
+      <ChangeStatusDialog
+        open={statusDialog.open}
+        lead={statusDialog.lead}
+        onClose={() => setStatusDialog({ open: false, lead: null })}
+        onRefresh={fetchLeads}
+      />
+      <AssignLeadDialog
+        open={assignDialog.open}
+        lead={assignDialog.lead}
+        onClose={() => setAssignDialog({ open: false, lead: null })}
+        onRefresh={fetchLeads}
+      />
     </Box>
   );
 };
