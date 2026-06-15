@@ -272,7 +272,12 @@ const AssignLeadDialog = ({ open, lead, onClose, onRefresh }) => {
       let team = [];
       try {
         const usersRes = await userAPI.getUsers({ limit: 200 });
-        const rawUsers = usersRes?.data?.data || usersRes?.data?.users || usersRes?.data || [];
+        const rawUsers =
+          usersRes?.data?.data?.users ||
+          usersRes?.data?.users ||
+          (Array.isArray(usersRes?.data?.data) ? usersRes.data.data : null) ||
+          (Array.isArray(usersRes?.data) ? usersRes.data : null) ||
+          [];
         team = (Array.isArray(rawUsers) ? rawUsers : [])
           .filter((u) => u && (u._id || u.id))
           .map((u) => ({ _id: u._id || u.id, firstName: u.firstName || '', lastName: u.lastName || '', email: u.email || '', role: u.role || '' }));
@@ -405,15 +410,11 @@ const LeadHeader = ({ lead, onRefresh, isLoading }) => {
                   lead is stuck at Site Visit Scheduled (visit booked but not
                   logged) or Site Visit Completed (visit done but lead not
                   advanced). Same logic as the Leads list column. */}
-              {['Site Visit Scheduled', 'Site Visit Completed'].includes(lead?.status) && (lead?.statusChangedAt || lead?.updatedAt) && (() => {
+              {['Site Visit Completed'].includes(lead?.status) && (lead?.statusChangedAt || lead?.updatedAt) && (() => {
                 const days = Math.max(0, Math.floor((Date.now() - new Date(lead.statusChangedAt || lead.updatedAt).getTime()) / 86400000));
                 const color = days >= 10 ? 'error' : days >= 5 ? 'warning' : days >= 2 ? 'info' : 'success';
-                const label = lead.status === 'Site Visit Scheduled'
-                  ? (days === 0 ? 'Awaiting visit (today)' : `Awaiting visit ${days}d`)
-                  : (days === 0 ? 'Just completed' : `${days}d since visit`);
-                const tip = lead.status === 'Site Visit Scheduled'
-                  ? 'Days since moved to "Site Visit Scheduled" — visit not yet logged.'
-                  : 'Days since visit completed — lead not yet advanced.';
+                const label = days === 0 ? 'Just completed' : `${days}d since visit`;
+                const tip = 'Days since visit completed — lead not yet advanced.';
                 return (
                   <Tooltip title={tip}>
                     <Chip label={label} color={color} size="small" variant="outlined" />
@@ -597,7 +598,7 @@ const AIInsights = ({ lead }) => {
       fallbackInsights.talkingPoints.push(`Reference their interest from ${leadData.source} when discussing the project`);
     }
 
-    if (leadData.status === 'New' || leadData.status === 'Contacted') {
+    if (leadData.status === 'New') {
       fallbackInsights.objectionHandling.push('Address any concerns about location and connectivity');
       fallbackInsights.objectionHandling.push('Provide detailed information about project amenities');
       fallbackInsights.objectionHandling.push('Offer virtual or physical site visit to build confidence');
