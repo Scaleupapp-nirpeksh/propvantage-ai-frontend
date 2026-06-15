@@ -13,15 +13,14 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { leadAPI, projectAPI, channelPartnerAPI } from '../../services/api';
 import { PageHeader, KPICard, FilterBar, DataTable, StatusChip } from '../../components/common';
-import { LEAD_STATUS } from '../../constants/statusConfig';
+import { LEAD_STATUS, LEAD_PRIORITY } from '../../constants/statusConfig';
 
 // Constants
 const LEAD_STATUSES = Object.keys(LEAD_STATUS);
 const LEAD_SOURCES = [
-  'Website', 'Property Portal', 'Referral', 'Walk-in',
-  'Social Media', 'Advertisement', 'Cold Call', 'Other',
+  'Channel Partner', 'Management', 'Direct', 'Referral', 'Marketing', 'Cold Calling',
 ];
-const PRIORITIES = ['Critical', 'High', 'Medium', 'Low', 'Very Low'];
+const PRIORITIES = ['High', 'Medium', 'Low', 'Very Low'];
 
 // Helpers
 const getTimeAgo = (date) => {
@@ -33,30 +32,6 @@ const getTimeAgo = (date) => {
   if (mins < 60) return `${mins}m ago`;
   if (hrs < 24) return `${hrs}h ago`;
   return `${days}d ago`;
-};
-
-const getScoreColor = (score) => {
-  if (score >= 90) return 'error';
-  if (score >= 75) return 'warning';
-  if (score >= 50) return 'info';
-  return 'default';
-};
-
-const getScoreLabel = (score) => {
-  if (score >= 90) return 'Hot';
-  if (score >= 75) return 'Warm';
-  if (score >= 50) return 'Moderate';
-  return 'Cold';
-};
-
-const getPriorityColor = (priority) => {
-  switch (priority?.toLowerCase()) {
-    case 'critical': return 'error';
-    case 'high': return 'warning';
-    case 'medium': return 'info';
-    case 'low': return 'success';
-    default: return 'default';
-  }
 };
 
 // Lead Action Menu (reused for both desktop and mobile)
@@ -114,8 +89,8 @@ const LeadMobileCard = ({ lead, onAction }) => {
 
       <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap', mb: 1 }}>
         <StatusChip status={lead.status} type="lead" size="small" />
-        <Chip label={`${lead.score || 0}`} color={getScoreColor(lead.score)} size="small" sx={{ fontWeight: 600, minWidth: 40 }} />
-        <Chip label={lead.priority} color={getPriorityColor(lead.priority)} size="small" variant="outlined" sx={{ fontSize: '0.688rem', height: 22 }} />
+        <Chip label={`${lead.score || 0}`} size="small" sx={{ fontWeight: 600, minWidth: 40 }} />
+        <Chip label={lead.priority || 'Very Low'} color={(LEAD_PRIORITY[lead.priority] || {}).color || 'default'} size="small" variant="outlined" sx={{ fontSize: '0.688rem', height: 22 }} />
       </Box>
 
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -252,7 +227,7 @@ const LeadsListPage = () => {
   // FilterBar config
   const filterConfig = [
     { key: 'search', type: 'search', label: 'Leads', placeholder: 'Search leads...' },
-    { key: 'status', type: 'select', label: 'Status', options: LEAD_STATUSES.map(s => ({ value: s, label: s })) },
+    { key: 'status', type: 'select', label: 'Status', options: LEAD_STATUSES.filter(s => s !== 'pending').map(s => ({ value: s, label: s })) },
     { key: 'priority', type: 'select', label: 'Priority', options: PRIORITIES.map(p => ({ value: p, label: p })) },
     { key: 'source', type: 'select', label: 'Source', options: LEAD_SOURCES.map(s => ({ value: s, label: s })) },
     { key: 'project', type: 'select', label: 'Project', options: projects.map(p => ({ value: p._id, label: p.name })) },
@@ -280,13 +255,11 @@ const LeadsListPage = () => {
       ),
     },
     {
-      id: 'score', label: 'Score', sortable: true, width: 100,
+      id: 'score', label: 'Score / Priority', sortable: true, width: 140,
       render: (_, lead) => (
-        <Box>
-          <Chip label={`${lead.score || 0}`} color={getScoreColor(lead.score)} size="small" sx={{ fontWeight: 600, minWidth: 40 }} />
-          <Typography variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>
-            {getScoreLabel(lead.score)}
-          </Typography>
+        <Box sx={{ display: 'flex', gap: 0.75, alignItems: 'center', flexWrap: 'wrap' }}>
+          <Chip label={`${lead.score || 0}`} size="small" sx={{ fontWeight: 600, minWidth: 40 }} />
+          <Chip label={lead.priority || 'Very Low'} color={(LEAD_PRIORITY[lead.priority] || {}).color || 'default'} size="small" />
         </Box>
       ),
     },
@@ -455,7 +428,7 @@ const LeadsListPage = () => {
           <KPICard title="Total Leads" value={stats.total} icon={Person} color="primary" loading={loading} />
         </Grid>
         <Grid item xs={6} sm={6} md={3}>
-          <KPICard title="Hot Leads (90+)" value={stats.hot} icon={Warning} color="error" loading={loading} />
+          <KPICard title="High Priority" value={stats.hot} icon={Warning} color="error" loading={loading} />
         </Grid>
         <Grid item xs={6} sm={6} md={3}>
           <KPICard title="Overdue Follow-ups" value={stats.overdue} icon={Schedule} color="warning" loading={loading} />
