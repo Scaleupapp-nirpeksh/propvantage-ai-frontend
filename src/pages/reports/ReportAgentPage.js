@@ -10,7 +10,7 @@ import {
 import { AutoAwesome, Save, ArrowBack, Palette, Schedule } from '@mui/icons-material';
 import { useSnackbar } from 'notistack';
 import { reportAPI } from '../../services/api';
-import ReportBlockRenderer from '../../components/reports/ReportBlockRenderer';
+import CanvasBlock from '../../components/reports/CanvasBlock';
 import ReportChatDock from '../../components/reports/ReportChatDock';
 import ReportDesignControls from '../../components/reports/ReportDesignControls';
 import ScheduleDeliveryDialog from '../../components/reports/ScheduleDeliveryDialog';
@@ -132,6 +132,22 @@ const ReportAgentPage = () => {
     repreview();
   };
 
+  // Per-block canvas controls — edit definition.blocks then re-resolve via repreview(newDef)
+  const applyBlocks = (fn) => {
+    const newBlocks = fn(definition.blocks || []);
+    const newDef = { ...definition, blocks: newBlocks };
+    setDefinition(newDef);
+    repreview(newDef);
+  };
+  const reindex = (blks) => blks.map((b, i) => ({ ...b, order: i }));
+  const moveBlock = (id, dir) => applyBlocks((blks) => {
+    const i = blks.findIndex((b) => b.id === id); const j = i + dir;
+    if (i < 0 || j < 0 || j >= blks.length) return blks;
+    const next = [...blks]; [next[i], next[j]] = [next[j], next[i]]; return reindex(next);
+  });
+  const removeBlock = (id) => applyBlocks((blks) => reindex(blks.filter((b) => b.id !== id)));
+  const retitleBlock = (id, title) => applyBlocks((blks) => blks.map((b) => (b.id === id ? { ...b, title } : b)));
+
   // Loading guard while fetching template on edit
   if (loading) {
     return (
@@ -186,13 +202,19 @@ const ReportAgentPage = () => {
           </Box>
         ) : (
           <Box sx={{ maxWidth: 820, mx: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {blocks.slice().sort((a, b) => (a.order || 0) - (b.order || 0)).map((block) => (
-              <ReportBlockRenderer
+            {blocks.slice().sort((a, b) => (a.order || 0) - (b.order || 0)).map((block, i, arr) => (
+              <CanvasBlock
                 key={block.id || block.type}
                 block={block}
                 images={imageSlots}
                 themePreset={definition.theme?.preset}
                 accentColor={definition.theme?.accentColor}
+                isFirst={i === 0}
+                isLast={i === arr.length - 1}
+                onMoveUp={() => moveBlock(block.id, -1)}
+                onMoveDown={() => moveBlock(block.id, 1)}
+                onRemove={() => removeBlock(block.id)}
+                onRetitle={(title) => retitleBlock(block.id, title)}
               />
             ))}
           </Box>
