@@ -17,7 +17,7 @@ const PAGES = [
   { label: 'Dashboard', path: '/dashboard', icon: Dashboard, section: 'Pages' },
   { label: 'All Projects', path: '/projects', icon: Business, section: 'Pages' },
   { label: 'All Leads', path: '/leads', icon: People, section: 'Pages' },
-  { label: 'Sales Pipeline', path: '/leads/pipeline', icon: TrendingUp, section: 'Pages' },
+  { label: 'Funnel', path: '/leads/pipeline', icon: TrendingUp, section: 'Pages' },
   { label: 'All Sales', path: '/sales', icon: AttachMoney, section: 'Pages' },
   { label: 'Sales Pipeline', path: '/sales/pipeline', icon: TrendingUp, section: 'Pages' },
   { label: 'Sales Reports', path: '/sales/reports', icon: Assessment, section: 'Pages' },

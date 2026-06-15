@@ -139,7 +139,7 @@ const getNavigationItems = (userRole, canAccess) => {
           requiredAccess: () => canAccess.leadManagement(),
           children: [
             { id: 'leads-list', title: 'All Leads', icon: PersonPin, path: '/leads' },
-            { id: 'leads-pipeline', title: 'Pipeline', icon: TrendingUp, path: '/leads/pipeline' },
+            { id: 'leads-pipeline', title: 'Funnel', icon: TrendingUp, path: '/leads/pipeline' },
             { id: 'leads-create', title: 'Add Lead', icon: PersonAdd, path: '/leads/create' },
           ],
         },
