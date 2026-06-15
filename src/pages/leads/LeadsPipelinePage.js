@@ -77,25 +77,11 @@ const PIPELINE_STAGES = [
     description: 'Fresh leads that need initial contact',
   },
   {
-    id: 'Contacted',
-    title: 'Contacted',
-    color: '#FF9800',
-    icon: <Phone />,
-    description: 'Leads that have been contacted',
-  },
-  {
     id: 'Qualified',
     title: 'Qualified',
     color: '#4CAF50',
     icon: <CheckCircle />,
     description: 'Qualified leads ready for follow-up',
-  },
-  {
-    id: 'Site Visit Scheduled',
-    title: 'Site Visit Scheduled',
-    color: '#9C27B0',
-    icon: <Schedule />,
-    description: 'Site visits scheduled',
   },
   {
     id: 'Site Visit Completed',
@@ -113,7 +99,7 @@ const PIPELINE_STAGES = [
   },
   {
     id: 'Booked',
-    title: 'Booked',
+    title: 'Booking',
     color: '#4CAF50',
     icon: <Star />,
     description: 'Successfully converted leads',
@@ -124,6 +110,13 @@ const PIPELINE_STAGES = [
     color: '#757575',
     icon: <Warning />,
     description: 'Lost opportunities',
+  },
+  {
+    id: 'Revived',
+    title: 'Revived',
+    color: '#9C27B0',
+    icon: <Refresh />,
+    description: 'Previously lost leads brought back',
   },
 ];
 
@@ -809,7 +802,7 @@ const LeadsPipelinePage = () => {
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
           <Box>
             <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
-              Sales Pipeline
+              Funnel
             </Typography>
             <Typography variant="body1" color="text.secondary">
               Visual lead management with drag-and-drop functionality
@@ -1030,7 +1023,7 @@ const LeadsPipelinePage = () => {
       {/* Pipeline Instructions */}
       <Paper sx={{ p: 3, mt: 3, bgcolor: 'info.50', border: '1px solid', borderColor: 'info.200' }}>
         <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'info.main' }}>
-          💡 How to use the Sales Pipeline
+          💡 How to use the Funnel
         </Typography>
         <Grid container spacing={2}>
           <Grid item xs={12} md={4}>
