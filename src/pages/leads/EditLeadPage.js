@@ -62,7 +62,7 @@ import {
 import { useSnackbar } from 'notistack';
 
 import { useAuth } from '../../context/AuthContext';
-import { leadAPI, projectAPI, amenityAPI } from '../../services/api';
+import { leadAPI, projectAPI, amenityAPI, userAPI } from '../../services/api';
 import ChannelPartnerAttributionFields from '../../components/channel-partners/ChannelPartnerAttributionFields';
 import { BUDGET_RANGES, budgetRangeToNumbers, priorityFromTimeline } from '../../utils/leadForm';
 
@@ -403,15 +403,23 @@ const EditLeadPage = () => {
         throw new Error('Failed to load lead data');
       }
 
-      // Set sales team (placeholder)
-      setSalesTeam([
-        {
-          _id: user?.id || user?._id,
-          firstName: user?.firstName || 'Current',
-          lastName: user?.lastName || 'User',
-          role: user?.roleRef?.name || user?.role || 'Sales Executive'
+      // Load assignable org members (sales managers/agents). Fall back to just the
+      // current user if the users endpoint is unavailable.
+      try {
+        const usersRes = await userAPI.getUsers({ limit: 200 });
+        const rawUsers = usersRes?.data?.data || usersRes?.data?.users || usersRes?.data || [];
+        const team = (Array.isArray(rawUsers) ? rawUsers : [])
+          .filter((u) => u && (u._id || u.id))
+          .map((u) => ({ _id: u._id || u.id, firstName: u.firstName || '', lastName: u.lastName || '', role: u.role || '' }));
+        if (team.length) {
+          setSalesTeam(team);
+        } else if (user) {
+          setSalesTeam([{ _id: user._id || user.id, firstName: user.firstName || '', lastName: user.lastName || '', role: user.role || '' }]);
         }
-      ]);
+      } catch (e) {
+        // Non-fatal: keep the current user as the only option.
+        if (user) setSalesTeam([{ _id: user._id || user.id, firstName: user.firstName || '', lastName: user.lastName || '', role: user.role || '' }]);
+      }
 
     } catch (error) {
       console.error('❌ Error loading initial data:', error);
