@@ -121,18 +121,20 @@ const PublicReportPage = () => {
 
   // status === 'viewing'
   const themePreset = report?.theme?.preset || meta?.theme?.preset;
+  const accentColor = report?.theme?.accentColor || meta?.theme?.accentColor;
   const t = getReportTheme(themePreset);
+  const accent = accentColor || t.accent;
   const blocks = (report?.blocks || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
   return (
     <Box id="report-print-root" sx={{ bgcolor: t.page, minHeight: '100vh', py: { xs: 2, md: 4 } }}>
       <Container maxWidth="md">
         <Box className="no-print" sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-          <Button size="small" startIcon={<PictureAsPdf />} onClick={() => window.print()} sx={{ color: t.accent }}>Download PDF</Button>
+          <Button size="small" startIcon={<PictureAsPdf />} onClick={() => window.print()} sx={{ color: accent }}>Download PDF</Button>
         </Box>
         <Stack spacing={2.5}>
           {blocks.map((block) => (
             <Box key={block.id} className="report-block">
-              <ReportBlockRenderer block={block} images={report?.images || []} themePreset={themePreset} />
+              <ReportBlockRenderer block={block} images={report?.images || []} themePreset={themePreset} accentColor={accentColor} />
             </Box>
           ))}
           <Typography variant="caption" textAlign="center" sx={{ pt: 2, color: t.subtext }}>
