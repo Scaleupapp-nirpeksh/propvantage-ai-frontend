@@ -1637,8 +1637,9 @@ export const reportAPI = {
   // Ad-hoc generate (preview)
   generate: (id) => api.post(`/reports/templates/${id}/generate`),
 
-  // Resolve an unsaved definition → live blocks (canvas preview)
-  preview: (definition) => api.post('/reports/preview', definition),
+  // Resolve an unsaved definition → live blocks (canvas preview). Heavy aggregations across
+  // many blocks can exceed the default 30s, so allow longer.
+  preview: (definition) => api.post('/reports/preview', definition, { timeout: 120000 }),
 
   // Image upload (hero/gallery/logo) → returns { url, s3Key }
   uploadImage: (file) => {
@@ -1667,7 +1668,9 @@ export const reportAPI = {
 // ─── Report Agent (conversational builder) ─────────────────────────────
 export const reportAgentAPI = {
   // body: { sessionId?, message } → { sessionId, reply, definition, previewBlocks }
-  message: (body) => api.post('/reports/agent/message', body),
+  // The agent runs a multi-step Claude tool-use loop + heavy aggregations (a full report can
+  // take ~40-90s), so it needs a much longer timeout than the default 30s.
+  message: (body) => api.post('/reports/agent/message', body, { timeout: 180000 }),
   getSession: (id) => api.get(`/reports/agent/sessions/${id}`),
 };
 
