@@ -503,14 +503,16 @@ const LeadHeader = ({ lead, onRefresh, isLoading }) => {
           </Tooltip>
 
           {/* 2026-05-24 lifecycle-repair (F1): "Convert to Booking" CTA.
-              Visible when the lead is in active pipeline (not pending /
-              Booked / Lost / Unqualified). Routes to /sales/create with the
-              leadId query param; CreateSalePage auto-pre-fills the customer +
+              Gated on salesPipeline() — creating a booking is a sales action,
+              so the button only shows to users who can actually create a sale
+              (matching the /sales/create route guard + CreateSalePage's
+              canCreateSales). Visible when the lead is in active pipeline (not
+              pending / Booked / Lost). Routes to /sales/create with the leadId
+              query param; CreateSalePage auto-pre-fills the customer +
               auto-hydrates channel-partner attribution from the lead so the
-              dev never has to manually re-tag the CP. (Phase 7 revisits the
-              target — leave it unchanged here.) */}
-          {canAccess.leadManagement() && lead?.status &&
-            !['pending', 'Booked', 'Lost', 'Unqualified'].includes(lead.status) && (
+              dev never has to manually re-tag the CP. */}
+          {canAccess.salesPipeline() && lead?.status &&
+            !['pending', 'Booked', 'Lost'].includes(lead.status) && (
             <Button
               variant="contained"
               color="success"

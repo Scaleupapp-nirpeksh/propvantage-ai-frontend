@@ -828,12 +828,13 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
       
-      {/* /sales/create accepts EITHER sales-pipeline OR lead-management access:
-          LeadDetailPage's "Convert to Booking" CTA is shown to
-          canAccess.leadManagement() users, so the route must agree or a
-          lead-manager without sales-pipeline access would be bounced. */}
+      {/* /sales/create is a sales action — gated on salesPipeline() only.
+          LeadDetailPage's "Convert to Booking" CTA is gated on the SAME
+          predicate (salesPipeline()), so the route and the CTA agree: a user
+          who sees the button can always reach the page (and CreateSalePage's
+          canCreateSales guard uses the same predicate). */}
       <Route path="/sales/create" element={
-        <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesPipeline() || canAccess.leadManagement()}>
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesPipeline()}>
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback />}>
               <CreateSalePage />

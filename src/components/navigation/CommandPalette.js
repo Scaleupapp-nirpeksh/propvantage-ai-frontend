@@ -71,7 +71,8 @@ const ENTITY_GROUPS = [
   { key: 'people', label: 'People' },
 ];
 
-const EMPTY_RESULTS = { leads: [], projects: [], units: [], people: [] };
+// Derived from ENTITY_GROUPS so the empty shape can't drift from the group set.
+const EMPTY_RESULTS = Object.fromEntries(ENTITY_GROUPS.map((g) => [g.key, []]));
 
 const SEARCH_DEBOUNCE_MS = 250;
 const MIN_QUERY_LEN = 2;
@@ -126,6 +127,9 @@ const CommandPalette = ({ open, onClose }) => {
 
     const myReqId = ++reqIdRef.current;
     setSearching(true);
+    // Clear the prior query's results immediately so the debounce window can't
+    // show — or let Enter navigate to — a stale result from a previous query.
+    setResults(EMPTY_RESULTS);
     const timer = setTimeout(async () => {
       try {
         const res = await searchAPI.search(q);
@@ -168,7 +172,10 @@ const CommandPalette = ({ open, onClose }) => {
       });
     }
     return PAGES.filter((p) => p.label.toLowerCase().includes(q)).slice(0, 8);
-  }, [query]);
+    // `open` is a dep so reopening the palette (query stays '') re-reads the
+    // recent-pages list and reflects the latest navigation each time.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, open]);
 
   // Build the grouped, flattened list of visible rows. Each row is normalised
   // to { key, label, sublabel, icon, target, beta, isPage } so keyboard nav and
@@ -180,6 +187,7 @@ const CommandPalette = ({ open, onClose }) => {
       const items = Array.isArray(results[key]) ? results[key] : [];
       if (items.length === 0) return;
       out.push({
+        key,
         header: label,
         rows: items.map((item) => ({
           key: `${key}-${item.id}`,
@@ -194,6 +202,7 @@ const CommandPalette = ({ open, onClose }) => {
 
     if (pageRows.length > 0) {
       out.push({
+        key: 'pages',
         header: pageRows[0].section === 'Recent' ? 'Recent' : 'Pages',
         rows: pageRows.map((p) => ({
           key: `page-${p.path}`,
@@ -312,7 +321,7 @@ const CommandPalette = ({ open, onClose }) => {
           ) : (
             <List dense sx={{ py: 1 }}>
               {groups.map((group) => (
-                <React.Fragment key={group.header}>
+                <React.Fragment key={group.key || group.header}>
                   <Typography
                     variant="overline"
                     sx={{ px: 2, pt: 1, pb: 0.5, display: 'block', color: 'text.secondary' }}

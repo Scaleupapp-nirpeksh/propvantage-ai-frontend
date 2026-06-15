@@ -3247,9 +3247,11 @@ const CreateSalePage = () => {
   // dev does NOT need to manually re-tag the CP. The backend has the same
   // safety net (services/salesAttributionHelper.js) — this just makes the
   // UI honest by showing the inherited attribution explicitly.
-  const [hydratedFromLead, setHydratedFromLead] = useState(false);
+  // hydratedRef is never rendered, so a ref (not state) avoids a gratuitous
+  // full-wizard re-render and the dep-driven re-run of this effect.
+  const hydratedRef = useRef(false);
   useEffect(() => {
-    if (hydratedFromLead) return;
+    if (hydratedRef.current) return;
     const leadIdParam = searchParams.get('leadId');
     if (!leadIdParam) return;
     // Wait for the preloaded list to finish loading before deciding the lead is
@@ -3276,7 +3278,7 @@ const CreateSalePage = () => {
           partners: cleanPartners,
         });
       }
-      setHydratedFromLead(true);
+      hydratedRef.current = true;
     };
 
     const sourceLead = (leads || []).find((l) => String(l._id) === String(leadIdParam));
@@ -3293,15 +3295,20 @@ const CreateSalePage = () => {
     (async () => {
       try {
         const res = await leadAPI.getLead(leadIdParam);
-        const lead = res?.data?.data || res?.data;
-        if (!cancelled) applyLead(lead);
+        if (cancelled) return;
+        // Validate before using: an error envelope ({success:false}), an empty
+        // {} body, or a missing record would otherwise be applied as the
+        // customer / advance the stepper. Require a real lead with an id.
+        const lead = res?.data?.data || res?.data?.lead || res?.data;
+        if (lead && (lead._id || lead.id)) applyLead(lead);
+        else hydratedRef.current = true; // invalid/empty body → stop, don't hydrate garbage
       } catch (e) {
         console.warn('[CreateSale] could not load source lead', leadIdParam, e?.message);
-        if (!cancelled) setHydratedFromLead(true); // stop retrying
+        if (!cancelled) hydratedRef.current = true; // stop retrying
       }
     })();
     return () => { cancelled = true; };
-  }, [leads, searchParams, hydratedFromLead, loading.leads]);
+  }, [leads, searchParams, loading.leads]);
 
   const fetchAllData = async () => {
     try {
