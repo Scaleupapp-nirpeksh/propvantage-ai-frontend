@@ -188,18 +188,17 @@ const validateContactInfo = (data) => {
     errors.source = 'Lead source is required';
   }
 
-  // When sourced via a channel partner and the toggle is on, require a valid split.
-  if (data.source === 'Channel Partner' && data.addSourceDetails) {
+  // When the source is Channel Partner the sub-fields auto-show, so always
+  // require a valid split (shares totalling 100%).
+  if (data.source === 'Channel Partner') {
     const cpa = data.channelPartnerAttribution;
-    if (cpa?.viaChannelPartner) {
-      const validPartners = (cpa.partners || []).filter(
-        (p) => p.channelPartner && Number(p.sharePct) > 0
-      );
-      const sum = validPartners.reduce((a, p) => a + Number(p.sharePct), 0);
-      if (validPartners.length === 0 || Math.abs(sum - 100) > 0.01) {
-        errors.channelPartner =
-          'Select at least one channel partner with shares totalling 100%.';
-      }
+    const validPartners = (cpa?.partners || []).filter(
+      (p) => p.channelPartner && Number(p.sharePct) > 0
+    );
+    const sum = validPartners.reduce((a, p) => a + Number(p.sharePct), 0);
+    if (validPartners.length === 0 || Math.abs(sum - 100) > 0.01) {
+      errors.channelPartner =
+        'Select at least one channel partner with shares totalling 100%.';
     }
   }
 
@@ -347,7 +346,12 @@ const CreateLeadPage = () => {
       // current user if the users endpoint is unavailable.
       try {
         const usersRes = await userAPI.getUsers({ limit: 200 });
-        const rawUsers = usersRes?.data?.data || usersRes?.data?.users || usersRes?.data || [];
+        const rawUsers =
+          usersRes?.data?.data?.users ||
+          usersRes?.data?.users ||
+          (Array.isArray(usersRes?.data?.data) ? usersRes.data.data : null) ||
+          (Array.isArray(usersRes?.data) ? usersRes.data : null) ||
+          [];
         const team = (Array.isArray(rawUsers) ? rawUsers : [])
           .filter((u) => u && (u._id || u.id))
           .map((u) => ({ _id: u._id || u.id, firstName: u.firstName || '', lastName: u.lastName || '', role: u.role || '' }));
@@ -550,27 +554,27 @@ const CreateLeadPage = () => {
       const budgetNumbers = budgetRangeToNumbers(formData.budgetRange);
 
       // Structured source detail — only what's relevant to the chosen source.
+      //  - Channel Partner: details flow through channelPartnerAttribution.
+      //  - Management: contactName/note auto-show, so always read them.
+      //  - Other sources: free-text, only when the "Add source details" toggle is on.
       let sourceDetailPayload;
-      if (formData.addSourceDetails) {
-        if (source === 'Channel Partner') {
-          // CP details flow through channelPartnerAttribution, not sourceDetail.
-          sourceDetailPayload = undefined;
-        } else if (source === 'Management') {
-          const contactName = formData.sourceDetail.management.contactName.trim();
-          const note = formData.sourceDetail.management.note.trim();
-          sourceDetailPayload =
-            contactName || note
-              ? {
-                  management: {
-                    contactName: contactName || undefined,
-                    note: note || undefined,
-                  },
-                }
-              : undefined;
-        } else {
-          const text = formData.sourceDetail.text.trim();
-          sourceDetailPayload = text ? { text } : undefined;
-        }
+      if (source === 'Channel Partner') {
+        sourceDetailPayload = undefined;
+      } else if (source === 'Management') {
+        const contactName = formData.sourceDetail.management.contactName.trim();
+        const note = formData.sourceDetail.management.note.trim();
+        sourceDetailPayload =
+          contactName || note
+            ? {
+                management: {
+                  contactName: contactName || undefined,
+                  note: note || undefined,
+                },
+              }
+            : undefined;
+      } else if (formData.addSourceDetails) {
+        const text = formData.sourceDetail.text.trim();
+        sourceDetailPayload = text ? { text } : undefined;
       }
 
       // Prepare lead data matching model structure exactly
@@ -698,9 +702,13 @@ const CreateLeadPage = () => {
   // RENDER FUNCTIONS
   // =============================================================================
 
-  // The source-detail block rendered when "Add source details" is ON.
+  // The source-detail block.
+  //  - Channel Partner / Management: sub-fields auto-show (no "Add source details"
+  //    toggle), driven only by the selected source.
+  //  - Other sources (Direct/Referral/Marketing/Cold Calling): keep the
+  //    "Add source details" toggle that reveals a free-text detail box.
   const renderSourceDetailFields = () => {
-    if (!formData.addSourceDetails) return null;
+    if (!formData.source) return null;
 
     if (formData.source === 'Channel Partner') {
       return (
@@ -709,6 +717,7 @@ const CreateLeadPage = () => {
             Channel partner
           </Typography>
           <ChannelPartnerAttributionFields
+            hideToggle
             value={formData.channelPartnerAttribution}
             onChange={(val) => {
               setFormData((prev) => ({ ...prev, channelPartnerAttribution: val }));
@@ -765,24 +774,40 @@ const CreateLeadPage = () => {
       );
     }
 
-    // Any other source → free-text source details
+    // Any other source → optional free-text source details behind a toggle.
     return (
-      <Grid item xs={12}>
-        <TextField
-          fullWidth
-          label="Source details"
-          placeholder="Specific details about the source (optional)"
-          value={formData.sourceDetail.text}
-          onChange={(e) => setFormData(prev => ({
-            ...prev,
-            sourceDetail: { ...prev.sourceDetail, text: e.target.value },
-          }))}
-          disabled={isLoading}
-          multiline
-          rows={2}
-          helperText="e.g., 'From John's referral' or 'Facebook ad campaign'"
-        />
-      </Grid>
+      <>
+        <Grid item xs={12}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={formData.addSourceDetails}
+                onChange={handleInputChange('addSourceDetails')}
+                disabled={isLoading}
+              />
+            }
+            label="Add source details"
+          />
+        </Grid>
+        {formData.addSourceDetails && (
+          <Grid item xs={12}>
+            <TextField
+              fullWidth
+              label="Source details"
+              placeholder="Specific details about the source (optional)"
+              value={formData.sourceDetail.text}
+              onChange={(e) => setFormData(prev => ({
+                ...prev,
+                sourceDetail: { ...prev.sourceDetail, text: e.target.value },
+              }))}
+              disabled={isLoading}
+              multiline
+              rows={2}
+              helperText="e.g., 'From John's referral' or 'Facebook ad campaign'"
+            />
+          </Grid>
+        )}
+      </>
     );
   };
 
@@ -889,19 +914,6 @@ const CreateLeadPage = () => {
             </Typography>
           )}
         </FormControl>
-      </Grid>
-
-      <Grid item xs={12}>
-        <FormControlLabel
-          control={
-            <Switch
-              checked={formData.addSourceDetails}
-              onChange={handleInputChange('addSourceDetails')}
-              disabled={isLoading || !formData.source}
-            />
-          }
-          label="Add source details"
-        />
       </Grid>
 
       {renderSourceDetailFields()}
@@ -1357,9 +1369,9 @@ const CreateLeadPage = () => {
   const selectedProject = projects.find(p => p._id === formData.project);
   const assignee = salesTeam.find(member => member._id === formData.assignedTo);
   const sourceDetailSummary = () => {
-    if (!formData.addSourceDetails) return '';
     if (formData.source === 'Channel Partner') return 'Via channel partner';
     if (formData.source === 'Management') return formData.sourceDetail.management.contactName;
+    if (!formData.addSourceDetails) return '';
     return formData.sourceDetail.text;
   };
 

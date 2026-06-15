@@ -11,7 +11,7 @@ import {
 import { Delete, Add } from '@mui/icons-material';
 import { channelPartnerAPI } from '../../services/api';
 
-const ChannelPartnerAttributionFields = ({ value, onChange }) => {
+const ChannelPartnerAttributionFields = ({ value, onChange, hideToggle = false }) => {
   const v = value || { viaChannelPartner: false, partners: [] };
   const [partners, setPartners] = useState([]);
 
@@ -30,6 +30,20 @@ const ChannelPartnerAttributionFields = ({ value, onChange }) => {
     channelPartner: '', agent: null, sharePct, _rowKey: `r${Date.now()}${Math.random()}`,
   });
 
+  // When the toggle is hidden (source IS Channel Partner), the fields are always
+  // shown and the `viaChannelPartner` flag must be seeded so the payload sends it.
+  // Guard on `!v.viaChannelPartner` so this fires once and never loops.
+  useEffect(() => {
+    if (hideToggle && !v.viaChannelPartner) {
+      onChange({
+        ...v,
+        viaChannelPartner: true,
+        partners: (v.partners || []).length ? v.partners : [newRow(100)],
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hideToggle, v.viaChannelPartner]);
+
   const setRow = (i, key, val) => {
     const rows = [...(v.partners || [])];
     rows[i] = { ...rows[i], [key]: val };
@@ -43,24 +57,26 @@ const ChannelPartnerAttributionFields = ({ value, onChange }) => {
 
   return (
     <Box>
-      <FormControlLabel
-        control={
-          <Switch
-            checked={Boolean(v.viaChannelPartner)}
-            onChange={(e) =>
-              emit({
-                viaChannelPartner: e.target.checked,
-                partners: e.target.checked && (v.partners || []).length === 0
-                  ? [newRow(100)]
-                  : v.partners,
-              })
-            }
-          />
-        }
-        label="Sourced via a channel partner"
-      />
+      {!hideToggle && (
+        <FormControlLabel
+          control={
+            <Switch
+              checked={Boolean(v.viaChannelPartner)}
+              onChange={(e) =>
+                emit({
+                  viaChannelPartner: e.target.checked,
+                  partners: e.target.checked && (v.partners || []).length === 0
+                    ? [newRow(100)]
+                    : v.partners,
+                })
+              }
+            />
+          }
+          label="Sourced via a channel partner"
+        />
+      )}
 
-      {v.viaChannelPartner && (
+      {(hideToggle || v.viaChannelPartner) && (
         <Stack spacing={1} sx={{ mt: 1 }}>
           {(v.partners || []).map((row, i) => (
             <Stack key={row._rowKey || i} direction="row" spacing={1} alignItems="center">
