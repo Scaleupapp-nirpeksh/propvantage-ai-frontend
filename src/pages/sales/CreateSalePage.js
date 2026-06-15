@@ -3251,28 +3251,57 @@ const CreateSalePage = () => {
   useEffect(() => {
     if (hydratedFromLead) return;
     const leadIdParam = searchParams.get('leadId');
-    if (!leadIdParam || !leads || leads.length === 0) return;
-    const sourceLead = leads.find((l) => String(l._id) === String(leadIdParam));
-    if (!sourceLead) return;
+    if (!leadIdParam) return;
+    // Wait for the preloaded list to finish loading before deciding the lead is
+    // "not in the list" — otherwise we'd fire the direct-fetch fallback (or
+    // no-op) prematurely on first render.
+    if (loading.leads) return;
 
-    setSelectedCustomer(sourceLead);
-    if (sourceLead.channelPartnerAttribution?.viaChannelPartner === true) {
-      const cleanPartners = (sourceLead.channelPartnerAttribution.partners || [])
-        .filter((p) => p && p.channelPartner)
-        .map((p) => ({
-          channelPartner: p.channelPartner?._id || p.channelPartner,
-          agent: p.agent?._id || p.agent || null,
-          // Preserve the User ref so the backend's agentUser path works.
-          agentUser: p.agentUser?._id || p.agentUser || null,
-          sharePct: Number(p.sharePct) || 0,
-        }));
-      setChannelPartnerAttribution({
-        viaChannelPartner: true,
-        partners: cleanPartners,
-      });
+    // Pre-fill the customer step + hydrate CP attribution from the source lead.
+    const applyLead = (sourceLead) => {
+      if (!sourceLead) return;
+      setSelectedCustomer(sourceLead);
+      if (sourceLead.channelPartnerAttribution?.viaChannelPartner === true) {
+        const cleanPartners = (sourceLead.channelPartnerAttribution.partners || [])
+          .filter((p) => p && p.channelPartner)
+          .map((p) => ({
+            channelPartner: p.channelPartner?._id || p.channelPartner,
+            agent: p.agent?._id || p.agent || null,
+            // Preserve the User ref so the backend's agentUser path works.
+            agentUser: p.agentUser?._id || p.agentUser || null,
+            sharePct: Number(p.sharePct) || 0,
+          }));
+        setChannelPartnerAttribution({
+          viaChannelPartner: true,
+          partners: cleanPartners,
+        });
+      }
+      setHydratedFromLead(true);
+    };
+
+    const sourceLead = (leads || []).find((l) => String(l._id) === String(leadIdParam));
+    if (sourceLead) {
+      applyLead(sourceLead);
+      return;
     }
-    setHydratedFromLead(true);
-  }, [leads, searchParams, hydratedFromLead]);
+
+    // Not in the preloaded list (e.g. filtered out of getLeads({limit:1000}),
+    // or assigned to another user) — fetch it directly so the "Convert to
+    // Booking" handoff can't land on an empty customer step. Attempt once;
+    // failures are non-fatal but still mark hydration done to avoid looping.
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await leadAPI.getLead(leadIdParam);
+        const lead = res?.data?.data || res?.data;
+        if (!cancelled) applyLead(lead);
+      } catch (e) {
+        console.warn('[CreateSale] could not load source lead', leadIdParam, e?.message);
+        if (!cancelled) setHydratedFromLead(true); // stop retrying
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [leads, searchParams, hydratedFromLead, loading.leads]);
 
   const fetchAllData = async () => {
     try {

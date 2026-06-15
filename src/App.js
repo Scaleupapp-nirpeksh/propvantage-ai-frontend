@@ -828,8 +828,12 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
       
+      {/* /sales/create accepts EITHER sales-pipeline OR lead-management access:
+          LeadDetailPage's "Convert to Booking" CTA is shown to
+          canAccess.leadManagement() users, so the route must agree or a
+          lead-manager without sales-pipeline access would be bounced. */}
       <Route path="/sales/create" element={
-        <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesPipeline()}>
+        <ProtectedRoute requiredPermission={(canAccess) => canAccess.salesPipeline() || canAccess.leadManagement()}>
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback />}>
               <CreateSalePage />
