@@ -1,5 +1,5 @@
 // src/pages/reports/useReportAgent.test.js
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import { reportAgentAPI } from '../../services/api';
 import useReportAgent from './useReportAgent';
 
