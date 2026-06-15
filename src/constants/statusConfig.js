@@ -4,7 +4,6 @@
 
 import {
   FiberNew,
-  Phone,
   ThumbUp,
   LocationOn,
   Handshake,

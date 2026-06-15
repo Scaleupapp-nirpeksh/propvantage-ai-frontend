@@ -47,7 +47,6 @@ import {
   Business,
   Warning,
   CheckCircle,
-  Schedule,
   Star,
   LocationOn,
   AttachMoney,
