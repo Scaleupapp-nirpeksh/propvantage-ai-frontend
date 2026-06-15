@@ -16,7 +16,7 @@ import ReportDesignControls from '../../components/reports/ReportDesignControls'
 import ScheduleDeliveryDialog from '../../components/reports/ScheduleDeliveryDialog';
 import { getReportTheme } from '../../utils/reportThemes';
 import useReportAgent from './useReportAgent';
-import { initialBuilderState } from './builderState';
+import { initialBuilderState, reindex, makeId } from './builderState';
 
 const ReportAgentPage = () => {
   const navigate = useNavigate();
@@ -60,7 +60,10 @@ const ReportAgentPage = () => {
         };
         setDefinition(def);
         setSchedule({ ...initialBuilderState.schedule, ...(tpl.schedule || {}) });
-        setDelivery({ ...initialBuilderState.delivery, ...(tpl.delivery || {}) });
+        const loadedDelivery = { ...initialBuilderState.delivery, ...(tpl.delivery || {}) };
+        // Give every server-loaded recipient a stable client key so editing a row doesn't drop focus.
+        loadedDelivery.recipients = (loadedDelivery.recipients || []).map((r) => ({ ...r, _key: r._key || makeId('r') }));
+        setDelivery(loadedDelivery);
         setAccess({ ...initialBuilderState.access, ...(tpl.access || {}) });
         setDescription(tpl.description || '');
         setImageSlots(tpl.imageSlots || []);
@@ -77,17 +80,23 @@ const ReportAgentPage = () => {
   }, [id, isEdit]);
 
   // Single source of truth for create + update + schedule persistence
-  const buildPayload = () => ({
-    name: definition.name || 'Untitled report',
-    description,
-    scope: definition.scope,
-    theme: definition.theme,
-    blocks: definition.blocks,
-    imageSlots,
-    ...(schedule ? { schedule } : {}),
-    ...(delivery ? { delivery } : {}),
-    ...(access ? { access } : {}),
-  });
+  const buildPayload = () => {
+    // Drop the client-only _key before persisting recipients.
+    const cleanDelivery = delivery
+      ? { ...delivery, recipients: (delivery.recipients || []).map(({ _key, ...r }) => r) }
+      : null;
+    return {
+      name: definition.name || 'Untitled report',
+      description,
+      scope: definition.scope,
+      theme: definition.theme,
+      blocks: definition.blocks,
+      imageSlots,
+      ...(schedule ? { schedule } : {}),
+      ...(cleanDelivery ? { delivery: cleanDelivery } : {}),
+      ...(access ? { access } : {}),
+    };
+  };
 
   const handleSave = async () => {
     if (!definition.blocks?.length) { enqueueSnackbar('Ask the agent to build something first.', { variant: 'info' }); return null; }
@@ -139,7 +148,6 @@ const ReportAgentPage = () => {
     setDefinition(newDef);
     repreview(newDef);
   };
-  const reindex = (blks) => blks.map((b, i) => ({ ...b, order: i }));
   const moveBlock = (id, dir) => applyBlocks((blks) => {
     const i = blks.findIndex((b) => b.id === id); const j = i + dir;
     if (i < 0 || j < 0 || j >= blks.length) return blks;
@@ -186,7 +194,7 @@ const ReportAgentPage = () => {
         >
           <ReportDesignControls theme={definition.theme} onChange={handleThemeChange} />
         </Popover>
-        <Button startIcon={<Schedule />} onClick={openSchedule}>Schedule &amp; send</Button>
+        <Button startIcon={<Schedule />} onClick={openSchedule} disabled={saving}>Schedule &amp; send</Button>
         <Button variant="contained" startIcon={<Save />} onClick={handleSave} disabled={saving}>
           {saving ? 'Saving…' : 'Save'}
         </Button>
@@ -204,13 +212,14 @@ const ReportAgentPage = () => {
           <Box sx={{ maxWidth: 820, mx: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
             {blocks.slice().sort((a, b) => (a.order || 0) - (b.order || 0)).map((block, i, arr) => (
               <CanvasBlock
-                key={block.id || block.type}
+                key={block.id || `${block.type}-${i}`}
                 block={block}
                 images={imageSlots}
                 themePreset={definition.theme?.preset}
                 accentColor={definition.theme?.accentColor}
                 isFirst={i === 0}
                 isLast={i === arr.length - 1}
+                disabled={isLoading}
                 onMoveUp={() => moveBlock(block.id, -1)}
                 onMoveDown={() => moveBlock(block.id, 1)}
                 onRemove={() => removeBlock(block.id)}

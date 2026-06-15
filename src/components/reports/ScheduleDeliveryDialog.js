@@ -5,6 +5,7 @@ import {
   TextField, MenuItem, Grid, Typography, IconButton, Box, Divider,
 } from '@mui/material';
 import { Add, DeleteOutline } from '@mui/icons-material';
+import { makeId } from '../../pages/reports/builderState';
 
 const DOW = [['Sun', 0], ['Mon', 1], ['Tue', 2], ['Wed', 3], ['Thu', 4], ['Fri', 5], ['Sat', 6]];
 
@@ -20,7 +21,7 @@ const ScheduleDeliveryDialog = ({ open, schedule = {}, delivery = {}, access = {
     const next = recipients.map((r, idx) => (idx === i ? { ...r, ...patch } : r));
     onDeliveryChange({ recipients: next });
   };
-  const addRecipient = () => onDeliveryChange({ recipients: [...recipients, { email: '', name: '', role: '', _key: `r_${Date.now()}_${Math.random().toString(36).slice(2)}` }] });
+  const addRecipient = () => onDeliveryChange({ recipients: [...recipients, { email: '', name: '', role: '', _key: makeId('r') }] });
   const removeRecipient = (i) => onDeliveryChange({ recipients: recipients.filter((_, idx) => idx !== i) });
 
   return (
@@ -83,7 +84,7 @@ const ScheduleDeliveryDialog = ({ open, schedule = {}, delivery = {}, access = {
         <Typography variant="subtitle2" sx={{ mb: 1 }}>Stakeholder recipients</Typography>
         {recipients.length === 0 && <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>No recipients yet.</Typography>}
         {recipients.map((r, i) => (
-          <Box key={r._key || r.email || i} sx={{ display: 'flex', gap: 1, mb: 1 }}>
+          <Box key={r._key || i} sx={{ display: 'flex', gap: 1, mb: 1 }}>
             <TextField size="small" type="email" label="Email" value={r.email || ''} sx={{ flex: 2 }}
               onChange={(e) => setRecipient(i, { email: e.target.value })} />
             <TextField size="small" label="Name" value={r.name || ''} sx={{ flex: 1 }}

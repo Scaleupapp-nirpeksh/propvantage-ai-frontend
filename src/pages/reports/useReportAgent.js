@@ -1,7 +1,7 @@
 // File: src/pages/reports/useReportAgent.js
 // Conversation state for the report agent. Sends each user turn to the backend agent
 // and applies the returned { reply, definition, previewBlocks }. Mirrors useCopilotChat.
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { reportAgentAPI, reportAPI } from '../../services/api';
 
 const EMPTY_DEFINITION = { name: '', scope: { mode: 'portfolio' }, theme: { preset: 'clean' }, blocks: [] };
@@ -13,6 +13,8 @@ const useReportAgent = (initialDefinition) => {
   const [previewBlocks, setPreviewBlocks] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  // Monotonic token so a slow preview response can't overwrite a newer one (or the agent's blocks).
+  const previewSeq = useRef(0);
 
   const sendMessage = useCallback(async (text) => {
     const trimmed = (text || '').trim();
@@ -25,7 +27,10 @@ const useReportAgent = (initialDefinition) => {
       const data = res.data?.data || {};
       if (data.sessionId) setSessionId(data.sessionId);
       if (data.definition) setDefinition(data.definition);
-      if (Array.isArray(data.previewBlocks)) setPreviewBlocks(data.previewBlocks);
+      if (Array.isArray(data.previewBlocks)) {
+        previewSeq.current += 1;           // the agent's blocks are authoritative — invalidate any in-flight repreview
+        setPreviewBlocks(data.previewBlocks);
+      }
       setMessages((m) => [...m, { role: 'assistant', content: data.reply || '' }]);
     } catch (err) {
       setError(err.response?.data?.message || 'Something went wrong.');
@@ -36,11 +41,13 @@ const useReportAgent = (initialDefinition) => {
   }, [sessionId, isLoading, definition]);
 
   const repreview = useCallback(async (defOverride) => {
+    const seq = (previewSeq.current += 1);
     try {
       const d = defOverride || definition;
       const res = await reportAPI.preview(d);
       const blocks = res.data?.data?.blocks;
-      if (Array.isArray(blocks)) setPreviewBlocks(blocks);
+      // Only apply if this is still the latest preview request (no newer edit/turn has landed).
+      if (seq === previewSeq.current && Array.isArray(blocks)) setPreviewBlocks(blocks);
     } catch (_err) { /* leave the canvas as-is on a transient preview error */ }
   }, [definition]);
 

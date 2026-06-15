@@ -39,7 +39,7 @@ export const actions = {
   setAccess: (patch) => ({ type: T.SET_ACCESS, patch }),
 };
 
-const reindex = (blocks) => blocks.map((b, i) => ({ ...b, order: i }));
+export const reindex = (blocks) => blocks.map((b, i) => ({ ...b, order: i }));
 
 export const builderReducer = (state, action) => {
   switch (action.type) {
