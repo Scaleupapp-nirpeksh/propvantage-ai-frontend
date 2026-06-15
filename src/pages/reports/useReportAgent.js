@@ -35,9 +35,10 @@ const useReportAgent = (initialDefinition) => {
     }
   }, [sessionId, isLoading, definition]);
 
-  const repreview = useCallback(async () => {
+  const repreview = useCallback(async (defOverride) => {
     try {
-      const res = await reportAPI.preview(definition);
+      const d = defOverride || definition;
+      const res = await reportAPI.preview(d);
       const blocks = res.data?.data?.blocks;
       if (Array.isArray(blocks)) setPreviewBlocks(blocks);
     } catch (_err) { /* leave the canvas as-is on a transient preview error */ }

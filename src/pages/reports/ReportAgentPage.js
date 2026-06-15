@@ -29,6 +29,7 @@ const ReportAgentPage = () => {
 
   // Edit-existing state
   const [templateId, setTemplateId] = useState(id || null);
+  const [description, setDescription] = useState('');
   const [schedule, setSchedule] = useState(null);
   const [delivery, setDelivery] = useState(null);
   const [access, setAccess] = useState(null);
@@ -40,7 +41,7 @@ const ReportAgentPage = () => {
 
   const tokens = getReportTheme(definition.theme?.preset);
   // Show resolved preview blocks (with data) when available; before the first turn the canvas is empty.
-  const blocks = previewBlocks.length ? previewBlocks : [];
+  const blocks = previewBlocks;
 
   // Load template on mount when editing an existing report
   useEffect(() => {
@@ -51,17 +52,20 @@ const ReportAgentPage = () => {
         const res = await reportAPI.getTemplate(id);
         const tpl = res.data?.data || {};
         if (cancelled) return;
-        setDefinition({
+        const def = {
           name: tpl.name || '',
           scope: tpl.scope || { mode: 'portfolio' },
           theme: { preset: 'clean', ...(tpl.theme || {}) },
           blocks: tpl.blocks || [],
-        });
+        };
+        setDefinition(def);
         setSchedule({ ...initialBuilderState.schedule, ...(tpl.schedule || {}) });
         setDelivery({ ...initialBuilderState.delivery, ...(tpl.delivery || {}) });
         setAccess({ ...initialBuilderState.access, ...(tpl.access || {}) });
+        setDescription(tpl.description || '');
         setImageSlots(tpl.imageSlots || []);
         setTemplateId(id);
+        if (def.blocks?.length) repreview(def);
       } catch (err) {
         enqueueSnackbar(err.response?.data?.message || 'Failed to load report', { variant: 'error' });
       } finally {
@@ -72,15 +76,10 @@ const ReportAgentPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, isEdit]);
 
-  // After the definition is seeded on edit, resolve a live preview once.
-  useEffect(() => {
-    if (isEdit && !loading && definition.blocks?.length) { repreview(); }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading]);
-
   // Single source of truth for create + update + schedule persistence
   const buildPayload = () => ({
     name: definition.name || 'Untitled report',
+    description,
     scope: definition.scope,
     theme: definition.theme,
     blocks: definition.blocks,
@@ -91,28 +90,31 @@ const ReportAgentPage = () => {
   });
 
   const handleSave = async () => {
-    if (!definition.blocks?.length) { enqueueSnackbar('Ask the agent to build something first.', { variant: 'info' }); return; }
+    if (!definition.blocks?.length) { enqueueSnackbar('Ask the agent to build something first.', { variant: 'info' }); return null; }
     setSaving(true);
     try {
       if (templateId) {
         await reportAPI.updateTemplate(templateId, buildPayload());
         enqueueSnackbar('Report saved.', { variant: 'success' });
+        return templateId;
       } else {
         const res = await reportAPI.createTemplate(buildPayload());
         const newId = res.data?.data?._id;
-        setTemplateId(newId);
+        if (newId) setTemplateId(newId);
         enqueueSnackbar('Report saved.', { variant: 'success' });
-        if (newId) navigate(`/reports/templates/${newId}/edit`, { replace: true });
+        return newId || null;
       }
     } catch (err) {
       enqueueSnackbar(err.response?.data?.message || 'Save failed', { variant: 'error' });
+      return null;
     } finally { setSaving(false); }
   };
 
   const openSchedule = async () => {
-    if (!templateId) {
-      if (!definition.blocks?.length) { enqueueSnackbar('Build and save the report first.', { variant: 'info' }); return; }
-      await handleSave();
+    let tid = templateId;
+    if (!tid) {
+      tid = await handleSave();
+      if (!tid) return;
     }
     // Ensure defaults exist for a brand-new report
     setSchedule((s) => s || { ...initialBuilderState.schedule });
@@ -188,7 +190,7 @@ const ReportAgentPage = () => {
               <ReportBlockRenderer
                 key={block.id || block.type}
                 block={block}
-                images={[]}
+                images={imageSlots}
                 themePreset={definition.theme?.preset}
                 accentColor={definition.theme?.accentColor}
               />
@@ -209,7 +211,11 @@ const ReportAgentPage = () => {
         onScheduleChange={(patch) => setSchedule((s) => ({ ...(s || initialBuilderState.schedule), ...patch }))}
         onDeliveryChange={(patch) => setDelivery((d) => ({ ...(d || initialBuilderState.delivery), ...patch }))}
         onAccessChange={(patch) => setAccess((a) => ({ ...(a || initialBuilderState.access), ...patch }))}
-        onClose={async () => {
+        onClose={async (_event, reason) => {
+          if (reason === 'backdropClick' || reason === 'escapeKeyDown') {
+            setScheduleOpen(false);
+            return;
+          }
           setScheduleOpen(false);
           if (templateId) {
             try {
