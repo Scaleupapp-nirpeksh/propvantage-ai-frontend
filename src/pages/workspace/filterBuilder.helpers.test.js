@@ -19,4 +19,19 @@ describe('FilterBuilder helpers', () => {
     expect(defaultValueForField({ type: 'enum', enumValues: ['A', 'B'] }, 'in')).toEqual([]);
     expect(defaultValueForField({ type: 'string' }, 'contains')).toBe('');
   });
+
+  it('defaultValueForField returns a 2-element array for between', () => {
+    expect(defaultValueForField({ type: 'number' }, 'between')).toEqual([null, null]);
+    expect(defaultValueForField({ type: 'date' }, 'between')).toEqual([null, null]);
+  });
+
+  it('defaultValueForField returns scalar defaults when switching away from between', () => {
+    expect(defaultValueForField({ type: 'number' }, 'gt')).toBe(0);
+    expect(defaultValueForField({ type: 'date' }, 'is')).toBe('');
+  });
+
+  it('defaultValueForField returns null for no-value operators', () => {
+    expect(defaultValueForField({ type: 'number' }, 'isEmpty')).toBeNull();
+    expect(defaultValueForField({ type: 'string' }, 'isNotEmpty')).toBeNull();
+  });
 });

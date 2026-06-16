@@ -42,7 +42,7 @@ export const defaultValueForField = (field, op) => {
 const FilterBuilder = ({ catalog, plan, onChange }) => {
   const fields = catalog?.fields || [];
 
-  const updateFilters = (filters) => onChange({ ...plan, filters });
+  const updateFilters = (filters) => onChange({ ...plan, logic: 'AND', filters });
 
   const addRow = () => {
     const first = fields[0];
@@ -96,6 +96,56 @@ const FilterBuilder = ({ catalog, plan, onChange }) => {
             ))}
           </Select>
         </FormControl>
+      );
+    }
+
+    if (row.op === 'between' && f?.type === 'number') {
+      const val = Array.isArray(row.value) ? row.value : [null, null];
+      return (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <TextField
+            size="small"
+            type="number"
+            label="Min"
+            value={val[0] ?? ''}
+            onChange={(e) => patchRow(idx, { value: [e.target.value === '' ? null : Number(e.target.value), val[1]] })}
+            sx={{ width: 120 }}
+          />
+          <TextField
+            size="small"
+            type="number"
+            label="Max"
+            value={val[1] ?? ''}
+            onChange={(e) => patchRow(idx, { value: [val[0], e.target.value === '' ? null : Number(e.target.value)] })}
+            sx={{ width: 120 }}
+          />
+        </Box>
+      );
+    }
+
+    if (row.op === 'between' && f?.type === 'date') {
+      const val = Array.isArray(row.value) ? row.value : ['', ''];
+      return (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <TextField
+            size="small"
+            type="date"
+            label="From"
+            InputLabelProps={{ shrink: true }}
+            value={val[0] || ''}
+            onChange={(e) => patchRow(idx, { value: [e.target.value, val[1]] })}
+            sx={{ width: 180 }}
+          />
+          <TextField
+            size="small"
+            type="date"
+            label="To"
+            InputLabelProps={{ shrink: true }}
+            value={val[1] || ''}
+            onChange={(e) => patchRow(idx, { value: [val[0], e.target.value] })}
+            sx={{ width: 180 }}
+          />
+        </Box>
       );
     }
 
