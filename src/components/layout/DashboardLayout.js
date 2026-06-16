@@ -86,6 +86,7 @@ import {
   Storefront,
   Visibility,
   Summarize,
+  ViewQuilt,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import { useChat } from '../../context/ChatContext';
@@ -107,6 +108,13 @@ const getNavigationItems = (userRole, canAccess) => {
     {
       section: 'MAIN',
       items: [
+        {
+          id: 'workspace',
+          title: 'My Workspace',
+          icon: ViewQuilt,
+          path: '/workspace',
+          requiredAccess: () => true,
+        },
         {
           id: 'dashboard',
           title: 'Dashboard',

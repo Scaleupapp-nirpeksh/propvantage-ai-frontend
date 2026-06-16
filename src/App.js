@@ -45,6 +45,9 @@ const SalesManagerDashboard = React.lazy(() => import('./pages/dashboard/SalesMa
 const FinanceHeadDashboard = React.lazy(() => import('./pages/dashboard/FinanceHeadDashboard'));
 const ProjectDirectorDashboard = React.lazy(() => import('./pages/dashboard/ProjectDirectorDashboard'));
 
+// Personalized Workspace (default landing) - new
+const WorkspacePage = React.lazy(() => import('./pages/workspace/WorkspacePage'));
+
 // Project Management Pages - UNCHANGED
 const ProjectsListPage = React.lazy(() => import('./pages/projects/ProjectsListPage'));
 const ProjectDetailPage = React.lazy(() => import('./pages/projects/ProjectDetailPage'));
@@ -348,7 +351,13 @@ const DashboardRouter = () => {
   // Redirect channel partner org users away from the developer dashboard
   if (isChannelPartnerOrg) return <Navigate to="/partner/dashboard" replace />;
 
-  // Route to appropriate dashboard based on role level / permissions first, then fall back to role string
+  // NEW: "My Workspace" is the default landing for developer-org users.
+  // The 5 role dashboards remain reachable via their own routes / the nav
+  // "Dashboards" group below; this only changes the implicit landing target.
+  return <Navigate to="/workspace" replace />;
+
+  /* eslint-disable no-unreachable */
+  // (role-dashboard computation retained below for reference / direct routes)
   const getDashboardComponent = () => {
     // Try permission-based routing when roleRef is available
     if (roleLevel !== undefined && roleLevel < 100) {
@@ -381,8 +390,8 @@ const DashboardRouter = () => {
         return <SalesExecutiveDashboard />; // Default fallback
     }
   };
-
   return getDashboardComponent();
+  /* eslint-enable no-unreachable */
 };
 
 // =============================================================================
@@ -502,6 +511,20 @@ const AppRoutes = () => {
       } />
 
       {/* ========================================= */}
+      {/* PERSONALIZED WORKSPACE (default landing)  */}
+      {/* ========================================= */}
+
+      <Route path="/workspace" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading your workspace..." />}>
+              <WorkspacePage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* ========================================= */}
       {/* PROTECTED DASHBOARD ROUTE - UNCHANGED */}
       {/* ========================================= */}
 
@@ -513,6 +536,33 @@ const AppRoutes = () => {
             </Suspense>
           </DashboardLayout>
         </ProtectedRoute>
+      } />
+
+      {/* The 5 role dashboards — reachable directly (nav "Dashboards" group). */}
+      <Route path="/dashboards/business-head" element={
+        <ProtectedRoute><DashboardLayout>
+          <Suspense fallback={<LoadingFallback />}><BusinessHeadDashboard /></Suspense>
+        </DashboardLayout></ProtectedRoute>
+      } />
+      <Route path="/dashboards/project-director" element={
+        <ProtectedRoute><DashboardLayout>
+          <Suspense fallback={<LoadingFallback />}><ProjectDirectorDashboard /></Suspense>
+        </DashboardLayout></ProtectedRoute>
+      } />
+      <Route path="/dashboards/sales-manager" element={
+        <ProtectedRoute><DashboardLayout>
+          <Suspense fallback={<LoadingFallback />}><SalesManagerDashboard /></Suspense>
+        </DashboardLayout></ProtectedRoute>
+      } />
+      <Route path="/dashboards/finance-head" element={
+        <ProtectedRoute><DashboardLayout>
+          <Suspense fallback={<LoadingFallback />}><FinanceHeadDashboard /></Suspense>
+        </DashboardLayout></ProtectedRoute>
+      } />
+      <Route path="/dashboards/sales-executive" element={
+        <ProtectedRoute><DashboardLayout>
+          <Suspense fallback={<LoadingFallback />}><SalesExecutiveDashboard /></Suspense>
+        </DashboardLayout></ProtectedRoute>
       } />
 
       {/* ========================================= */}
