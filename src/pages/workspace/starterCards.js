@@ -68,13 +68,13 @@ export const STARTER_CARDS = {
       { field: 'daysInCurrentStatus', dir: 'desc' },
     ),
     listCard(
-      "My team's site visits this week",
+      'Recent site visits',
       'leads',
       [
-        { field: 'status', op: 'is', value: 'Site Visit Scheduled' },
-        { field: 'followUpDate', op: 'lastNDays', value: 7 },
+        { field: 'status', op: 'is', value: 'Site Visit Completed' },
+        { field: 'daysInCurrentStatus', op: 'lte', value: 7 },
       ],
-      { field: 'followUpDate', dir: 'asc' },
+      { field: 'daysInCurrentStatus', dir: 'asc' },
     ),
   ],
   'Sales Head': [
@@ -96,10 +96,10 @@ export const STARTER_CARDS = {
       { field: 'daysOverdue', dir: 'desc' },
     ),
     listCard(
-      'Payments due this week',
+      'Pending payments',
       'payments',
-      [{ field: 'dueDate', op: 'lastNDays', value: 7 }],
-      { field: 'dueDate', dir: 'asc' },
+      [{ field: 'status', op: 'is', value: 'pending' }],
+      { field: 'daysOverdue', dir: 'desc' },
     ),
   ],
   'Finance Manager': [
