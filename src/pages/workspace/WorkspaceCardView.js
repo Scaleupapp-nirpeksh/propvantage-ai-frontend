@@ -13,6 +13,7 @@ import { useSnackbar } from 'notistack';
 import { workspaceAPI } from '../../services/api';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { DataTable, KPICard } from '../../components/common';
+import ConfirmDialog from '../../components/common/ConfirmDialog';
 import CardBuilderDialog from './CardBuilderDialog';
 import SharingSettings from './SharingSettings';
 import { getModuleCatalog, detailRouteFor } from './catalogCache';
@@ -28,6 +29,7 @@ const WorkspaceCardView = ({ card, size = 'md', dragHandleProps }) => {
   const [menuEl, setMenuEl] = useState(null);
   const [editOpen, setEditOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   const isMetric = card.renderMode === 'metric';
 
@@ -164,7 +166,7 @@ const WorkspaceCardView = ({ card, size = 'md', dragHandleProps }) => {
         </MenuItem>
         <Divider />
         <MenuItem
-          onClick={() => { deleteCard(card._id); setMenuEl(null); }}
+          onClick={() => { setConfirmDeleteOpen(true); setMenuEl(null); }}
           sx={{ color: 'error.main' }}
         >
           <ListItemIcon><DeleteOutline fontSize="small" color="error" /></ListItemIcon>
@@ -174,6 +176,15 @@ const WorkspaceCardView = ({ card, size = 'md', dragHandleProps }) => {
 
       <CardBuilderDialog open={editOpen} onClose={() => setEditOpen(false)} card={card} />
       <SharingSettings open={shareOpen} onClose={() => setShareOpen(false)} card={card} />
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        title="Delete card?"
+        message={`Delete "${card.title}"? This removes it for everyone it's shared with.`}
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={() => { deleteCard(card._id); setConfirmDeleteOpen(false); }}
+        onCancel={() => setConfirmDeleteOpen(false)}
+      />
     </Card>
   );
 };

@@ -11,14 +11,6 @@ import { CSS } from '@dnd-kit/utilities';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import WorkspaceCardView from './WorkspaceCardView';
 
-// Map a card size to a responsive column span (12-col grid).
-// eslint-disable-next-line no-unused-vars
-const SIZE_SPAN = {
-  sm: { xs: 12, sm: 6, md: 4, lg: 3 },
-  md: { xs: 12, sm: 6, md: 6, lg: 4 },
-  lg: { xs: 12, sm: 12, md: 8, lg: 6 },
-};
-
 // Flexbox basis (%) per size at the md+ breakpoint — keeps dnd hit-areas simple.
 const SIZE_BASIS = { sm: '25%', md: '33.333%', lg: '50%' };
 
