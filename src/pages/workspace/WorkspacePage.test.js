@@ -2,6 +2,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import WorkspacePage from './WorkspacePage';
 
 // Mock the API module so no network calls fire.
 jest.mock('../../services/api', () => ({
@@ -33,8 +34,6 @@ jest.mock('../../context/WorkspaceContext', () => ({
 jest.mock('./WorkspaceBoard', () => () => <div data-testid="board" />);
 jest.mock('./CardBuilderDialog', () => () => null);
 jest.mock('./SharedWithMeTray', () => () => null);
-
-import WorkspacePage from './WorkspacePage';
 
 describe('WorkspacePage', () => {
   it('renders the header and the role-based empty state', () => {
