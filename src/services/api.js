@@ -592,7 +592,7 @@ export const workspaceAPI = {
   // opts: { renderMode:'list'|'metric', metricConfig:{ agg, field } }
   // → { rows, total } (list) or { value, breakdown } (metric)
   preview: (plan, opts = {}) =>
-    api.post('/workspace/preview', { ...plan, ...opts }),
+    api.post('/workspace/preview', { queryPlan: plan, ...opts }),
 
   // List the user's own + shared-with-them cards.
   getCards: () => api.get('/workspace/cards'),

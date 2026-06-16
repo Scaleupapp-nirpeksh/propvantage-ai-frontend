@@ -42,7 +42,7 @@ const SharingSettings = ({ open, onClose, card }) => {
         if (cancelled) return;
         const uList = uRes.data?.data?.users || uRes.data?.data || uRes.data || [];
         setUsers(Array.isArray(uList) ? uList : []);
-        const rList = rRes?.data?.data || rRes?.data || null;
+        const rList = rRes?.data?.data?.roles || rRes?.data?.data || rRes?.data || null;
         if (Array.isArray(rList) && rList.length) {
           setRoles(rList.map((r) => r.name).filter(Boolean));
         }
