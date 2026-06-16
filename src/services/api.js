@@ -575,6 +575,41 @@ export const amenityAPI = {
 };
 
 // =============================================================================
+// PERSONALIZED WORKSPACE SERVICES (/api/workspace)
+// Cards = saved, filtered queries over one module, rendered as list or metric.
+// All responses are wrapped { success, data, message } — unwrap res.data.data.
+// =============================================================================
+export const workspaceAPI = {
+  // Field catalog that drives the FilterBuilder UI (fields, operators, enumValues).
+  getCatalog: (module) => api.get(`/workspace/catalog/${module}`),
+
+  // Compile a natural-language sentence into a validated Query Plan.
+  // → { plan, clarification }
+  nlToQueryPlan: (text, module) =>
+    api.post('/workspace/nl-to-queryplan', { text, module }),
+
+  // Run a Query Plan WITHOUT saving (builder live preview).
+  // opts: { renderMode:'list'|'metric', metricConfig:{ agg, field } }
+  // → { rows, total } (list) or { value, breakdown } (metric)
+  preview: (plan, opts = {}) =>
+    api.post('/workspace/preview', { ...plan, ...opts }),
+
+  // List the user's own + shared-with-them cards.
+  getCards: () => api.get('/workspace/cards'),
+  createCard: (payload) => api.post('/workspace/cards', payload),
+  updateCard: (id, payload) => api.put(`/workspace/cards/${id}`, payload),
+  deleteCard: (id) => api.delete(`/workspace/cards/${id}`),
+
+  // Run a saved card under the viewer's own scope.
+  // → { rows, total } (list) or { value, breakdown } (metric)
+  getCardData: (id) => api.post(`/workspace/cards/${id}/data`),
+
+  // Personal layout (card order + sizes).
+  getLayout: () => api.get('/workspace/layout'),
+  saveLayout: (items) => api.put('/workspace/layout', { items }),
+};
+
+// =============================================================================
 // 9. SALES MANAGEMENT SERVICES (/api/sales) - UNCHANGED
 // =============================================================================
 export const salesAPI = {
