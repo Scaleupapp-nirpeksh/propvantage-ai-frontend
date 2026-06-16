@@ -72,11 +72,13 @@ const WorkspaceCardView = ({ card, size = 'md', dragHandleProps }) => {
       id: f.key,
       label: f.label,
       sortable: false,
-      render: (val) => {
-        if (val === null || val === undefined || val === '') return '-';
-        if (f.type === 'date') return new Date(val).toLocaleDateString();
-        if (typeof val === 'object') return val.name || val.title || val.firmName || '-';
-        return String(val);
+      render: (val, row) => {
+        const labelVal = row?.[`${f.key}_label`];
+        const resolved = (labelVal !== undefined && labelVal !== null && labelVal !== '') ? labelVal : val;
+        if (resolved === null || resolved === undefined || resolved === '') return '—';
+        if (f.type === 'date') return new Date(resolved).toLocaleDateString();
+        if (typeof resolved === 'object') return resolved.name || resolved.title || resolved.firmName || '—';
+        return String(resolved);
       },
     }));
   }, [catalog]);
