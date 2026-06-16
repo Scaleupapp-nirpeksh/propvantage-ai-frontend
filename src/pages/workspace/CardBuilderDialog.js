@@ -6,6 +6,7 @@ import {
   ToggleButtonGroup, ToggleButton, Typography, Divider, Paper, CircularProgress,
 } from '@mui/material';
 import { ListAlt, ShowChart } from '@mui/icons-material';
+import { useSnackbar } from 'notistack';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { workspaceAPI } from '../../services/api';
 import { getModuleCatalog } from './catalogCache';
@@ -31,6 +32,7 @@ const emptyPlan = (module) => ({
 
 const CardBuilderDialog = ({ open, onClose, card }) => {
   const { createCard, updateCard, addToBoard } = useWorkspace();
+  const { enqueueSnackbar } = useSnackbar();
   const isEdit = Boolean(card?._id);
 
   const [title, setTitle] = useState('');
@@ -86,10 +88,17 @@ const CardBuilderDialog = ({ open, onClose, card }) => {
 
   // Live preview: run the current plan without saving.
   const runPreview = useCallback(async () => {
+    if (!plan || !plan.filters || plan.filters.length === 0) {
+      setPreview(null);
+      return;
+    }
     setPreviewing(true);
     try {
+      const metricConfig = metricField
+        ? { agg: 'sum', field: metricField }
+        : { agg: 'count', field: null };
       const opts = renderMode === 'metric'
-        ? { renderMode, metricConfig: { agg: 'count', field: metricField } }
+        ? { renderMode, metricConfig }
         : { renderMode };
       const res = await workspaceAPI.preview({ ...plan, module }, opts);
       setPreview(res.data?.data || null);
@@ -112,14 +121,21 @@ const CardBuilderDialog = ({ open, onClose, card }) => {
     : (preview?.total ?? preview?.rows?.length ?? '—');
 
   const handleSave = async () => {
+    if (!title.trim()) {
+      enqueueSnackbar('Please enter a card title', { variant: 'warning' });
+      return;
+    }
     setSaving(true);
     try {
+      const metricConfig = metricField
+        ? { agg: 'sum', field: metricField }
+        : { agg: 'count', field: null };
       const payload = {
-        title: title.trim() || 'Untitled card',
+        title: title.trim(),
         module,
         queryPlan: { ...plan, module },
         renderMode,
-        metricConfig: { agg: 'count', field: renderMode === 'metric' ? metricField : null },
+        metricConfig: renderMode === 'metric' ? metricConfig : { agg: 'count', field: null },
       };
       if (isEdit) {
         await updateCard(card._id, payload);
