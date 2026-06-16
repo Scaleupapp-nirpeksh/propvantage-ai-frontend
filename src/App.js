@@ -15,6 +15,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { ChatProvider } from './context/ChatContext';
 import { CoachMarkProvider, FLOWS } from './components/onboarding';
 import { ProjectProvider } from './context/ProjectContext';
+import { WorkspaceProvider } from './context/WorkspaceContext';
 
 // Layout Components
 import AuthLayout from './components/layout/AuthLayout';
@@ -1768,15 +1769,17 @@ const App = () => {
       >
         <AuthProvider>
           <ProjectProvider>
-            <ChatProvider>
-              <CoachMarkProvider flows={FLOWS}>
-                <Router>
-                  <Suspense fallback={<LoadingFallback message="Loading PropVantage AI..." />}>
-                    <AppRoutes />
-                  </Suspense>
-                </Router>
-              </CoachMarkProvider>
-            </ChatProvider>
+            <WorkspaceProvider>
+              <ChatProvider>
+                <CoachMarkProvider flows={FLOWS}>
+                  <Router>
+                    <Suspense fallback={<LoadingFallback message="Loading PropVantage AI..." />}>
+                      <AppRoutes />
+                    </Suspense>
+                  </Router>
+                </CoachMarkProvider>
+              </ChatProvider>
+            </WorkspaceProvider>
           </ProjectProvider>
         </AuthProvider>
       </SnackbarProvider>
