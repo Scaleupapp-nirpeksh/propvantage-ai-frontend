@@ -108,9 +108,11 @@ const QuestionResult = ({ text }) => {
 // ── Page ─────────────────────────────────────────────────────────────────────
 const HomePage = () => {
   const navigate = useNavigate();
-  const { user, isChannelPartnerOrg } = useAuth();
+  const { user, roleRef, isChannelPartnerOrg } = useAuth();
   const firstName = user?.firstName || 'there';
-  const title = user?.roleRef?.name || null;
+  // Role title lives in the top-level roleRef (populated role) — fall back to the
+  // legacy user.role string (what User Management renders).
+  const title = roleRef?.name || user?.role || null;
 
   const [returning, setReturning] = useState(false);
   const [text, setText] = useState('');
