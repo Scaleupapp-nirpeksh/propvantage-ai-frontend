@@ -47,6 +47,7 @@ const ProjectDirectorDashboard = React.lazy(() => import('./pages/dashboard/Proj
 
 // Personalized Workspace (default landing) - new
 const WorkspacePage = React.lazy(() => import('./pages/workspace/WorkspacePage'));
+const HomePage = React.lazy(() => import('./pages/home/HomePage'));
 
 // Project Management Pages - UNCHANGED
 const ProjectsListPage = React.lazy(() => import('./pages/projects/ProjectsListPage'));
@@ -1737,7 +1738,16 @@ const AppRoutes = () => {
       {/* REDIRECT ROUTES - UNCHANGED */}
       {/* ========================================= */}
 
-      <Route path="/" element={<Navigate to="/workspace" replace />} />
+      <Route path="/" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading home..." />}>
+              <HomePage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/home" element={<Navigate to="/" replace />} />
       <Route path="*" element={<Navigate to="/404" replace />} />
     </Routes>
   );

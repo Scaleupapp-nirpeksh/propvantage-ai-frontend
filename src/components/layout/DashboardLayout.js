@@ -87,6 +87,7 @@ import {
   Visibility,
   Summarize,
   ViewQuilt,
+  Home as HomeIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import { useChat } from '../../context/ChatContext';
@@ -108,6 +109,13 @@ const getNavigationItems = (userRole, canAccess) => {
     {
       section: 'MAIN',
       items: [
+        {
+          id: 'home',
+          title: 'Home',
+          icon: HomeIcon,
+          path: '/',
+          requiredAccess: () => true,
+        },
         {
           id: 'workspace',
           title: 'My View',

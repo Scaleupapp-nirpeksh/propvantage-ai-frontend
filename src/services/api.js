@@ -579,6 +579,14 @@ export const amenityAPI = {
 // Cards = saved, filtered queries over one module, rendered as list or metric.
 // All responses are wrapped { success, data, message } — unwrap res.data.data.
 // =============================================================================
+// Home screen: classify a free-text request into one intent.
+// → { kind:'action', entity, mode, label }
+//   | { kind:'data', card:{ title, module, renderMode, queryPlan, metricConfig } }
+//   | { kind:'question', text } | { kind:'clarify', clarification }
+export const homeAPI = {
+  intent: (text) => api.post('/home/intent', { text }),
+};
+
 export const workspaceAPI = {
   // Field catalog that drives the FilterBuilder UI (fields, operators, enumValues).
   getCatalog: (module) => api.get(`/workspace/catalog/${module}`),
