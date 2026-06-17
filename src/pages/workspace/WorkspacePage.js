@@ -49,7 +49,7 @@ const WorkspacePage = () => {
   return (
     <Box>
       <PageHeader
-        title="My Workspace"
+        title="My View"
         subtitle="Your saved, filtered views across every module"
         icon={ViewQuilt}
         actions={
@@ -95,7 +95,7 @@ const WorkspacePage = () => {
         >
           <ViewQuilt sx={{ fontSize: 48, color: 'primary.main', mb: 1 }} />
           <Typography variant="h6" fontWeight={700}>
-            Build your workspace
+            Build your view
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3, maxWidth: 520, mx: 'auto' }}>
             Pin saved, filtered views from any module. Start from a suggestion for

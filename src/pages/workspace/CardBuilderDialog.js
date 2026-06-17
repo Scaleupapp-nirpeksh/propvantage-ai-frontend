@@ -63,7 +63,8 @@ const CardBuilderDialog = ({ open, onClose, card }) => {
       setRenderMode('list');
       setMetricField(null);
     }
-    setTab(0);
+    // New card → default to "Describe the Cards" (NL) tab; editing → Builder (plan exists).
+    setTab(isEdit ? 0 : 1);
     setPreview(null);
   }, [open, isEdit, card]);
 
@@ -194,7 +195,7 @@ const CardBuilderDialog = ({ open, onClose, card }) => {
           <Grid item xs={12}>
             <Tabs value={tab} onChange={(e, v) => setTab(v)} sx={{ mb: 1, minHeight: 40 }}>
               <Tab label="Builder" sx={{ minHeight: 40, textTransform: 'none' }} />
-              <Tab label="Ask in words" sx={{ minHeight: 40, textTransform: 'none' }} />
+              <Tab label="Describe the Cards" sx={{ minHeight: 40, textTransform: 'none' }} />
             </Tabs>
 
             {catalogLoading ? (

@@ -28,17 +28,19 @@ export const getModuleCatalog = (module) => {
   return promise;
 };
 
-// Existing detail routes per module (see src/App.js route table).
+// Existing detail routes per module (see src/App.js route table). Each takes the
+// full row, since the target id differs by module — e.g. a payments row is a
+// PaymentTransaction whose detail is the *sale's* payment plan (row.sale), not row._id.
 const DETAIL_ROUTE = {
-  leads: (id) => `/leads/${id}`,
-  sales: (id) => `/sales/${id}`,
-  payments: (id) => `/payments/plans/${id}`,
-  tasks: (id) => `/tasks/${id}`,
-  channelPartners: (id) => `/channel-partners/${id}`,
+  leads: (row) => `/leads/${row._id}`,
+  sales: (row) => `/sales/${row._id}`,
+  payments: (row) => (row.sale ? `/payments/plans/${row.sale}` : null),
+  tasks: (row) => `/tasks/${row._id}`,
+  channelPartners: (row) => `/channel-partners/${row._id}`,
 };
 
-export const detailRouteFor = (module, id) => {
-  if (!id) return null;
+export const detailRouteFor = (module, row) => {
+  if (!row?._id) return null;
   const fn = DETAIL_ROUTE[module];
-  return fn ? fn(id) : null;
+  return fn ? fn(row) : null;
 };

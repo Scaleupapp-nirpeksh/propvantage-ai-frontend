@@ -110,7 +110,7 @@ const getNavigationItems = (userRole, canAccess) => {
       items: [
         {
           id: 'workspace',
-          title: 'My Workspace',
+          title: 'My View',
           icon: ViewQuilt,
           path: '/workspace',
           requiredAccess: () => true,

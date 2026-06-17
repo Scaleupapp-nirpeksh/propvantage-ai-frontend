@@ -84,7 +84,7 @@ const WorkspaceCardView = ({ card, size = 'md', dragHandleProps }) => {
   }, [catalog]);
 
   const handleRowClick = (row) => {
-    const route = detailRouteFor(card.module, row._id);
+    const route = detailRouteFor(card.module, row);
     if (route) navigate(route);
   };
 

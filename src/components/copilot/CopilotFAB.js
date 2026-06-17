@@ -102,8 +102,8 @@ const CopilotFAB = () => {
               color="primary"
               onClick={handleToggle}
               sx={{
-                width: 56,
-                height: 56,
+                width: 44,
+                height: 44,
                 boxShadow: '0 4px 16px rgba(30, 136, 229, 0.4)',
                 transition: 'all 200ms ease',
                 '&:hover': {
@@ -121,7 +121,7 @@ const CopilotFAB = () => {
                 }),
               }}
             >
-              <AutoAwesome sx={{ fontSize: 24 }} />
+              <AutoAwesome sx={{ fontSize: 20 }} />
             </Fab>
           </Tooltip>
         </Box>
