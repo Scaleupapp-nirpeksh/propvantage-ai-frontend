@@ -70,3 +70,6 @@ yarn-debug.log*
 yarn-error.log*
 .vercel
 .superpowers/
+
+# Playwright MCP verification snapshots/screenshots
+.playwright-mcp/
