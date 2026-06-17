@@ -57,7 +57,7 @@ const LoginPage = () => {
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      const defaultDest = isChannelPartnerOrg ? '/partner/dashboard' : '/dashboard';
+      const defaultDest = isChannelPartnerOrg ? '/partner/dashboard' : '/workspace';
       const candidate = location.state?.from?.pathname;
       const goodCandidate =
         candidate &&
@@ -134,7 +134,7 @@ const LoginPage = () => {
       if (result.success) {
         enqueueSnackbar(`Welcome back, ${result.user.firstName}!`, { variant: 'success' });
         const isCp = result.organization?.type === 'channel_partner';
-        const defaultDest = isCp ? '/partner/dashboard' : '/dashboard';
+        const defaultDest = isCp ? '/partner/dashboard' : '/workspace';
         const candidate = location.state?.from?.pathname || result.redirectTo;
         const goodCandidate =
           candidate &&

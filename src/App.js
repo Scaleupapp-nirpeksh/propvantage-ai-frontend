@@ -351,13 +351,8 @@ const DashboardRouter = () => {
   // Redirect channel partner org users away from the developer dashboard
   if (isChannelPartnerOrg) return <Navigate to="/partner/dashboard" replace />;
 
-  // NEW: "My Workspace" is the default landing for developer-org users.
-  // The 5 role dashboards remain reachable via their own routes / the nav
-  // "Dashboards" group below; this only changes the implicit landing target.
-  return <Navigate to="/workspace" replace />;
-
-  /* eslint-disable no-unreachable */
-  // (role-dashboard computation retained below for reference / direct routes)
+  // "/dashboard" renders the user's role dashboard. "My Workspace" (/workspace)
+  // is the default post-login landing (see LoginPage default dest + the root "/" route).
   const getDashboardComponent = () => {
     // Try permission-based routing when roleRef is available
     if (roleLevel !== undefined && roleLevel < 100) {
@@ -391,7 +386,6 @@ const DashboardRouter = () => {
     }
   };
   return getDashboardComponent();
-  /* eslint-enable no-unreachable */
 };
 
 // =============================================================================
@@ -1795,7 +1789,7 @@ const AppRoutes = () => {
       {/* REDIRECT ROUTES - UNCHANGED */}
       {/* ========================================= */}
 
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/" element={<Navigate to="/workspace" replace />} />
       <Route path="*" element={<Navigate to="/404" replace />} />
     </Routes>
   );
