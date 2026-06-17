@@ -14,6 +14,7 @@ import WorkspaceBoard from './WorkspaceBoard';
 import CardBuilderDialog from './CardBuilderDialog';
 import SharedWithMeTray from './SharedWithMeTray';
 import RoleDashboard from './RoleDashboard';
+import SuggestedCardsDialog from './SuggestedCardsDialog';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -42,6 +43,7 @@ const WorkspacePage = () => {
 
   const [builderOpen, setBuilderOpen] = useState(false);
   const [seeding, setSeeding] = useState(false);
+  const [suggestedOpen, setSuggestedOpen] = useState(false);
 
   // Sync viewMode when the ?view= param changes after mount (e.g. /dashboard
   // redirect, nav clicks, or browser back/forward).
@@ -147,6 +149,16 @@ const WorkspacePage = () => {
             >
               Refresh all
             </Button>
+            {boardCount > 0 && (
+              <Button
+                variant="outlined"
+                startIcon={<AutoAwesome />}
+                onClick={() => setSuggestedOpen(true)}
+                sx={{ textTransform: 'none' }}
+              >
+                Suggested
+              </Button>
+            )}
             <Button
               variant="contained"
               startIcon={<Add />}
@@ -231,6 +243,11 @@ const WorkspacePage = () => {
         open={builderOpen}
         onClose={() => setBuilderOpen(false)}
         card={null}
+      />
+
+      <SuggestedCardsDialog
+        open={suggestedOpen}
+        onClose={() => setSuggestedOpen(false)}
       />
     </Box>
   );

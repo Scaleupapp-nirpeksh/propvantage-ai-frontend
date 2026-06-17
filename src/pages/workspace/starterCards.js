@@ -30,6 +30,67 @@ const metricCard = (title, module, filters) => ({
   queryPlan: plan(module, filters, null, 1),
 });
 
+const metricSumCard = (title, module, field, filters) => ({
+  title,
+  module,
+  renderMode: 'metric',
+  metricConfig: { agg: 'sum', field },
+  queryPlan: plan(module, filters, null, 1),
+});
+
+// Dashboard-derived suggested cards — mirror dashboard KPIs and use only
+// fields the catalogs expose. Returned for all roles (role param reserved for
+// future personalisation).
+const SUGGESTED = [
+  metricSumCard(
+    'Revenue booked (90d)',
+    'sales',
+    'salePrice',
+    [{ field: 'bookingDate', op: 'lastNDays', value: 90 }],
+  ),
+  metricCard(
+    'Bookings (30d)',
+    'sales',
+    [
+      { field: 'status', op: 'is', value: 'Booked' },
+      { field: 'bookingDate', op: 'lastNDays', value: 30 },
+    ],
+  ),
+  metricCard(
+    'Payments received (30d)',
+    'payments',
+    [
+      { field: 'status', op: 'in', value: ['completed', 'cleared'] },
+      { field: 'paymentDate', op: 'lastNDays', value: 30 },
+    ],
+  ),
+  listCard(
+    'Stale CP leads (20d)',
+    'leads',
+    [
+      { field: 'channelPartner', op: 'isNotEmpty', value: null },
+      { field: 'daysSinceLastCPFollowUp', op: 'gte', value: 20 },
+    ],
+    { field: 'daysSinceLastCPFollowUp', dir: 'desc' },
+  ),
+  listCard(
+    'Overdue tasks',
+    'tasks',
+    [{ field: 'daysOverdue', op: 'gt', value: 0 }],
+    { field: 'daysOverdue', dir: 'desc' },
+  ),
+];
+
+/**
+ * Return the dashboard-derived suggested card definitions.
+ * The role param is reserved for future personalisation; currently the same
+ * set is returned for all roles.
+ * @param {string} [_role]
+ * @returns {Array<object>}
+ */
+// eslint-disable-next-line no-unused-vars
+export const getSuggestedCards = (_role) => SUGGESTED;
+
 // Generic fallback set — useful to any persona.
 const GENERIC = [
   listCard(
