@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box, Card, CardContent, CardHeader, IconButton, Menu, MenuItem,
-  ListItemIcon, ListItemText, Tooltip, Chip, Divider,
+  ListItemIcon, ListItemText, Tooltip, Chip, Divider, Typography,
 } from '@mui/material';
 import {
   MoreVert, Refresh, Edit, Share, RemoveCircleOutline, DeleteOutline,
@@ -12,7 +12,7 @@ import {
 import { useSnackbar } from 'notistack';
 import { workspaceAPI } from '../../services/api';
 import { useWorkspace } from '../../context/WorkspaceContext';
-import { DataTable, KPICard } from '../../components/common';
+import { DataTable } from '../../components/common';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import CardBuilderDialog from './CardBuilderDialog';
 import SharingSettings from './SharingSettings';
@@ -139,13 +139,17 @@ const WorkspaceCardView = ({ card, size = 'md', dragHandleProps }) => {
         {isInsight ? (
           <InsightCardView payload={result} loading={loading} />
         ) : isMetric ? (
-          <KPICard
-            title={card.title}
-            value={loading ? 0 : (result?.value ?? 0)}
-            loading={loading}
-            subtitle={result?.breakdown ? `${result.breakdown.length} segments` : undefined}
-            onClick={loadData}
-          />
+          // Clean single value — the card header already shows the title, so we
+          // don't repeat it (and there's no group-by, so no "segments" line).
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 96, py: 1 }}>
+            <Typography variant="h3" fontWeight={800} sx={{ lineHeight: 1.1 }}>
+              {loading
+                ? '—'
+                : (typeof result?.value === 'number'
+                    ? result.value.toLocaleString('en-IN')
+                    : (result?.value ?? '—'))}
+            </Typography>
+          </Box>
         ) : (
           // List body is capped so long lists scroll inside the card instead of
           // stretching the board (Theme B).
