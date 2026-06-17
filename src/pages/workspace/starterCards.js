@@ -38,15 +38,6 @@ const metricSumCard = (title, module, field, filters) => ({
   queryPlan: plan(module, filters, null, 1),
 });
 
-// chartConfig: { chartType, groupBy, agg:'count'|'sum', metricField, timeBucket }
-const chartCard = (title, module, chartConfig, filters = []) => ({
-  title,
-  module,
-  renderMode: 'chart',
-  chartConfig: { agg: 'count', metricField: null, timeBucket: null, ...chartConfig },
-  queryPlan: plan(module, filters, null, 50),
-});
-
 // Dashboard-derived suggested cards — mirror dashboard KPIs and use only
 // fields the catalogs expose. Returned for all roles (role param reserved for
 // future personalisation).
@@ -88,12 +79,6 @@ const SUGGESTED = [
     [{ field: 'daysOverdue', op: 'gt', value: 0 }],
     { field: 'daysOverdue', dir: 'desc' },
   ),
-  chartCard('Leads by status', 'leads', { chartType: 'funnel', groupBy: 'status' }),
-  chartCard('Leads by source', 'leads', { chartType: 'pie', groupBy: 'source' }),
-  chartCard('Bookings by status', 'sales', { chartType: 'bar', groupBy: 'status' }),
-  chartCard('Revenue by month', 'sales', {
-    chartType: 'line', groupBy: 'bookingDate', agg: 'sum', metricField: 'salePrice', timeBucket: 'month',
-  }),
 ];
 
 /**

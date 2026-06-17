@@ -19,9 +19,6 @@ import {
   Tooltip,
   CartesianGrid,
   Legend,
-  FunnelChart,
-  Funnel,
-  LabelList,
 } from 'recharts';
 
 // Compact INR formatter for chart axis
@@ -33,7 +30,7 @@ const fmtAxisValue = (value) => {
   return value;
 };
 
-const ChartCardRenderer = ({ card, bare = false, height = 180 }) => {
+const ChartCardRenderer = ({ card }) => {
   const theme = useTheme();
   const chartColors = theme.custom?.chartColors || [
     '#1e88e5', '#43a047', '#fb8c00', '#8e24aa', '#00acc1', '#e53935',
@@ -133,22 +130,6 @@ const ChartCardRenderer = ({ card, bare = false, height = 180 }) => {
       );
     }
 
-    if (chartType === 'funnel') {
-      const valueKey = yKeys[0];
-      return (
-        <FunnelChart>
-          {commonTooltip}
-          <Funnel dataKey={valueKey} nameKey={xKey} data={data} isAnimationActive>
-            {data.map((_, i) => (
-              <Cell key={i} fill={chartColors[i % chartColors.length]} />
-            ))}
-            <LabelList position="right" dataKey={xKey} stroke="none" style={{ fontSize: 10 }} />
-            <LabelList position="left" dataKey={valueKey} stroke="none" style={{ fontSize: 10 }} />
-          </Funnel>
-        </FunnelChart>
-      );
-    }
-
     // Default: bar
     return (
       <BarChart data={data}>
@@ -168,16 +149,6 @@ const ChartCardRenderer = ({ card, bare = false, height = 180 }) => {
       </BarChart>
     );
   };
-
-  // Bare mode (workspace chart cards): no title caption + no outer border — the
-  // card shell already provides those. Just the responsive chart.
-  if (bare) {
-    return (
-      <ResponsiveContainer width="100%" height={height}>
-        {renderChart()}
-      </ResponsiveContainer>
-    );
-  }
 
   return (
     <Box sx={{ mb: 1 }}>
@@ -206,7 +177,7 @@ const ChartCardRenderer = ({ card, bare = false, height = 180 }) => {
           bgcolor: 'background.paper',
         }}
       >
-        <ResponsiveContainer width="100%" height={height}>
+        <ResponsiveContainer width="100%" height={180}>
           {renderChart()}
         </ResponsiveContainer>
       </Box>

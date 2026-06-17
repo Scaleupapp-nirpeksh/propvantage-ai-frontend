@@ -45,7 +45,6 @@ const SuggestedCardsDialog = ({ open, onClose }) => {
         queryPlan: def.queryPlan,
         renderMode: def.renderMode,
         metricConfig: def.metricConfig,
-        chartConfig: def.chartConfig,
         visibility: 'private',
         sharedWithUsers: [],
         sharedWithRoles: [],
