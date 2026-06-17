@@ -21,9 +21,10 @@ const NLInput = ({ module, onPlan }) => {
       if (data.clarification) {
         setClarification(data.clarification);
       } else if (data.plan) {
-        // Hand the compiled plan to the dialog; it switches to the Builder tab
-        // so the user can review/edit ("here's the filter I built — edit it").
-        onPlan({ ...data.plan, nlSource: text.trim() });
+        // Hand the compiled plan (+ optional chart spec) to the dialog; it
+        // switches to the Builder tab so the user can review/edit, and into
+        // Chart mode if the request described a chart.
+        onPlan({ ...data.plan, nlSource: text.trim() }, data.chart || null);
       } else {
         setError('Could not understand that. Try rephrasing.');
       }

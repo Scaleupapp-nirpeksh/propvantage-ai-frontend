@@ -7,7 +7,7 @@ import {
 } from '@mui/material';
 import {
   MoreVert, Refresh, Edit, Share, RemoveCircleOutline, DeleteOutline,
-  DragIndicator, ListAlt, ShowChart, Insights,
+  DragIndicator, ListAlt, ShowChart, Insights, BarChart as BarChartIcon,
 } from '@mui/icons-material';
 import { useSnackbar } from 'notistack';
 import { workspaceAPI } from '../../services/api';
@@ -17,6 +17,7 @@ import ConfirmDialog from '../../components/common/ConfirmDialog';
 import CardBuilderDialog from './CardBuilderDialog';
 import SharingSettings from './SharingSettings';
 import InsightCardView from './InsightCardView';
+import ChartCardView from './ChartCardView';
 import { getModuleCatalog, detailRouteFor } from './catalogCache';
 
 const WorkspaceCardView = ({ card, size = 'md', dragHandleProps }) => {
@@ -34,6 +35,7 @@ const WorkspaceCardView = ({ card, size = 'md', dragHandleProps }) => {
 
   const isMetric = card.renderMode === 'metric';
   const isInsight = card.renderMode === 'insight';
+  const isChart = card.renderMode === 'chart';
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -41,23 +43,23 @@ const WorkspaceCardView = ({ card, size = 'md', dragHandleProps }) => {
       const res = await workspaceAPI.getCardData(card._id);
       setResult(res.data?.data || null);
     } catch (err) {
-      setResult(isInsight ? null : isMetric ? { value: 0 } : { rows: [], total: 0 });
+      setResult(isInsight || isChart ? null : isMetric ? { value: 0 } : { rows: [], total: 0 });
       enqueueSnackbar(`"${card.title}" failed to load`, { variant: 'error' });
     } finally {
       setLoading(false);
     }
-  }, [card._id, card.title, isMetric, isInsight, enqueueSnackbar]);
+  }, [card._id, card.title, isMetric, isInsight, isChart, enqueueSnackbar]);
 
-  // Catalog drives the displayable columns for list mode (not needed for metric/insight).
+  // Catalog drives the displayable columns for list mode (not needed for metric/insight/chart).
   const loadCatalog = useCallback(async () => {
-    if (isMetric || isInsight) return;
+    if (isMetric || isInsight || isChart) return;
     try {
       const cat = await getModuleCatalog(card.module);
       setCatalog(cat);
     } catch {
       setCatalog(null);
     }
-  }, [card.module, isMetric, isInsight]);
+  }, [card.module, isMetric, isInsight, isChart]);
 
   useEffect(() => { loadData(); }, [loadData]);
   useEffect(() => { loadCatalog(); }, [loadCatalog]);
@@ -113,11 +115,16 @@ const WorkspaceCardView = ({ card, size = 'md', dragHandleProps }) => {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 0.25 }}>
             <Chip
               size="small"
-              icon={isInsight ? <Insights sx={{ fontSize: 14 }} /> : isMetric ? <ShowChart sx={{ fontSize: 14 }} /> : <ListAlt sx={{ fontSize: 14 }} />}
+              icon={
+                isInsight ? <Insights sx={{ fontSize: 14 }} />
+                  : isChart ? <BarChartIcon sx={{ fontSize: 14 }} />
+                  : isMetric ? <ShowChart sx={{ fontSize: 14 }} />
+                  : <ListAlt sx={{ fontSize: 14 }} />
+              }
               label={isInsight ? 'insight' : card.module}
               sx={{ height: 20, fontSize: '0.65rem' }}
             />
-            {!isMetric && !isInsight && total !== undefined && (
+            {!isMetric && !isInsight && !isChart && total !== undefined && (
               <Chip size="small" label={total} color="primary" sx={{ height: 20, fontSize: '0.65rem', fontWeight: 700 }} />
             )}
           </Box>
@@ -136,7 +143,13 @@ const WorkspaceCardView = ({ card, size = 'md', dragHandleProps }) => {
       />
 
       <CardContent sx={{ flex: 1, pt: 1, '&:last-child': { pb: 2 } }}>
-        {isInsight ? (
+        {isChart ? (
+          <ChartCardView
+            payload={result}
+            chartType={card.chartConfig?.chartType || 'bar'}
+            loading={loading}
+          />
+        ) : isInsight ? (
           <InsightCardView payload={result} loading={loading} />
         ) : isMetric ? (
           // Clean single value — the card header already shows the title, so we

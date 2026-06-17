@@ -6,7 +6,9 @@ import {
   ToggleButtonGroup, ToggleButton, Typography, Divider, Paper, CircularProgress,
   FormGroup, FormControlLabel, Checkbox,
 } from '@mui/material';
-import { ListAlt, ShowChart, ArrowUpward, ArrowDownward, Insights } from '@mui/icons-material';
+import {
+  ListAlt, ShowChart, ArrowUpward, ArrowDownward, Insights, BarChart as BarChartIcon,
+} from '@mui/icons-material';
 import { useSnackbar } from 'notistack';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { workspaceAPI, projectAPI } from '../../services/api';
@@ -14,6 +16,7 @@ import { getModuleCatalog, getInsightSources } from './catalogCache';
 import FilterBuilder from './FilterBuilder';
 import NLInput from './NLInput';
 import InsightCardView from './InsightCardView';
+import ChartCardView from './ChartCardView';
 
 const MODULES = [
   { value: 'leads', label: 'Leads' },
@@ -55,6 +58,12 @@ const CardBuilderDialog = ({ open, onClose, card }) => {
   const [projects, setProjects] = useState([]);
   const [insightPreview, setInsightPreview] = useState(null);
   const [insightPreviewing, setInsightPreviewing] = useState(false);
+  // Chart mode: type + group-by + measure (count, or sum of a numeric field).
+  const [chartType, setChartType] = useState('bar');
+  const [chartGroupBy, setChartGroupBy] = useState('');
+  const [chartMeasure, setChartMeasure] = useState(''); // '' = count; else numeric field key (sum)
+  const [chartPreview, setChartPreview] = useState(null);
+  const [chartPreviewing, setChartPreviewing] = useState(false);
   const [preview, setPreview] = useState(null); // { rows, total } | { value }
   const [previewing, setPreviewing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -72,6 +81,9 @@ const CardBuilderDialog = ({ open, onClose, card }) => {
       setInsightSource(card.insightConfig?.source || '');
       setInsightPeriod(card.insightConfig?.period || '');
       setInsightProject(card.insightConfig?.projectId || '');
+      setChartType(card.chartConfig?.chartType || 'bar');
+      setChartGroupBy(card.chartConfig?.groupBy || '');
+      setChartMeasure(card.chartConfig?.agg === 'sum' ? (card.chartConfig?.metricField || '') : '');
     } else {
       setTitle('');
       setModule('leads');
@@ -82,8 +94,12 @@ const CardBuilderDialog = ({ open, onClose, card }) => {
       setInsightSource('');
       setInsightPeriod('');
       setInsightProject('');
+      setChartType('bar');
+      setChartGroupBy('');
+      setChartMeasure('');
     }
     setInsightPreview(null);
+    setChartPreview(null);
     // New card → default to "Describe the Cards" (NL) tab; editing → Builder (plan exists).
     setTab(isEdit ? 0 : 1);
     setPreview(null);
@@ -157,12 +173,46 @@ const CardBuilderDialog = ({ open, onClose, card }) => {
     return () => { cancelled = true; clearTimeout(t); };
   }, [open, renderMode, insightSource, insightPeriod, insightProject]);
 
+  // Assemble the chartConfig from the builder controls (month-bucket dates).
+  const buildChartConfig = () => {
+    const gf = (catalog?.fields || []).find((f) => f.key === chartGroupBy);
+    return {
+      chartType,
+      groupBy: chartGroupBy,
+      agg: chartMeasure ? 'sum' : 'count',
+      metricField: chartMeasure || null,
+      timeBucket: gf?.type === 'date' ? 'month' : null,
+    };
+  };
+
+  // Live chart preview when type/group-by/measure or filters change.
+  useEffect(() => {
+    if (!open || renderMode !== 'chart' || !chartGroupBy) {
+      setChartPreview(null);
+      return undefined;
+    }
+    let cancelled = false;
+    setChartPreviewing(true);
+    const t = setTimeout(() => {
+      workspaceAPI
+        .previewChart({ ...plan, module }, buildChartConfig())
+        .then((res) => { if (!cancelled) setChartPreview(res.data?.data || null); })
+        .catch(() => { if (!cancelled) setChartPreview(null); })
+        .finally(() => { if (!cancelled) setChartPreviewing(false); });
+    }, 400);
+    return () => { cancelled = true; clearTimeout(t); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, renderMode, chartType, chartGroupBy, chartMeasure, plan, module]);
+
   const handleModuleChange = (next) => {
     setModule(next);
     setPlan(emptyPlan(next)); // reset filters + sort when module changes
     setPreview(null);
     setMetricField(null);
     setColumns([]); // catalog effect re-fills defaults for the new module
+    setChartGroupBy(''); // group-by fields are module-specific
+    setChartMeasure('');
+    setChartPreview(null);
   };
 
   const toggleColumn = (key) => {
@@ -179,7 +229,7 @@ const CardBuilderDialog = ({ open, onClose, card }) => {
 
   // Live preview: run the current plan without saving.
   const runPreview = useCallback(async () => {
-    if (renderMode === 'insight') return; // insight has its own preview effect
+    if (renderMode === 'insight' || renderMode === 'chart') return; // these have their own preview effects
     if (!plan || !plan.filters || plan.filters.length === 0) {
       setPreview(null);
       return;
@@ -221,29 +271,44 @@ const CardBuilderDialog = ({ open, onClose, card }) => {
       enqueueSnackbar('Please pick an insight and a period', { variant: 'warning' });
       return;
     }
+    if (renderMode === 'chart' && !chartGroupBy) {
+      enqueueSnackbar('Please pick a field to group by', { variant: 'warning' });
+      return;
+    }
     setSaving(true);
     try {
       const metricConfig = metricField
         ? { agg: 'sum', field: metricField }
         : { agg: 'count', field: null };
-      const payload = renderMode === 'insight'
-        ? {
-            title: title.trim(),
-            renderMode: 'insight',
-            insightConfig: {
-              source: insightSource,
-              period: insightPeriod,
-              projectId: insightProject || null,
-            },
-          }
-        : {
-            title: title.trim(),
-            module,
-            queryPlan: { ...plan, module },
-            renderMode,
-            metricConfig: renderMode === 'metric' ? metricConfig : { agg: 'count', field: null },
-            columns: renderMode === 'list' ? columns : [],
-          };
+      let payload;
+      if (renderMode === 'insight') {
+        payload = {
+          title: title.trim(),
+          renderMode: 'insight',
+          insightConfig: {
+            source: insightSource,
+            period: insightPeriod,
+            projectId: insightProject || null,
+          },
+        };
+      } else if (renderMode === 'chart') {
+        payload = {
+          title: title.trim(),
+          module,
+          queryPlan: { ...plan, module },
+          renderMode: 'chart',
+          chartConfig: buildChartConfig(),
+        };
+      } else {
+        payload = {
+          title: title.trim(),
+          module,
+          queryPlan: { ...plan, module },
+          renderMode,
+          metricConfig: renderMode === 'metric' ? metricConfig : { agg: 'count', field: null },
+          columns: renderMode === 'list' ? columns : [],
+        };
+      }
       if (isEdit) {
         await updateCard(card._id, payload);
       } else {
@@ -253,7 +318,7 @@ const CardBuilderDialog = ({ open, onClose, card }) => {
           sharedWithUsers: [],
           sharedWithRoles: [],
         });
-        if (created?._id) await addToBoard(created._id, renderMode === 'list' ? 'md' : 'sm');
+        if (created?._id) await addToBoard(created._id, (renderMode === 'list' || renderMode === 'chart') ? 'md' : 'sm');
       }
       onClose();
     } catch {
@@ -265,6 +330,7 @@ const CardBuilderDialog = ({ open, onClose, card }) => {
 
   const numericFields = (catalog?.fields || []).filter((f) => f.type === 'number');
   const displayableFields = (catalog?.fields || []).filter((f) => f.displayable);
+  const groupableFields = (catalog?.fields || []).filter((f) => f.groupable);
   const sortField = plan.sort?.field || '';
   const sortDir = plan.sort?.dir || 'desc';
 
@@ -319,7 +385,17 @@ const CardBuilderDialog = ({ open, onClose, card }) => {
               ) : (
                 <NLInput
                   module={module}
-                  onPlan={(nextPlan) => { setPlan({ ...nextPlan, module }); setTab(0); }}
+                  onPlan={(nextPlan, chart) => {
+                    setPlan({ ...nextPlan, module });
+                    setTab(0);
+                    if (chart && chart.groupBy) {
+                      // The request described a chart — switch to Chart mode + prefill.
+                      setRenderMode('chart');
+                      setChartType(chart.chartType || 'bar');
+                      setChartGroupBy(chart.groupBy);
+                      setChartMeasure(chart.agg === 'sum' ? (chart.metricField || '') : '');
+                    }
+                  }}
                 />
               )}
             </Grid>
@@ -339,6 +415,7 @@ const CardBuilderDialog = ({ open, onClose, card }) => {
             >
               <ToggleButton value="list"><ListAlt sx={{ fontSize: 16, mr: 0.5 }} /> List</ToggleButton>
               <ToggleButton value="metric"><ShowChart sx={{ fontSize: 16, mr: 0.5 }} /> Metric</ToggleButton>
+              <ToggleButton value="chart"><BarChartIcon sx={{ fontSize: 16, mr: 0.5 }} /> Chart</ToggleButton>
               <ToggleButton value="insight"><Insights sx={{ fontSize: 16, mr: 0.5 }} /> Insight</ToggleButton>
             </ToggleButtonGroup>
           </Grid>
@@ -409,6 +486,56 @@ const CardBuilderDialog = ({ open, onClose, card }) => {
             </>
           )}
 
+          {/* Chart controls (chart mode only) */}
+          {renderMode === 'chart' && (
+            <>
+              <Grid item xs={12}>
+                <Typography variant="caption" color="text.secondary">Chart type</Typography>
+                <ToggleButtonGroup
+                  value={chartType}
+                  exclusive
+                  size="small"
+                  onChange={(e, v) => v && setChartType(v)}
+                  sx={{ display: 'block', mt: 0.5 }}
+                >
+                  <ToggleButton value="bar">Bar</ToggleButton>
+                  <ToggleButton value="line">Line</ToggleButton>
+                  <ToggleButton value="funnel">Funnel</ToggleButton>
+                  <ToggleButton value="pie">Pie</ToggleButton>
+                </ToggleButtonGroup>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Group by</InputLabel>
+                  <Select
+                    value={groupableFields.some((f) => f.key === chartGroupBy) ? chartGroupBy : ''}
+                    label="Group by"
+                    onChange={(e) => setChartGroupBy(e.target.value)}
+                  >
+                    {groupableFields.map((f) => (
+                      <MenuItem key={f.key} value={f.key}>{f.label}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Measure</InputLabel>
+                  <Select
+                    value={chartMeasure}
+                    label="Measure"
+                    onChange={(e) => setChartMeasure(e.target.value)}
+                  >
+                    <MenuItem value="">Count of records</MenuItem>
+                    {numericFields.map((f) => (
+                      <MenuItem key={f.key} value={f.key}>Sum of {f.label}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+            </>
+          )}
+
           {/* Columns + sort (list mode only) */}
           {renderMode === 'list' && displayableFields.length > 0 && (
             <>
@@ -471,11 +598,19 @@ const CardBuilderDialog = ({ open, onClose, card }) => {
                 <Typography variant="subtitle2" fontWeight={700}>Preview</Typography>
                 {renderMode === 'insight'
                   ? (insightPreviewing && <CircularProgress size={16} />)
+                  : renderMode === 'chart'
+                  ? (chartPreviewing && <CircularProgress size={16} />)
                   : (previewing
                       ? <CircularProgress size={16} />
                       : <Typography variant="body2" color="text.secondary">{previewCount} matching</Typography>)}
               </Box>
-              {renderMode === 'insight' ? (
+              {renderMode === 'chart' ? (
+                !chartGroupBy ? (
+                  <Typography variant="body2" color="text.secondary">Pick a field to group by to preview the chart.</Typography>
+                ) : (
+                  <ChartCardView payload={chartPreview} chartType={chartType} loading={chartPreviewing} height={200} />
+                )
+              ) : renderMode === 'insight' ? (
                 (!insightSource || !insightPeriod) ? (
                   <Typography variant="body2" color="text.secondary">Pick an insight and a period to preview.</Typography>
                 ) : (

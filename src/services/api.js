@@ -594,6 +594,11 @@ export const workspaceAPI = {
   preview: (plan, opts = {}) =>
     api.post('/workspace/preview', { queryPlan: plan, ...opts }),
 
+  // Chart cards: live preview of a grouped aggregation (filters + group-by).
+  // → { buckets: [{ key, value }] }
+  previewChart: (plan, chartConfig) =>
+    api.post('/workspace/preview', { queryPlan: plan, renderMode: 'chart', chartConfig }),
+
   // Insight cards (D3): registry of available insight sources for the builder.
   // → [{ key, label, kind, params:{ period|timeframe:[...] } }]
   getInsightSources: () => api.get('/workspace/insight-sources'),
