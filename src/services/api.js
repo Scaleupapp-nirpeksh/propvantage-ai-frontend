@@ -594,6 +594,15 @@ export const workspaceAPI = {
   preview: (plan, opts = {}) =>
     api.post('/workspace/preview', { queryPlan: plan, ...opts }),
 
+  // Insight cards (D3): registry of available insight sources for the builder.
+  // → [{ key, label, kind, params:{ period|timeframe:[...] } }]
+  getInsightSources: () => api.get('/workspace/insight-sources'),
+
+  // Run an insight source WITHOUT saving (builder live preview).
+  // → normalized insight payload { kind, headline, bands, confidence, series, bullets, asOf, scope }
+  previewInsight: (insightConfig) =>
+    api.post('/workspace/preview', { renderMode: 'insight', insightConfig }),
+
   // List the user's own + shared-with-them cards.
   getCards: () => api.get('/workspace/cards'),
   createCard: (payload) => api.post('/workspace/cards', payload),

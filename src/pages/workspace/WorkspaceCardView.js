@@ -7,7 +7,7 @@ import {
 } from '@mui/material';
 import {
   MoreVert, Refresh, Edit, Share, RemoveCircleOutline, DeleteOutline,
-  DragIndicator, ListAlt, ShowChart,
+  DragIndicator, ListAlt, ShowChart, Insights,
 } from '@mui/icons-material';
 import { useSnackbar } from 'notistack';
 import { workspaceAPI } from '../../services/api';
@@ -16,6 +16,7 @@ import { DataTable, KPICard } from '../../components/common';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import CardBuilderDialog from './CardBuilderDialog';
 import SharingSettings from './SharingSettings';
+import InsightCardView from './InsightCardView';
 import { getModuleCatalog, detailRouteFor } from './catalogCache';
 
 const WorkspaceCardView = ({ card, size = 'md', dragHandleProps }) => {
@@ -32,6 +33,7 @@ const WorkspaceCardView = ({ card, size = 'md', dragHandleProps }) => {
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   const isMetric = card.renderMode === 'metric';
+  const isInsight = card.renderMode === 'insight';
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -39,23 +41,23 @@ const WorkspaceCardView = ({ card, size = 'md', dragHandleProps }) => {
       const res = await workspaceAPI.getCardData(card._id);
       setResult(res.data?.data || null);
     } catch (err) {
-      setResult(isMetric ? { value: 0 } : { rows: [], total: 0 });
+      setResult(isInsight ? null : isMetric ? { value: 0 } : { rows: [], total: 0 });
       enqueueSnackbar(`"${card.title}" failed to load`, { variant: 'error' });
     } finally {
       setLoading(false);
     }
-  }, [card._id, card.title, isMetric, enqueueSnackbar]);
+  }, [card._id, card.title, isMetric, isInsight, enqueueSnackbar]);
 
-  // Catalog drives the displayable columns for list mode.
+  // Catalog drives the displayable columns for list mode (not needed for metric/insight).
   const loadCatalog = useCallback(async () => {
-    if (isMetric) return;
+    if (isMetric || isInsight) return;
     try {
       const cat = await getModuleCatalog(card.module);
       setCatalog(cat);
     } catch {
       setCatalog(null);
     }
-  }, [card.module, isMetric]);
+  }, [card.module, isMetric, isInsight]);
 
   useEffect(() => { loadData(); }, [loadData]);
   useEffect(() => { loadCatalog(); }, [loadCatalog]);
@@ -111,11 +113,11 @@ const WorkspaceCardView = ({ card, size = 'md', dragHandleProps }) => {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 0.25 }}>
             <Chip
               size="small"
-              icon={isMetric ? <ShowChart sx={{ fontSize: 14 }} /> : <ListAlt sx={{ fontSize: 14 }} />}
-              label={card.module}
+              icon={isInsight ? <Insights sx={{ fontSize: 14 }} /> : isMetric ? <ShowChart sx={{ fontSize: 14 }} /> : <ListAlt sx={{ fontSize: 14 }} />}
+              label={isInsight ? 'insight' : card.module}
               sx={{ height: 20, fontSize: '0.65rem' }}
             />
-            {!isMetric && total !== undefined && (
+            {!isMetric && !isInsight && total !== undefined && (
               <Chip size="small" label={total} color="primary" sx={{ height: 20, fontSize: '0.65rem', fontWeight: 700 }} />
             )}
           </Box>
@@ -134,7 +136,9 @@ const WorkspaceCardView = ({ card, size = 'md', dragHandleProps }) => {
       />
 
       <CardContent sx={{ flex: 1, pt: 1, '&:last-child': { pb: 2 } }}>
-        {isMetric ? (
+        {isInsight ? (
+          <InsightCardView payload={result} loading={loading} />
+        ) : isMetric ? (
           <KPICard
             title={card.title}
             value={loading ? 0 : (result?.value ?? 0)}

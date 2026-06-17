@@ -6,13 +6,14 @@ import {
   ToggleButtonGroup, ToggleButton, Typography, Divider, Paper, CircularProgress,
   FormGroup, FormControlLabel, Checkbox,
 } from '@mui/material';
-import { ListAlt, ShowChart, ArrowUpward, ArrowDownward } from '@mui/icons-material';
+import { ListAlt, ShowChart, ArrowUpward, ArrowDownward, Insights } from '@mui/icons-material';
 import { useSnackbar } from 'notistack';
 import { useWorkspace } from '../../context/WorkspaceContext';
-import { workspaceAPI } from '../../services/api';
-import { getModuleCatalog } from './catalogCache';
+import { workspaceAPI, projectAPI } from '../../services/api';
+import { getModuleCatalog, getInsightSources } from './catalogCache';
 import FilterBuilder from './FilterBuilder';
 import NLInput from './NLInput';
+import InsightCardView from './InsightCardView';
 
 const MODULES = [
   { value: 'leads', label: 'Leads' },
@@ -46,6 +47,14 @@ const CardBuilderDialog = ({ open, onClose, card }) => {
   const [renderMode, setRenderMode] = useState('list');
   const [metricField, setMetricField] = useState(null);
   const [columns, setColumns] = useState([]); // chosen list display columns (catalog field keys)
+  // Insight mode (D3): source registry + the chosen source/period/project.
+  const [insightSources, setInsightSources] = useState([]);
+  const [insightSource, setInsightSource] = useState('');
+  const [insightPeriod, setInsightPeriod] = useState('');
+  const [insightProject, setInsightProject] = useState(''); // '' = All projects
+  const [projects, setProjects] = useState([]);
+  const [insightPreview, setInsightPreview] = useState(null);
+  const [insightPreviewing, setInsightPreviewing] = useState(false);
   const [preview, setPreview] = useState(null); // { rows, total } | { value }
   const [previewing, setPreviewing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -60,6 +69,9 @@ const CardBuilderDialog = ({ open, onClose, card }) => {
       setRenderMode(card.renderMode || 'list');
       setMetricField(card.metricConfig?.field || null);
       setColumns(card.columns || []); // empty → catalog effect fills defaults
+      setInsightSource(card.insightConfig?.source || '');
+      setInsightPeriod(card.insightConfig?.period || '');
+      setInsightProject(card.insightConfig?.projectId || '');
     } else {
       setTitle('');
       setModule('leads');
@@ -67,7 +79,11 @@ const CardBuilderDialog = ({ open, onClose, card }) => {
       setRenderMode('list');
       setMetricField(null);
       setColumns([]);
+      setInsightSource('');
+      setInsightPeriod('');
+      setInsightProject('');
     }
+    setInsightPreview(null);
     // New card → default to "Describe the Cards" (NL) tab; editing → Builder (plan exists).
     setTab(isEdit ? 0 : 1);
     setPreview(null);
@@ -95,6 +111,52 @@ const CardBuilderDialog = ({ open, onClose, card }) => {
     return () => { cancelled = true; };
   }, [open, module]);
 
+  // Load insight-source registry + project list once when the dialog opens.
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    getInsightSources()
+      .then((srcs) => { if (!cancelled) setInsightSources(srcs || []); })
+      .catch(() => { if (!cancelled) setInsightSources([]); });
+    projectAPI.getProjects()
+      .then((res) => { if (!cancelled) setProjects(res.data?.data || res.data || []); })
+      .catch(() => { if (!cancelled) setProjects([]); });
+    return () => { cancelled = true; };
+  }, [open]);
+
+  const activeInsightSource = insightSources.find((s) => s.key === insightSource) || null;
+  // Each source declares exactly one param (period or timeframe); read its values.
+  const insightParamKey = activeInsightSource
+    ? (activeInsightSource.params?.period ? 'period' : 'timeframe')
+    : 'period';
+  const insightParamValues = activeInsightSource?.params?.[insightParamKey] || [];
+
+  // When the chosen source changes, default the period to its first allowed value.
+  useEffect(() => {
+    if (renderMode !== 'insight' || !activeInsightSource) return;
+    if (!insightParamValues.includes(insightPeriod)) {
+      setInsightPeriod(insightParamValues[0] || '');
+    }
+  }, [renderMode, insightSource]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Live insight preview when source/period/project change.
+  useEffect(() => {
+    if (!open || renderMode !== 'insight' || !insightSource || !insightPeriod) {
+      setInsightPreview(null);
+      return undefined;
+    }
+    let cancelled = false;
+    setInsightPreviewing(true);
+    const t = setTimeout(() => {
+      workspaceAPI
+        .previewInsight({ source: insightSource, period: insightPeriod, projectId: insightProject || null })
+        .then((res) => { if (!cancelled) setInsightPreview(res.data?.data || null); })
+        .catch(() => { if (!cancelled) setInsightPreview(null); })
+        .finally(() => { if (!cancelled) setInsightPreviewing(false); });
+    }, 400);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [open, renderMode, insightSource, insightPeriod, insightProject]);
+
   const handleModuleChange = (next) => {
     setModule(next);
     setPlan(emptyPlan(next)); // reset filters + sort when module changes
@@ -117,6 +179,7 @@ const CardBuilderDialog = ({ open, onClose, card }) => {
 
   // Live preview: run the current plan without saving.
   const runPreview = useCallback(async () => {
+    if (renderMode === 'insight') return; // insight has its own preview effect
     if (!plan || !plan.filters || plan.filters.length === 0) {
       setPreview(null);
       return;
@@ -154,19 +217,33 @@ const CardBuilderDialog = ({ open, onClose, card }) => {
       enqueueSnackbar('Please enter a card title', { variant: 'warning' });
       return;
     }
+    if (renderMode === 'insight' && (!insightSource || !insightPeriod)) {
+      enqueueSnackbar('Please pick an insight and a period', { variant: 'warning' });
+      return;
+    }
     setSaving(true);
     try {
       const metricConfig = metricField
         ? { agg: 'sum', field: metricField }
         : { agg: 'count', field: null };
-      const payload = {
-        title: title.trim(),
-        module,
-        queryPlan: { ...plan, module },
-        renderMode,
-        metricConfig: renderMode === 'metric' ? metricConfig : { agg: 'count', field: null },
-        columns: renderMode === 'list' ? columns : [],
-      };
+      const payload = renderMode === 'insight'
+        ? {
+            title: title.trim(),
+            renderMode: 'insight',
+            insightConfig: {
+              source: insightSource,
+              period: insightPeriod,
+              projectId: insightProject || null,
+            },
+          }
+        : {
+            title: title.trim(),
+            module,
+            queryPlan: { ...plan, module },
+            renderMode,
+            metricConfig: renderMode === 'metric' ? metricConfig : { agg: 'count', field: null },
+            columns: renderMode === 'list' ? columns : [],
+          };
       if (isEdit) {
         await updateCard(card._id, payload);
       } else {
@@ -176,7 +253,7 @@ const CardBuilderDialog = ({ open, onClose, card }) => {
           sharedWithUsers: [],
           sharedWithRoles: [],
         });
-        if (created?._id) await addToBoard(created._id, renderMode === 'metric' ? 'sm' : 'md');
+        if (created?._id) await addToBoard(created._id, renderMode === 'list' ? 'md' : 'sm');
       }
       onClose();
     } catch {
@@ -197,7 +274,7 @@ const CardBuilderDialog = ({ open, onClose, card }) => {
       <DialogContent dividers>
         <Grid container spacing={2}>
           {/* Step 1 — title + module */}
-          <Grid item xs={12} sm={7}>
+          <Grid item xs={12} sm={renderMode === 'insight' ? 12 : 7}>
             <TextField
               label="Card title"
               value={title}
@@ -207,42 +284,46 @@ const CardBuilderDialog = ({ open, onClose, card }) => {
               placeholder="e.g. Stale CP leads"
             />
           </Grid>
-          <Grid item xs={12} sm={5}>
-            <FormControl fullWidth size="small">
-              <InputLabel>Module</InputLabel>
-              <Select
-                value={module}
-                label="Module"
-                onChange={(e) => handleModuleChange(e.target.value)}
-                disabled={isEdit}
-              >
-                {MODULES.map((m) => (
-                  <MenuItem key={m.value} value={m.value}>{m.label}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
+          {renderMode !== 'insight' && (
+            <Grid item xs={12} sm={5}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Module</InputLabel>
+                <Select
+                  value={module}
+                  label="Module"
+                  onChange={(e) => handleModuleChange(e.target.value)}
+                  disabled={isEdit}
+                >
+                  {MODULES.map((m) => (
+                    <MenuItem key={m.value} value={m.value}>{m.label}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+          )}
 
-          {/* Step 2 — Builder / Ask in words */}
-          <Grid item xs={12}>
-            <Tabs value={tab} onChange={(e, v) => setTab(v)} sx={{ mb: 1, minHeight: 40 }}>
-              <Tab label="Builder" sx={{ minHeight: 40, textTransform: 'none' }} />
-              <Tab label="Describe the Cards" sx={{ minHeight: 40, textTransform: 'none' }} />
-            </Tabs>
+          {/* Step 2 — Builder / Ask in words (query-plan modes only) */}
+          {renderMode !== 'insight' && (
+            <Grid item xs={12}>
+              <Tabs value={tab} onChange={(e, v) => setTab(v)} sx={{ mb: 1, minHeight: 40 }}>
+                <Tab label="Builder" sx={{ minHeight: 40, textTransform: 'none' }} />
+                <Tab label="Describe the Cards" sx={{ minHeight: 40, textTransform: 'none' }} />
+              </Tabs>
 
-            {catalogLoading ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
-                <CircularProgress size={22} />
-              </Box>
-            ) : tab === 0 ? (
-              <FilterBuilder catalog={catalog} plan={plan} onChange={setPlan} />
-            ) : (
-              <NLInput
-                module={module}
-                onPlan={(nextPlan) => { setPlan({ ...nextPlan, module }); setTab(0); }}
-              />
-            )}
-          </Grid>
+              {catalogLoading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
+                  <CircularProgress size={22} />
+                </Box>
+              ) : tab === 0 ? (
+                <FilterBuilder catalog={catalog} plan={plan} onChange={setPlan} />
+              ) : (
+                <NLInput
+                  module={module}
+                  onPlan={(nextPlan) => { setPlan({ ...nextPlan, module }); setTab(0); }}
+                />
+              )}
+            </Grid>
+          )}
 
           <Grid item xs={12}><Divider /></Grid>
 
@@ -258,6 +339,7 @@ const CardBuilderDialog = ({ open, onClose, card }) => {
             >
               <ToggleButton value="list"><ListAlt sx={{ fontSize: 16, mr: 0.5 }} /> List</ToggleButton>
               <ToggleButton value="metric"><ShowChart sx={{ fontSize: 16, mr: 0.5 }} /> Metric</ToggleButton>
+              <ToggleButton value="insight"><Insights sx={{ fontSize: 16, mr: 0.5 }} /> Insight</ToggleButton>
             </ToggleButtonGroup>
           </Grid>
           {renderMode === 'metric' && (
@@ -276,6 +358,55 @@ const CardBuilderDialog = ({ open, onClose, card }) => {
                 </Select>
               </FormControl>
             </Grid>
+          )}
+
+          {/* Insight source + period + project (insight mode only) */}
+          {renderMode === 'insight' && (
+            <>
+              <Grid item xs={12} sm={5}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Insight</InputLabel>
+                  <Select
+                    value={insightSource}
+                    label="Insight"
+                    onChange={(e) => setInsightSource(e.target.value)}
+                  >
+                    {insightSources.map((s) => (
+                      <MenuItem key={s.key} value={s.key}>{s.label}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={3}>
+                <FormControl fullWidth size="small" disabled={!activeInsightSource}>
+                  <InputLabel>{insightParamKey === 'timeframe' ? 'Timeframe' : 'Period'}</InputLabel>
+                  <Select
+                    value={insightParamValues.includes(insightPeriod) ? insightPeriod : ''}
+                    label={insightParamKey === 'timeframe' ? 'Timeframe' : 'Period'}
+                    onChange={(e) => setInsightPeriod(e.target.value)}
+                  >
+                    {insightParamValues.map((v) => (
+                      <MenuItem key={v} value={v}>{v.replace(/_/g, ' ')}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Project</InputLabel>
+                  <Select
+                    value={insightProject}
+                    label="Project"
+                    onChange={(e) => setInsightProject(e.target.value)}
+                  >
+                    <MenuItem value="">All projects</MenuItem>
+                    {projects.map((p) => (
+                      <MenuItem key={p._id} value={p._id}>{p.name}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+            </>
           )}
 
           {/* Columns + sort (list mode only) */}
@@ -338,11 +469,19 @@ const CardBuilderDialog = ({ open, onClose, card }) => {
             <Paper elevation={0} sx={{ border: (t) => `1px solid ${t.palette.divider}`, borderRadius: 2, p: 2 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
                 <Typography variant="subtitle2" fontWeight={700}>Preview</Typography>
-                {previewing
-                  ? <CircularProgress size={16} />
-                  : <Typography variant="body2" color="text.secondary">{previewCount} matching</Typography>}
+                {renderMode === 'insight'
+                  ? (insightPreviewing && <CircularProgress size={16} />)
+                  : (previewing
+                      ? <CircularProgress size={16} />
+                      : <Typography variant="body2" color="text.secondary">{previewCount} matching</Typography>)}
               </Box>
-              {renderMode === 'metric' ? (
+              {renderMode === 'insight' ? (
+                (!insightSource || !insightPeriod) ? (
+                  <Typography variant="body2" color="text.secondary">Pick an insight and a period to preview.</Typography>
+                ) : (
+                  <InsightCardView payload={insightPreview} loading={insightPreviewing} />
+                )
+              ) : renderMode === 'metric' ? (
                 <Typography variant="h4" fontWeight={800}>{preview?.value ?? '—'}</Typography>
               ) : (
                 <Box sx={{ maxHeight: 180, overflow: 'auto' }}>

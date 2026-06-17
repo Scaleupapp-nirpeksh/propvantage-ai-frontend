@@ -28,6 +28,20 @@ export const getModuleCatalog = (module) => {
   return promise;
 };
 
+// Insight-source registry (D3). Cached once per session like module catalogs.
+let insightSourcesPromise = null;
+export const getInsightSources = () => {
+  if (insightSourcesPromise) return insightSourcesPromise;
+  insightSourcesPromise = workspaceAPI
+    .getInsightSources()
+    .then((res) => res.data?.data || [])
+    .catch((err) => {
+      insightSourcesPromise = null; // allow retry on next call
+      return Promise.reject(err);
+    });
+  return insightSourcesPromise;
+};
+
 // Existing detail routes per module (see src/App.js route table). Each takes the
 // full row, since the target id differs by module — e.g. a payments row is a
 // PaymentTransaction whose detail is the *sale's* payment plan (row.sale), not row._id.
