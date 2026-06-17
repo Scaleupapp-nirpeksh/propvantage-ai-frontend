@@ -2,8 +2,10 @@
 import React, { useState } from 'react';
 import {
   Box, Button, Paper, Typography, Grid, Stack, Chip, Skeleton,
+  ToggleButtonGroup, ToggleButton,
 } from '@mui/material';
 import { Add, ViewQuilt, AutoAwesome, Refresh } from '@mui/icons-material';
+import { useSearchParams, Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { PageHeader } from '../../components/common';
@@ -11,18 +13,50 @@ import { getStarterCardsForRole } from './starterCards';
 import WorkspaceBoard from './WorkspaceBoard';
 import CardBuilderDialog from './CardBuilderDialog';
 import SharedWithMeTray from './SharedWithMeTray';
+import RoleDashboard from './RoleDashboard';
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+const getInitialViewMode = (searchParams) => {
+  const param = searchParams.get('view');
+  if (param === 'my' || param === 'standard') return param;
+  const stored = localStorage.getItem('pv.viewMode');
+  if (stored === 'my' || stored === 'standard') return stored;
+  return 'my';
+};
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
 
 const WorkspacePage = () => {
-  const { user } = useAuth();
+  const { user, isChannelPartnerOrg } = useAuth();
   const {
     layout, loading, refresh, createCard, addToBoard,
   } = useWorkspace();
 
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [viewMode, setViewMode] = useState(() => getInitialViewMode(searchParams));
+
   const [builderOpen, setBuilderOpen] = useState(false);
   const [seeding, setSeeding] = useState(false);
 
+  // Channel-partner-org guard — mirror the old DashboardRouter guard.
+  if (isChannelPartnerOrg) {
+    return <Navigate to="/partner/dashboard" replace />;
+  }
+
   const boardCount = (layout.items || []).length;
   const starters = getStarterCardsForRole(user?.role);
+
+  const handleViewModeChange = (_event, newMode) => {
+    if (!newMode) return; // exclusive toggle — ignore deselect
+    setViewMode(newMode);
+    setSearchParams({ view: newMode }, { replace: true });
+    localStorage.setItem('pv.viewMode', newMode);
+  };
 
   // Create the suggested starter cards and place them on the board.
   const handleSeedStarters = async () => {
@@ -46,8 +80,51 @@ const WorkspacePage = () => {
     }
   };
 
+  // ---------------------------------------------------------------------------
+  // Segmented toggle bar — visible in both modes
+  // ---------------------------------------------------------------------------
+  const toggleBar = (
+    <Box sx={{ mb: 2 }}>
+      <ToggleButtonGroup
+        value={viewMode}
+        exclusive
+        onChange={handleViewModeChange}
+        size="small"
+        aria-label="View mode"
+        sx={{
+          '& .MuiToggleButton-root': {
+            textTransform: 'none',
+            px: 2.5,
+            py: 0.75,
+            fontWeight: 500,
+          },
+        }}
+      >
+        <ToggleButton value="my">My View</ToggleButton>
+        <ToggleButton value="standard">Standard</ToggleButton>
+      </ToggleButtonGroup>
+    </Box>
+  );
+
+  // ---------------------------------------------------------------------------
+  // Standard mode — show toggle bar + role dashboard only
+  // ---------------------------------------------------------------------------
+  if (viewMode === 'standard') {
+    return (
+      <Box>
+        {toggleBar}
+        <RoleDashboard />
+      </Box>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // My View mode — existing board UI with toggle above the header
+  // ---------------------------------------------------------------------------
   return (
     <Box>
+      {toggleBar}
+
       <PageHeader
         title="My View"
         subtitle="Your saved, filtered views across every module"

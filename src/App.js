@@ -341,52 +341,8 @@ const ChannelPartnerRoute = ({ children }) => {
   return children;
 };
 
-// =============================================================================
-// ROLE-BASED DASHBOARD ROUTER - UNCHANGED
-// =============================================================================
-
-const DashboardRouter = () => {
-  const { user, roleLevel, isOwner, checkPerm, isChannelPartnerOrg } = useAuth();
-
-  // Redirect channel partner org users away from the developer dashboard
-  if (isChannelPartnerOrg) return <Navigate to="/partner/dashboard" replace />;
-
-  // "/dashboard" renders the user's role dashboard. "My Workspace" (/workspace)
-  // is the default post-login landing (see LoginPage default dest + the root "/" route).
-  const getDashboardComponent = () => {
-    // Try permission-based routing when roleRef is available
-    if (roleLevel !== undefined && roleLevel < 100) {
-      if (isOwner || roleLevel <= 5) return <BusinessHeadDashboard />;
-      if (roleLevel <= 15) return <ProjectDirectorDashboard />;
-      if (checkPerm && (checkPerm('sales:view') || checkPerm('leads:view'))) {
-        if (roleLevel <= 30) return <SalesManagerDashboard />;
-      }
-      if (checkPerm && (checkPerm('payments:view') || checkPerm('commissions:view'))) {
-        return <FinanceHeadDashboard />;
-      }
-    }
-
-    // Fallback: legacy role string
-    switch (user?.role) {
-      case 'Business Head':
-        return <BusinessHeadDashboard />;
-      case 'Project Director':
-        return <ProjectDirectorDashboard />;
-      case 'Sales Head':
-      case 'Sales Manager':
-        return <SalesManagerDashboard />;
-      case 'Finance Head':
-      case 'Finance Manager':
-        return <FinanceHeadDashboard />;
-      case 'Sales Executive':
-      case 'Channel Partner Agent':
-        return <SalesExecutiveDashboard />;
-      default:
-        return <SalesExecutiveDashboard />; // Default fallback
-    }
-  };
-  return getDashboardComponent();
-};
+// DashboardRouter removed — /dashboard now redirects to /workspace?view=standard.
+// Role-dashboard selection lives in src/pages/workspace/RoleDashboard.js.
 
 // =============================================================================
 // PUBLIC ROUTE COMPONENT - UNCHANGED
@@ -519,18 +475,10 @@ const AppRoutes = () => {
       } />
 
       {/* ========================================= */}
-      {/* PROTECTED DASHBOARD ROUTE - UNCHANGED */}
+      {/* DASHBOARD ROUTE — redirect to workspace Standard mode */}
       {/* ========================================= */}
 
-      <Route path="/dashboard" element={
-        <ProtectedRoute>
-          <DashboardLayout>
-            <Suspense fallback={<LoadingFallback />}>
-              <DashboardRouter />
-            </Suspense>
-          </DashboardLayout>
-        </ProtectedRoute>
-      } />
+      <Route path="/dashboard" element={<Navigate to="/workspace?view=standard" replace />} />
 
       {/* The 5 role dashboards — reachable directly (nav "Dashboards" group). */}
       <Route path="/dashboards/business-head" element={

@@ -115,13 +115,6 @@ const getNavigationItems = (userRole, canAccess) => {
           path: '/workspace',
           requiredAccess: () => true,
         },
-        {
-          id: 'dashboard',
-          title: 'Dashboard',
-          icon: Dashboard,
-          path: '/dashboard',
-          requiredAccess: () => true,
-        },
       ],
     },
     // OPERATIONS
