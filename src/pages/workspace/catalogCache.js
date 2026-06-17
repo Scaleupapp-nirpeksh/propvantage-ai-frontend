@@ -37,6 +37,7 @@ const DETAIL_ROUTE = {
   payments: (row) => (row.sale ? `/payments/plans/${row.sale}` : null),
   tasks: (row) => `/tasks/${row._id}`,
   channelPartners: (row) => `/channel-partners/${row._id}`,
+  projects: (row) => `/projects/${row._id}`,
 };
 
 export const detailRouteFor = (module, row) => {
