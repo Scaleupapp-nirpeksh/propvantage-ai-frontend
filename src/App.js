@@ -337,7 +337,7 @@ const ChannelPartnerRoute = ({ children }) => {
   const { isAuthenticated, isLoading, isChannelPartnerOrg } = useAuth();
   if (isLoading) return <LoadingFallback message="Authenticating..." />;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
-  if (!isChannelPartnerOrg) return <Navigate to="/dashboard" replace />;
+  if (!isChannelPartnerOrg) return <Navigate to="/workspace" replace />;
   return children;
 };
 
@@ -356,7 +356,7 @@ const PublicRoute = ({ children }) => {
   }
 
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/workspace" replace />;
   }
 
   return children;

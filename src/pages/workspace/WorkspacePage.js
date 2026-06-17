@@ -1,5 +1,5 @@
 // src/pages/workspace/WorkspacePage.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box, Button, Paper, Typography, Grid, Stack, Chip, Skeleton,
   ToggleButtonGroup, ToggleButton,
@@ -42,6 +42,15 @@ const WorkspacePage = () => {
 
   const [builderOpen, setBuilderOpen] = useState(false);
   const [seeding, setSeeding] = useState(false);
+
+  // Sync viewMode when the ?view= param changes after mount (e.g. /dashboard
+  // redirect, nav clicks, or browser back/forward).
+  useEffect(() => {
+    const param = searchParams.get('view');
+    if ((param === 'my' || param === 'standard') && param !== viewMode) {
+      setViewMode(param);
+    }
+  }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Channel-partner-org guard — mirror the old DashboardRouter guard.
   if (isChannelPartnerOrg) {
