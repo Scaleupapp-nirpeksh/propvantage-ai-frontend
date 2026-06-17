@@ -60,15 +60,20 @@ const WorkspaceCardView = ({ card, size = 'md', dragHandleProps }) => {
   useEffect(() => { loadData(); }, [loadData]);
   useEffect(() => { loadCatalog(); }, [loadCatalog]);
 
-  // Build DataTable columns from catalog displayable fields (defaultColumn first).
+  // Build DataTable columns. If the card pins an explicit `columns` set (D2
+  // field picker), honor it in that order; otherwise fall back to the catalog's
+  // default columns (defaultColumn first, capped at 6).
   const columns = useMemo(() => {
     if (!catalog) return [];
-    const fields = (catalog.fields || []).filter((f) => f.displayable);
-    const ordered = [
-      ...fields.filter((f) => f.defaultColumn),
-      ...fields.filter((f) => !f.defaultColumn),
-    ].slice(0, 6);
-    return ordered.map((f) => ({
+    const displayable = (catalog.fields || []).filter((f) => f.displayable);
+    const byKey = new Map(displayable.map((f) => [f.key, f]));
+    const chosen = (card.columns && card.columns.length)
+      ? card.columns.map((k) => byKey.get(k)).filter(Boolean)
+      : [
+          ...displayable.filter((f) => f.defaultColumn),
+          ...displayable.filter((f) => !f.defaultColumn),
+        ].slice(0, 6);
+    return chosen.map((f) => ({
       id: f.key,
       label: f.label,
       sortable: false,
@@ -81,7 +86,7 @@ const WorkspaceCardView = ({ card, size = 'md', dragHandleProps }) => {
         return String(resolved);
       },
     }));
-  }, [catalog]);
+  }, [catalog, card.columns]);
 
   const handleRowClick = (row) => {
     const route = detailRouteFor(card.module, row);

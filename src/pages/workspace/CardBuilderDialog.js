@@ -4,8 +4,9 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Grid,
   TextField, FormControl, InputLabel, Select, MenuItem, Tabs, Tab,
   ToggleButtonGroup, ToggleButton, Typography, Divider, Paper, CircularProgress,
+  FormGroup, FormControlLabel, Checkbox,
 } from '@mui/material';
-import { ListAlt, ShowChart } from '@mui/icons-material';
+import { ListAlt, ShowChart, ArrowUpward, ArrowDownward } from '@mui/icons-material';
 import { useSnackbar } from 'notistack';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { workspaceAPI } from '../../services/api';
@@ -44,6 +45,7 @@ const CardBuilderDialog = ({ open, onClose, card }) => {
   const [plan, setPlan] = useState(emptyPlan('leads'));
   const [renderMode, setRenderMode] = useState('list');
   const [metricField, setMetricField] = useState(null);
+  const [columns, setColumns] = useState([]); // chosen list display columns (catalog field keys)
   const [preview, setPreview] = useState(null); // { rows, total } | { value }
   const [previewing, setPreviewing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -57,12 +59,14 @@ const CardBuilderDialog = ({ open, onClose, card }) => {
       setPlan(card.queryPlan || emptyPlan(card.module));
       setRenderMode(card.renderMode || 'list');
       setMetricField(card.metricConfig?.field || null);
+      setColumns(card.columns || []); // empty → catalog effect fills defaults
     } else {
       setTitle('');
       setModule('leads');
       setPlan(emptyPlan('leads'));
       setRenderMode('list');
       setMetricField(null);
+      setColumns([]);
     }
     // New card → default to "Describe the Cards" (NL) tab; editing → Builder (plan exists).
     setTab(isEdit ? 0 : 1);
@@ -75,7 +79,17 @@ const CardBuilderDialog = ({ open, onClose, card }) => {
     let cancelled = false;
     setCatalogLoading(true);
     getModuleCatalog(module)
-      .then((cat) => { if (!cancelled) setCatalog(cat); })
+      .then((cat) => {
+        if (cancelled) return;
+        setCatalog(cat);
+        // Pre-check the catalog's default columns when none are chosen yet
+        // (new card, or an edit card that never pinned columns).
+        const defaults = (cat?.fields || [])
+          .filter((f) => f.displayable && f.defaultColumn)
+          .map((f) => f.key)
+          .slice(0, 6);
+        setColumns((prev) => (prev && prev.length ? prev : defaults));
+      })
       .catch(() => { if (!cancelled) setCatalog(null); })
       .finally(() => { if (!cancelled) setCatalogLoading(false); });
     return () => { cancelled = true; };
@@ -83,9 +97,22 @@ const CardBuilderDialog = ({ open, onClose, card }) => {
 
   const handleModuleChange = (next) => {
     setModule(next);
-    setPlan(emptyPlan(next)); // reset filters when module changes
+    setPlan(emptyPlan(next)); // reset filters + sort when module changes
     setPreview(null);
     setMetricField(null);
+    setColumns([]); // catalog effect re-fills defaults for the new module
+  };
+
+  const toggleColumn = (key) => {
+    setColumns((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
+  };
+
+  // Sort control reads/writes plan.sort = { field, dir } | null.
+  const setSortField = (field) => {
+    setPlan((p) => ({ ...p, sort: field ? { field, dir: p.sort?.dir || 'desc' } : null }));
+  };
+  const setSortDir = (dir) => {
+    setPlan((p) => (p.sort?.field ? { ...p, sort: { ...p.sort, dir } } : p));
   };
 
   // Live preview: run the current plan without saving.
@@ -138,6 +165,7 @@ const CardBuilderDialog = ({ open, onClose, card }) => {
         queryPlan: { ...plan, module },
         renderMode,
         metricConfig: renderMode === 'metric' ? metricConfig : { agg: 'count', field: null },
+        columns: renderMode === 'list' ? columns : [],
       };
       if (isEdit) {
         await updateCard(card._id, payload);
@@ -159,6 +187,9 @@ const CardBuilderDialog = ({ open, onClose, card }) => {
   };
 
   const numericFields = (catalog?.fields || []).filter((f) => f.type === 'number');
+  const displayableFields = (catalog?.fields || []).filter((f) => f.displayable);
+  const sortField = plan.sort?.field || '';
+  const sortDir = plan.sort?.dir || 'desc';
 
   return (
     <Dialog open={open} onClose={saving ? undefined : onClose} maxWidth="md" fullWidth>
@@ -245,6 +276,61 @@ const CardBuilderDialog = ({ open, onClose, card }) => {
                 </Select>
               </FormControl>
             </Grid>
+          )}
+
+          {/* Columns + sort (list mode only) */}
+          {renderMode === 'list' && displayableFields.length > 0 && (
+            <>
+              <Grid item xs={12}>
+                <Typography variant="caption" color="text.secondary">
+                  Columns to show {columns.length ? `(${columns.length} selected)` : ''}
+                </Typography>
+                <FormGroup row sx={{ mt: 0.5, gap: 0.5 }}>
+                  {displayableFields.map((f) => (
+                    <FormControlLabel
+                      key={f.key}
+                      control={
+                        <Checkbox
+                          size="small"
+                          checked={columns.includes(f.key)}
+                          onChange={() => toggleColumn(f.key)}
+                        />
+                      }
+                      label={<Typography variant="body2">{f.label}</Typography>}
+                      sx={{ mr: 1 }}
+                    />
+                  ))}
+                </FormGroup>
+              </Grid>
+              <Grid item xs={12} sm={7}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Sort by</InputLabel>
+                  <Select
+                    value={sortField}
+                    label="Sort by"
+                    onChange={(e) => setSortField(e.target.value)}
+                  >
+                    <MenuItem value="">Default order</MenuItem>
+                    {displayableFields.map((f) => (
+                      <MenuItem key={f.key} value={f.key}>{f.label}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={5}>
+                <ToggleButtonGroup
+                  value={sortDir}
+                  exclusive
+                  size="small"
+                  disabled={!sortField}
+                  onChange={(e, v) => v && setSortDir(v)}
+                  sx={{ mt: 0.5 }}
+                >
+                  <ToggleButton value="desc"><ArrowDownward sx={{ fontSize: 16, mr: 0.5 }} /> Desc</ToggleButton>
+                  <ToggleButton value="asc"><ArrowUpward sx={{ fontSize: 16, mr: 0.5 }} /> Asc</ToggleButton>
+                </ToggleButtonGroup>
+              </Grid>
+            </>
           )}
 
           {/* Live preview */}
