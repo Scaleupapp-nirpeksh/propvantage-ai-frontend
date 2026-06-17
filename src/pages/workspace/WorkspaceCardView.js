@@ -147,18 +147,22 @@ const WorkspaceCardView = ({ card, size = 'md', dragHandleProps }) => {
             onClick={loadData}
           />
         ) : (
-          <DataTable
-            columns={columns}
-            rows={result?.rows || []}
-            loading={loading}
-            onRowClick={handleRowClick}
-            emptyState={{
-              title: 'No matching records',
-              description: 'Nothing matches this card right now.',
-            }}
-            elevation={0}
-            sx={{ boxShadow: 'none', border: 'none' }}
-          />
+          // List body is capped so long lists scroll inside the card instead of
+          // stretching the board (Theme B).
+          <Box sx={{ maxHeight: 320, overflowY: 'auto' }}>
+            <DataTable
+              columns={columns}
+              rows={result?.rows || []}
+              loading={loading}
+              onRowClick={handleRowClick}
+              emptyState={{
+                title: 'No matching records',
+                description: 'Nothing matches this card right now.',
+              }}
+              elevation={0}
+              sx={{ boxShadow: 'none', border: 'none' }}
+            />
+          </Box>
         )}
       </CardContent>
 

@@ -20,6 +20,7 @@ jest.mock('../../context/AuthContext', () => ({
 }));
 jest.mock('../../context/WorkspaceContext', () => ({
   useWorkspace: () => ({
+    cards: [],
     ownedCards: [],
     sharedWithMe: [],
     layout: { items: [] },
@@ -27,6 +28,9 @@ jest.mock('../../context/WorkspaceContext', () => ({
     refresh: jest.fn(),
     createCard: jest.fn(),
     addToBoard: jest.fn(),
+    removeFromBoard: jest.fn(),
+    deleteCard: jest.fn(),
+    updateCard: jest.fn(),
   }),
 }));
 
@@ -34,19 +38,22 @@ jest.mock('../../context/WorkspaceContext', () => ({
 jest.mock('./WorkspaceBoard', () => () => <div data-testid="board" />);
 jest.mock('./CardBuilderDialog', () => () => null);
 jest.mock('./SharedWithMeTray', () => () => null);
+jest.mock('./SuggestedCardsDialog', () => () => null);
+jest.mock('./RoleDashboard', () => () => <div data-testid="role-dashboard" />);
 
 describe('WorkspacePage', () => {
-  it('renders the header and the role-based empty state', () => {
+  it('renders the My View header and the empty state', () => {
     render(
       <MemoryRouter>
         <WorkspacePage />
       </MemoryRouter>,
     );
 
-    expect(screen.getByText('My Workspace')).toBeInTheDocument();
+    // Subtitle is unique (the title "My View" also appears in the view toggle).
+    expect(screen.getByText('Your saved, filtered views across every module')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /add card/i })).toBeInTheDocument();
-    // Empty-state CTA + a Sales Manager starter suggestion chip.
+    // Empty-state heading + suggested-cards CTA.
+    expect(screen.getByText('Build your view')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /add suggested cards/i })).toBeInTheDocument();
-    expect(screen.getByText('Stale CP leads')).toBeInTheDocument();
   });
 });
