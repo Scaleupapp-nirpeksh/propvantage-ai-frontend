@@ -12,6 +12,7 @@ import {
 import { useSnackbar } from 'notistack';
 import { workspaceAPI } from '../../services/api';
 import { useWorkspace } from '../../context/WorkspaceContext';
+import { useProjectContext } from '../../context/ProjectContext';
 import { DataTable } from '../../components/common';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import CardBuilderDialog from './CardBuilderDialog';
@@ -23,6 +24,7 @@ const WorkspaceCardView = ({ card, size = 'md', dragHandleProps }) => {
   const navigate = useNavigate();
   const { enqueueSnackbar } = useSnackbar();
   const { deleteCard, removeFromBoard } = useWorkspace();
+  const { activeProjectId } = useProjectContext(); // global switcher (null = All Projects)
 
   const [result, setResult] = useState(null); // { rows, total } | { value, breakdown }
   const [loading, setLoading] = useState(true);
@@ -38,7 +40,7 @@ const WorkspaceCardView = ({ card, size = 'md', dragHandleProps }) => {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await workspaceAPI.getCardData(card._id);
+      const res = await workspaceAPI.getCardData(card._id, activeProjectId);
       setResult(res.data?.data || null);
     } catch (err) {
       setResult(isInsight ? null : isMetric ? { value: 0 } : { rows: [], total: 0 });
@@ -46,7 +48,7 @@ const WorkspaceCardView = ({ card, size = 'md', dragHandleProps }) => {
     } finally {
       setLoading(false);
     }
-  }, [card._id, card.title, isMetric, isInsight, enqueueSnackbar]);
+  }, [card._id, card.title, isMetric, isInsight, activeProjectId, enqueueSnackbar]);
 
   // Catalog drives the displayable columns for list mode (not needed for metric/insight).
   const loadCatalog = useCallback(async () => {

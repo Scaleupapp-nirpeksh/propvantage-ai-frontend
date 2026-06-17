@@ -609,9 +609,12 @@ export const workspaceAPI = {
   updateCard: (id, payload) => api.put(`/workspace/cards/${id}`, payload),
   deleteCard: (id) => api.delete(`/workspace/cards/${id}`),
 
-  // Run a saved card under the viewer's own scope.
+  // Run a saved card under the viewer's own scope. An optional scopeProjectId
+  // (from the global project switcher) narrows project-scoped modules to one
+  // project — the server intersects it with the viewer's access.
   // → { rows, total } (list) or { value, breakdown } (metric)
-  getCardData: (id) => api.post(`/workspace/cards/${id}/data`),
+  getCardData: (id, scopeProjectId = null) =>
+    api.post(`/workspace/cards/${id}/data`, scopeProjectId ? { scopeProjectId } : {}),
 
   // Personal layout (card order + sizes).
   getLayout: () => api.get('/workspace/layout'),
