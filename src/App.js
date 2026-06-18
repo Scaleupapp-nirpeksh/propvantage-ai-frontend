@@ -128,6 +128,7 @@ const GenerateInvoicePage = React.lazy(() => import('./pages/sales/GenerateInvoi
 const ProfilePage = React.lazy(() => import('./pages/profile/ProfilePage'));
 const SettingsPage = React.lazy(() => import('./pages/settings/SettingsPage'));
 const UserManagementPage = React.lazy(() => import('./pages/settings/UserManagementPage'));
+const SupportSettingsPage = React.lazy(() => import('./pages/settings/SupportSettingsPage'));
 const RolesListPage = React.lazy(() => import('./pages/settings/RolesListPage'));
 const CreateEditRolePage = React.lazy(() => import('./pages/settings/CreateEditRolePage'));
 const RoleDetailPage = React.lazy(() => import('./pages/settings/RoleDetailPage'));
@@ -1253,6 +1254,16 @@ const AppRoutes = () => {
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback />}>
               <UserManagementPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/settings/support" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback />}>
+              <SupportSettingsPage />
             </Suspense>
           </DashboardLayout>
         </ProtectedRoute>

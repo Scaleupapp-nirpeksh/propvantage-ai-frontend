@@ -1703,6 +1703,9 @@ export const supportAPI = {
   reply: (id, body) => api.post(`/support/${id}/reply`, { body }),
   addNote: (id, body) => api.post(`/support/${id}/note`, { body }),
   ingestTest: (payload) => api.post('/support/ingest-test', payload),
+  // Helpdesk inbox (the org's public address; auto-provisioned on first read).
+  getInbox: () => api.get('/support/inbox'),
+  regenerateInbox: (slug) => api.post('/support/inbox/regenerate', slug ? { slug } : {}),
 };
 
 // Public ticket status page (no auth) — uses the interceptor-free `publicApi`

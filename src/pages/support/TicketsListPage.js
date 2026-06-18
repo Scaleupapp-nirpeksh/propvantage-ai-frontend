@@ -1,14 +1,11 @@
 // File: src/pages/support/TicketsListPage.js
-// Support tickets list — filter by status/category, dev "Simulate inbound" tool.
+// Support tickets list — filter by status/category. Tickets are created from real
+// inbound email (provisioned helpdesk address); there is no manual "create" here.
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Box, Chip, MenuItem, TextField, Button, Typography,
-  Dialog, DialogTitle, DialogContent, DialogActions, Stack,
-} from '@mui/material';
-import { SupportAgent, Add } from '@mui/icons-material';
+import { Box, Chip, MenuItem, TextField, Button, Typography } from '@mui/material';
+import { SupportAgent, Settings } from '@mui/icons-material';
 import { useSnackbar } from 'notistack';
-import { useAuth } from '../../context/AuthContext';
 import { supportAPI } from '../../services/api';
 import { PageHeader, DataTable } from '../../components/common';
 
@@ -58,19 +55,11 @@ const assigneeName = (assignee) =>
 const TicketsListPage = () => {
   const navigate = useNavigate();
   const { enqueueSnackbar } = useSnackbar();
-  const { isOwner, user } = useAuth();
-
-  const canSimulate =
-    isOwner || ['Business Head', 'admin', 'owner'].includes(user?.role);
 
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('');
   const [category, setCategory] = useState('');
-
-  const [simOpen, setSimOpen] = useState(false);
-  const [simSubmitting, setSimSubmitting] = useState(false);
-  const [simForm, setSimForm] = useState({ from: '', fromName: '', subject: '', text: '' });
 
   const loadTickets = useCallback(async () => {
     setLoading(true);
@@ -89,31 +78,6 @@ const TicketsListPage = () => {
   }, [status, category, enqueueSnackbar]);
 
   useEffect(() => { loadTickets(); }, [loadTickets]);
-
-  const handleSimulate = async () => {
-    if (!simForm.from || !simForm.subject) {
-      enqueueSnackbar('From email and subject are required.', { variant: 'warning' });
-      return;
-    }
-    setSimSubmitting(true);
-    try {
-      await supportAPI.ingestTest({
-        from: simForm.from,
-        fromName: simForm.fromName,
-        subject: simForm.subject,
-        text: simForm.text,
-        html: simForm.text ? `<p>${simForm.text}</p>` : undefined,
-      });
-      enqueueSnackbar('Simulated inbound email ingested.', { variant: 'success' });
-      setSimOpen(false);
-      setSimForm({ from: '', fromName: '', subject: '', text: '' });
-      loadTickets();
-    } catch (err) {
-      enqueueSnackbar(err.response?.data?.message || 'Failed to simulate inbound email.', { variant: 'error' });
-    } finally {
-      setSimSubmitting(false);
-    }
-  };
 
   const columns = [
     {
@@ -164,16 +128,14 @@ const TicketsListPage = () => {
         subtitle="Inbound client requests routed from email"
         icon={SupportAgent}
         actions={
-          canSimulate ? (
-            <Button
-              variant="outlined"
-              size="small"
-              startIcon={<Add />}
-              onClick={() => setSimOpen(true)}
-            >
-              Simulate inbound
-            </Button>
-          ) : null
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<Settings />}
+            onClick={() => navigate('/settings/support')}
+          >
+            Helpdesk settings
+          </Button>
         }
       >
         <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
@@ -210,40 +172,6 @@ const TicketsListPage = () => {
           description: 'No support tickets match the current filters.',
         }}
       />
-
-      <Dialog open={simOpen} onClose={() => setSimOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Simulate inbound email</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField
-              label="From (email)" type="email" required fullWidth size="small"
-              value={simForm.from}
-              onChange={(e) => setSimForm((f) => ({ ...f, from: e.target.value }))}
-            />
-            <TextField
-              label="From name" fullWidth size="small"
-              value={simForm.fromName}
-              onChange={(e) => setSimForm((f) => ({ ...f, fromName: e.target.value }))}
-            />
-            <TextField
-              label="Subject" required fullWidth size="small"
-              value={simForm.subject}
-              onChange={(e) => setSimForm((f) => ({ ...f, subject: e.target.value }))}
-            />
-            <TextField
-              label="Message" fullWidth multiline minRows={3} size="small"
-              value={simForm.text}
-              onChange={(e) => setSimForm((f) => ({ ...f, text: e.target.value }))}
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setSimOpen(false)} disabled={simSubmitting}>Cancel</Button>
-          <Button variant="contained" onClick={handleSimulate} disabled={simSubmitting}>
-            {simSubmitting ? 'Sending…' : 'Create ticket'}
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 };

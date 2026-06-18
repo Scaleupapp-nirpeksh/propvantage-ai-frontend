@@ -325,6 +325,7 @@ const getNavigationItems = (userRole, canAccess) => {
             { id: 'user-management', title: 'Users', icon: People, path: '/settings/users', requiredAccess: () => canAccess.userManagement() },
             { id: 'roles', title: 'Roles', icon: AdminPanelSettings, path: '/roles', requiredAccess: () => canAccess.systemSettings() },
             { id: 'project-access', title: 'Project Access', icon: VpnKey, path: '/settings/project-access', requiredAccess: () => canAccess.projectManagement() },
+            { id: 'support-settings', title: 'Helpdesk', icon: ConfirmationNumber, path: '/settings/support', requiredAccess: () => true },
             { id: 'notification-settings', title: 'Notifications', icon: Notifications, path: '/settings/notifications' },
           ],
         },
