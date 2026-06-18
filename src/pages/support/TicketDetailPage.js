@@ -206,15 +206,14 @@ const TicketDetailPage = () => {
             </Typography>
             {ticket.linkedTask && (
               <Typography variant="body2">
-                <strong>Linked task:</strong>{' '}
+                <strong>Internal task:</strong>{' '}
                 <MuiLink
                   component="button"
                   type="button"
                   onClick={() => navigate(`/tasks/${ticket.linkedTask._id}`)}
                   sx={{ verticalAlign: 'baseline' }}
                 >
-                  {ticket.linkedTask.taskNumber ? `#${ticket.linkedTask.taskNumber} ` : ''}
-                  {ticket.linkedTask.title || 'View task'}
+                  Open in task tracker →
                 </MuiLink>
               </Typography>
             )}
@@ -222,7 +221,9 @@ const TicketDetailPage = () => {
 
           {publicUrl && (
             <Box>
-              <Typography variant="caption" color="text.secondary">Public link</Typography>
+              <Typography variant="caption" color="text.secondary">
+                Client status link — share with the customer; opens their live status page (no login)
+              </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
                 <TextField
                   value={publicUrl} size="small" fullWidth

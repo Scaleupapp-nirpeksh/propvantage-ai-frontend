@@ -52,6 +52,7 @@ const DETAIL_ROUTE = {
   tasks: (row) => `/tasks/${row._id}`,
   channelPartners: (row) => `/channel-partners/${row._id}`,
   projects: (row) => `/projects/${row._id}`,
+  supportTickets: (row) => `/support/${row._id}`,
 };
 
 export const detailRouteFor = (module, row) => {

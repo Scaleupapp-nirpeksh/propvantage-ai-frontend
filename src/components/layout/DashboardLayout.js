@@ -508,14 +508,14 @@ const DashboardBreadcrumbs = () => {
   const segments = location.pathname.split('/').filter(Boolean);
   if (segments.length <= 1 && segments[0] === 'dashboard') return null;
 
+  const isObjectId = (s) => /^[a-f0-9]{24}$/i.test(s);
   let path = '';
   const crumbs = segments.map((seg, i) => {
     path += `/${seg}`;
-    return {
-      label: labelMap[seg] || seg.charAt(0).toUpperCase() + seg.slice(1).replace(/-/g, ' '),
-      path,
-      isLast: i === segments.length - 1,
-    };
+    // Raw Mongo ids (detail routes) shouldn't show as an ugly hex string.
+    const label = labelMap[seg]
+      || (isObjectId(seg) ? 'Detail' : seg.charAt(0).toUpperCase() + seg.slice(1).replace(/-/g, ' '));
+    return { label, path, isLast: i === segments.length - 1 };
   });
 
   return (

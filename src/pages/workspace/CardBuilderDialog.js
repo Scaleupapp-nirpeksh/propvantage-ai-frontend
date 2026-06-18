@@ -22,6 +22,7 @@ const MODULES = [
   { value: 'tasks', label: 'Tasks' },
   { value: 'channelPartners', label: 'Channel Partners' },
   { value: 'projects', label: 'Projects' },
+  { value: 'supportTickets', label: 'Support Tickets' },
 ];
 
 const emptyPlan = (module) => ({
