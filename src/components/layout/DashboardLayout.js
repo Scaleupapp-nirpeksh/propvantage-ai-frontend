@@ -74,6 +74,7 @@ import {
   AdminPanelSettings,
   AccountTree,
   TaskAlt,
+  ConfirmationNumber,
   ViewKanban,
   GroupWork,
   ListAlt,
@@ -194,6 +195,13 @@ const getNavigationItems = (userRole, canAccess) => {
             { id: 'task-analytics', title: 'Analytics', icon: Assessment, path: '/tasks/analytics', requiredAccess: () => canAccess.taskAnalytics() },
             { id: 'task-templates', title: 'Templates', icon: Description, path: '/tasks/templates', requiredAccess: () => canAccess.taskTemplates() },
           ],
+        },
+        {
+          id: 'tickets',
+          title: 'Tickets',
+          icon: ConfirmationNumber,
+          path: '/support',
+          requiredAccess: () => true,
         },
         {
           id: 'approvals',

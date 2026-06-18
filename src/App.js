@@ -49,6 +49,11 @@ const ProjectDirectorDashboard = React.lazy(() => import('./pages/dashboard/Proj
 const WorkspacePage = React.lazy(() => import('./pages/workspace/WorkspacePage'));
 const HomePage = React.lazy(() => import('./pages/home/HomePage'));
 
+// Support Tickets Pages
+const TicketsListPage = React.lazy(() => import('./pages/support/TicketsListPage'));
+const TicketDetailPage = React.lazy(() => import('./pages/support/TicketDetailPage'));
+const PublicTicketPage = React.lazy(() => import('./pages/public/PublicTicketPage'));
+
 // Project Management Pages - UNCHANGED
 const ProjectsListPage = React.lazy(() => import('./pages/projects/ProjectsListPage'));
 const ProjectDetailPage = React.lazy(() => import('./pages/projects/ProjectDetailPage'));
@@ -387,6 +392,13 @@ const AppRoutes = () => {
         </Suspense>
       } />
 
+      {/* PUBLIC TICKET STATUS — fully public, open link */}
+      <Route path="/t/:token" element={
+        <Suspense fallback={<LoadingFallback section="ticket" message="Loading ticket..." />}>
+          <PublicTicketPage />
+        </Suspense>
+      } />
+
       {/* ========================================= */}
       {/* PUBLIC ROUTES - ENHANCED WITH INVITATION */}
       {/* ========================================= */}
@@ -470,6 +482,30 @@ const AppRoutes = () => {
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback message="Loading your workspace..." />}>
               <WorkspacePage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* ========================================= */}
+      {/* SUPPORT TICKETS                           */}
+      {/* ========================================= */}
+
+      <Route path="/support" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading tickets..." />}>
+              <TicketsListPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/support/:id" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading ticket..." />}>
+              <TicketDetailPage />
             </Suspense>
           </DashboardLayout>
         </ProtectedRoute>

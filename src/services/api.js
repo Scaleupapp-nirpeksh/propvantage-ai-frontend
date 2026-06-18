@@ -1694,6 +1694,23 @@ export const publicReportAPI = {
   requestOtp: (slug, email) => publicApi.post(`/public/reports/${slug}/request-otp`, { email }),
 };
 
+// =============================================================================
+// SUPPORT TICKETS SERVICES (/api/support)
+// =============================================================================
+export const supportAPI = {
+  list: (params) => api.get('/support', { params }),
+  get: (id) => api.get(`/support/${id}`),
+  reply: (id, body) => api.post(`/support/${id}/reply`, { body }),
+  addNote: (id, body) => api.post(`/support/${id}/note`, { body }),
+  ingestTest: (payload) => api.post('/support/ingest-test', payload),
+};
+
+// Public ticket status page (no auth) — uses the interceptor-free `publicApi`
+// instance so anonymous viewers never trigger the 401-refresh flow.
+export const publicTicketAPI = {
+  get: (token) => publicApi.get(`/public/tickets/${token}`),
+};
+
 // ─── Reports (Leadership Report Builder) ───────────────────────────────
 export const reportAPI = {
   // Block catalog for the builder palette
