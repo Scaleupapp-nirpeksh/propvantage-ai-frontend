@@ -50,6 +50,8 @@ Client ──email──▶ helpdesk address ──▶ Inbound provider ──we
 
 **Internal task = a `Task`** (reused): `category` set, `linkedEntity = { entityType:'SupportTicket', entityId }`, `assignedTo = dept head`, `assignedBy = system`, watchers = head + team. Task status changes drive ticket status + client emails. (Keeps the team in the tooling they already use.)
 
+**Task segregation (critical — Tasks are also the general internal tracker):** a ticket's Task is marked `source: 'support_ticket'` (new Task field, default `'internal'`). The **client thread, "Reply to client" action, and all outbound-email machinery render ONLY for support-ticket tasks** — regular internal tasks are untouched and never gain client-comms surfaces. Support tickets live in a dedicated **Tickets** view; in normal task lists/queries they're filterable (and excluded by default unless the user opts in). No ticket/email behavior ever attaches to a plain internal task.
+
 **`models/supportRoutingModel.js`** (new, per-org config): `category → { roleName | assigneeUserId }` with a **fallback queue** (e.g. CRM Head/admin) for unmatched/unknown subjects. Seed defaults.
 
 **New roles (confirmed):** add **`Legal Head`** and **`CRM Head`** at the **department-head tier** (same level as Sales/Finance/Marketing Head). Touches: the role enum (`models/userModel.js`), the role-level map, `config/permissions.js`, and the org role seeder; both become valid `category → head` routing targets.
@@ -64,7 +66,8 @@ Client ──email──▶ helpdesk address ──▶ Inbound provider ──we
 
 ## Outbound: auto-reply, client updates, public vs internal
 - **Auto-reply (immediate):** "We've received your request — **TKT-000123** — track it here: `https://app/t/<token>`." Branded via existing templates.
-- **Public vs internal:** team members add **internal task comments** (private) freely; to update the client they use an explicit **"Reply to client"** action on the ticket → sends an email + appends a `public/outbound` message + bumps the status page. Status transitions (`→ in progress`, `→ resolved/closed`) optionally trigger a templated client email. **Debounce** (e.g., one status email per transition; coalesce rapid changes) to avoid email storms.
+- **Replies are ALWAYS sent by the platform, never from a personal mailbox.** Agents update the ticket in-app (an internal note, or **"Reply to client"**); the platform sends the client email **from the org's helpdesk address** (`25south@helpdesk.prop-vantage.com`) with `Reply-To` threaded, and records it as a `public/outbound` message. The agent's own email is never exposed and the team never emails the client directly — so every client interaction is captured on the ticket (this is the whole point: nothing happens off-ticket).
+- **Public vs internal:** internal task comments are private; only the explicit **"Reply to client"** action emails the client + appends a `public/outbound` message + bumps the status page. Status transitions (`→ in progress`, `→ resolved/closed`) optionally trigger a templated client email. **Debounce** (one status email per transition; coalesce rapid changes) to avoid email storms.
 
 ## Public status page (client-facing)
 - **Backend:** `GET /api/public/tickets/:token` (meta + status), `GET …/timeline` (public messages + status history) — reuse the report public-controller patterns (token validation, optional email-gate, rate-limit, view logging). Never expose internal notes/assignee PII beyond a generic "our team".
