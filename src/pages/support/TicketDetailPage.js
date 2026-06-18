@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box, Card, CardContent, Chip, Typography, Stack, Divider, TextField,
-  Button, IconButton, Tooltip, Alert, Link as MuiLink, Paper,
+  Button, IconButton, Tooltip, Alert, Link as MuiLink, Paper, MenuItem,
 } from '@mui/material';
 import {
   SupportAgent, ContentCopy, OpenInNew, Reply, NoteAdd, ArrowBack,
@@ -94,6 +94,7 @@ const TicketDetailPage = () => {
   const [error, setError] = useState(null);
   const [composer, setComposer] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [statusBusy, setStatusBusy] = useState(false);
 
   const loadTicket = useCallback(async () => {
     setLoading(true);
@@ -120,6 +121,21 @@ const TicketDetailPage = () => {
     if (!publicUrl) return;
     navigator.clipboard?.writeText(publicUrl);
     enqueueSnackbar('Public link copied to clipboard.', { variant: 'success' });
+  };
+
+  const handleStatusChange = async (newStatus) => {
+    if (!newStatus || newStatus === ticket.status) return;
+    setStatusBusy(true);
+    try {
+      const res = await supportAPI.updateStatus(id, newStatus);
+      setTicket(res.data?.data || ticket);
+      enqueueSnackbar(`Status changed to “${statusMeta(newStatus).label}”. The client was notified.`, { variant: 'success' });
+      loadTicket();
+    } catch (err) {
+      enqueueSnackbar(err.response?.data?.message || 'Failed to update status.', { variant: 'error' });
+    } finally {
+      setStatusBusy(false);
+    }
   };
 
   const handleSend = async (kind) => {
@@ -187,10 +203,23 @@ const TicketDetailPage = () => {
             </Box>
           </Box>
 
-          <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1, mb: 1.5 }}>
+          <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1, mb: 1.5, alignItems: 'center' }}>
             <Chip label={m.label} color={m.color} size="small" />
             <Chip label={CATEGORY_LABEL[ticket.category] || ticket.category} size="small" variant="outlined" />
             {ticket.priority && <Chip label={`Priority: ${ticket.priority}`} size="small" variant="outlined" />}
+            <Box sx={{ flexGrow: 1 }} />
+            <TextField
+              select size="small" label="Change status"
+              value={ticket.status} disabled={statusBusy}
+              onChange={(e) => handleStatusChange(e.target.value)}
+              sx={{ minWidth: 190 }}
+            >
+              {Object.entries(STATUS_META).map(([value, meta]) => (
+                <MenuItem key={value} value={value} disabled={value === 'new'}>
+                  {meta.label}
+                </MenuItem>
+              ))}
+            </TextField>
           </Stack>
 
           <Stack spacing={0.5} sx={{ mb: 1.5 }}>

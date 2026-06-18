@@ -1702,6 +1702,7 @@ export const supportAPI = {
   get: (id) => api.get(`/support/${id}`),
   reply: (id, body) => api.post(`/support/${id}/reply`, { body }),
   addNote: (id, body) => api.post(`/support/${id}/note`, { body }),
+  updateStatus: (id, status) => api.patch(`/support/${id}/status`, { status }),
   ingestTest: (payload) => api.post('/support/ingest-test', payload),
   // Helpdesk inbox (the org's public address; auto-provisioned on first read).
   getInbox: () => api.get('/support/inbox'),
@@ -1712,6 +1713,7 @@ export const supportAPI = {
 // instance so anonymous viewers never trigger the 401-refresh flow.
 export const publicTicketAPI = {
   get: (token) => publicApi.get(`/public/tickets/${token}`),
+  reply: (token, body) => publicApi.post(`/public/tickets/${token}/reply`, { body }),
 };
 
 // ─── Reports (Leadership Report Builder) ───────────────────────────────

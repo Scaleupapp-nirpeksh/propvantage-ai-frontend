@@ -4,7 +4,7 @@
 // so anonymous viewers never send an auth header or trigger the 401-refresh flow.
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import { Box, Typography, Stack } from '@mui/material';
+import { Box, Typography, Stack, CircularProgress } from '@mui/material';
 import { publicTicketAPI } from '../../services/api';
 
 /* ------------------------------------------------------------------ *
@@ -362,6 +362,10 @@ const PublicTicketPage = () => {
   const [ticket, setTicket] = useState(null);
   const [error, setError] = useState(null);
   const [lastSync, setLastSync] = useState(null);
+  const [replyText, setReplyText] = useState('');
+  const [sending, setSending] = useState(false);
+  const [replyErr, setReplyErr] = useState(null);
+  const [justSent, setJustSent] = useState(false);
   const mounted = useRef(true);
 
   const load = useCallback(async (initial) => {
@@ -389,6 +393,26 @@ const PublicTicketPage = () => {
     const interval = setInterval(() => load(false), POLL_MS);
     return () => { mounted.current = false; clearInterval(interval); };
   }, [load]);
+
+  const submitReply = async () => {
+    const body = replyText.trim();
+    if (!body || sending) return;
+    setSending(true);
+    setReplyErr(null);
+    try {
+      const res = await publicTicketAPI.reply(token, body);
+      if (!mounted.current) return;
+      setTicket(res.data?.data || ticket);
+      setReplyText('');
+      setJustSent(true);
+      setLastSync(Date.now());
+    } catch (err) {
+      if (!mounted.current) return;
+      setReplyErr(err.response?.data?.message || 'Could not send your message. Please try again.');
+    } finally {
+      if (mounted.current) setSending(false);
+    }
+  };
 
   if (status === 'loading') {
     return <LoadingState />;
@@ -547,6 +571,86 @@ const PublicTicketPage = () => {
           </Stack>
         </Box>
       )}
+
+      {/* Reply composer — clients can respond here directly, no login */}
+      <Hairline my={{ xs: 3, md: 3.5 }} />
+      <Eyebrow sx={{ color: C.ink, letterSpacing: '0.2em', mb: 1.5 }}>Add a reply</Eyebrow>
+
+      {justSent && (
+        <Box
+          sx={{
+            mb: 2, px: 2, py: 1.25, borderRadius: '12px',
+            border: `1px solid ${TONE.green.border}`, bgcolor: C.greenSoft,
+          }}
+        >
+          <Typography sx={{ fontSize: 13.5, color: C.green, fontWeight: 600 }}>
+            Thank you — your message has been added to the ticket and our team has been notified.
+          </Typography>
+        </Box>
+      )}
+
+      <Box
+        component="textarea"
+        value={replyText}
+        onChange={(e) => { setReplyText(e.target.value); if (justSent) setJustSent(false); }}
+        placeholder="Write a message to the support team…"
+        rows={4}
+        disabled={sending}
+        sx={{
+          width: '100%',
+          boxSizing: 'border-box',
+          resize: 'vertical',
+          fontFamily: SANS,
+          fontSize: 14,
+          lineHeight: 1.6,
+          color: C.ink,
+          p: 1.75,
+          borderRadius: '12px',
+          border: `1px solid ${C.hairline}`,
+          outline: 'none',
+          bgcolor: '#FBFAF8',
+          '&:focus': { borderColor: C.gold, bgcolor: C.white },
+          '&::placeholder': { color: C.muted },
+        }}
+      />
+
+      {replyErr && (
+        <Typography sx={{ fontSize: 12.5, color: '#B42318', mt: 1 }}>{replyErr}</Typography>
+      )}
+
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1.5, gap: 1.5 }}>
+        <Typography sx={{ fontSize: 11.5, color: C.muted }}>
+          You can also simply reply to our emails.
+        </Typography>
+        <Box
+          component="button"
+          type="button"
+          onClick={submitReply}
+          disabled={sending || !replyText.trim()}
+          sx={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 1,
+            px: 2.5,
+            py: 1.1,
+            borderRadius: '999px',
+            border: 'none',
+            cursor: sending || !replyText.trim() ? 'default' : 'pointer',
+            fontFamily: SANS,
+            fontSize: 13,
+            fontWeight: 700,
+            letterSpacing: '0.03em',
+            color: C.white,
+            bgcolor: C.ink,
+            opacity: sending || !replyText.trim() ? 0.45 : 1,
+            transition: 'opacity .15s ease, transform .15s ease',
+            '&:hover': { transform: sending || !replyText.trim() ? 'none' : 'translateY(-1px)' },
+          }}
+        >
+          {sending && <CircularProgress size={13} sx={{ color: C.white }} />}
+          {sending ? 'Sending…' : 'Send reply'}
+        </Box>
+      </Box>
     </PageShell>
   );
 };
