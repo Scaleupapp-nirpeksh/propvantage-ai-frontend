@@ -24,10 +24,20 @@ Client ──email──▶ helpdesk address ──▶ Inbound provider ──we
                      /t/:token (no login)                   to existing ticket      "Reply to client" ─▶ email + public msg
 ```
 
+## Typical user flow
+**Client (external):** (1) At booking the developer gives the buyer their helpdesk address + "prefix the subject with legal/sales/crm". (2) Buyer emails `25south@helpdesk.prop-vantage.com`, subject "Legal – clarity on clause 4". (3) Seconds later an auto-reply: "received — **TKT-000412** — track it: [link]". (4) The link opens a no-login public page: ticket #, subject, status **Received**, timeline, "assigned to our Legal team". (5) Monday the team replies → buyer emailed "Update on TKT-000412" + page → **In Progress** with the reply; buyer can reply by email (threads back). (6) Resolved → buyer emailed + page shows **Resolved**.
+
+**Internal:** (1) Inbound webhook → routed to 25 South's org (by recipient address) → category **legal** → **TKT-000412** + linked **Task** auto-assigned to the **Legal Head**, legal team as watchers. (2) Monday 9am the Legal Head finds it waiting in bell notifications + their task queue/My-View + Home "what to focus on" — not buried in an inbox (the friction removed). (3) Triage in the existing task tracker (internal notes, reassign, priority/SLA, subtasks). (4) "Reply to client" → emails the buyer + posts to the public timeline + advances status; internal notes stay internal. (5) Weekend tickets unactioned by Monday midday auto-escalate to the Business Head.
+
 ## Inbound ingestion (provider-abstracted)
 - **Endpoint:** `POST /api/support/inbound/:provider` — unauthenticated, **signature-verified per provider**, rate-limited (reuse the public-route limiter pattern), body-size capped.
 - **Adapter layer:** `services/support/inbound/<provider>.js` each normalize to a canonical shape `{ to, from, fromName, subject, text, html, messageId, inReplyTo, references[], attachments[], spamScore? }`. Providers: `mailgun`, `sendgrid` (managed parse, recommended), `ses` (S3+SNS/Lambda → webhook, all-AWS alt). The rest of the system only sees the canonical shape, so the provider is swappable.
-- **Multi-tenant routing:** map the recipient address → org. Default model: platform subdomain `helpdesk.prop-vantage.com` with per-org local-part (`25south@helpdesk.prop-vantage.com`); a `SupportInbox` record maps `address → organization`. (Phase 2: custom per-org domains with verified MX.)
+- **Multi-tenant routing (route by RECIPIENT, never sender):** each org gets a **unique** address on the shared subdomain — `25south@helpdesk.prop-vantage.com`, `downtown@helpdesk.prop-vantage.com` (local-part derived from org slug at onboarding). One catch-all MX/rule receives the whole subdomain; the webhook reads the recipient local-part → `SupportInbox` (`address → organization`) → ticket in the correct org. Unambiguous even if two orgs' clients share an email. **Never** a single shared address. Fallback for a wrong/generic recipient: match sender domain → known org, else an "unrouted" triage queue (still captured, never dropped). Phase 2: a developer's own branded `helpdesk@<their-domain>` via a forward to their platform address, or a verified custom domain.
+
+### Helpdesk email setup (DNS only — no mailbox)
+`prop-vantage.com` is registered in **Route 53**; email-to-ticket needs **no IMAP/webmail mailbox** — just DNS so mail is received and handed to the app:
+- **Inbound:** an **MX** record for `helpdesk.prop-vantage.com` → the provider. **SES:** MX → `inbound-smtp.<region>.amazonaws.com` + domain verification (DKIM CNAMEs) + a receipt rule → S3/SNS/Lambda → webhook. ⚠️ SES *inbound* is only in us-east-1/us-west-2/eu-west-1, so inbound runs in a supported region even though the app is ap-south-1 (it just POSTs to the API). **Managed parse:** MX → provider host + their verification/DKIM + an inbound route → webhook (clean JSON).
+- **Outbound (auto-reply/updates):** **SPF + DKIM + DMARC** records so `…@helpdesk.prop-vantage.com` is an authorized sender and lands in inboxes. `Reply-To` = the org's threaded address so replies return correctly.
 - **Guards:** dedup by `messageId` (skip re-delivery); ignore auto-responders/`no-reply`/`mailer-daemon` and mail with `Auto-Submitted`/`Precedence: bulk`; drop if spamScore high; strip the auto-reply’s own address to prevent loops.
 
 ## Data model (net-new + one reuse)
@@ -40,7 +50,9 @@ Client ──email──▶ helpdesk address ──▶ Inbound provider ──we
 
 **Internal task = a `Task`** (reused): `category` set, `linkedEntity = { entityType:'SupportTicket', entityId }`, `assignedTo = dept head`, `assignedBy = system`, watchers = head + team. Task status changes drive ticket status + client emails. (Keeps the team in the tooling they already use.)
 
-**`models/supportRoutingModel.js`** (new, per-org config): `category → { roleName | assigneeUserId }` with a **fallback queue** (e.g. CRM Head/admin) for unmatched/unknown subjects. Seed defaults; add **`Legal Head`** and **`CRM Head`** roles (the enum has Sales/Finance/Marketing/Business heads only) or map them to existing roles via this table.
+**`models/supportRoutingModel.js`** (new, per-org config): `category → { roleName | assigneeUserId }` with a **fallback queue** (e.g. CRM Head/admin) for unmatched/unknown subjects. Seed defaults.
+
+**New roles (confirmed):** add **`Legal Head`** and **`CRM Head`** at the **department-head tier** (same level as Sales/Finance/Marketing Head). Touches: the role enum (`models/userModel.js`), the role-level map, `config/permissions.js`, and the org role seeder; both become valid `category → head` routing targets.
 
 ## Category detection (subject prefix + AI fallback)
 1. Parse the subject: leading token before `-`/`:` (case-insensitive, fuzzy: `legal`, `Legal Issue`, `sales`) → category.
