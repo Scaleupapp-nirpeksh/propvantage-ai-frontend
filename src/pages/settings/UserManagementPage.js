@@ -132,6 +132,20 @@ const USER_MANAGEMENT_CONFIG = {
       description: 'Financial oversight and budget management',
       priority: 5,
     },
+    'Legal Head': {
+      label: 'Legal Head',
+      color: 'warning',
+      icon: <Assignment />,
+      description: 'Legal & compliance leadership',
+      priority: 5,
+    },
+    'CRM Head': {
+      label: 'CRM Head',
+      color: 'info',
+      icon: <People />,
+      description: 'Customer relationship & support leadership',
+      priority: 5,
+    },
     'Sales Manager': {
       label: 'Sales Manager',
       color: 'primary',
@@ -224,7 +238,7 @@ const USER_MANAGEMENT_CONFIG = {
  * Get role category for filtering
  */
 const getRoleCategory = (role) => {
-  const managementRoles = ['Business Head', 'Project Director', 'Sales Head', 'Marketing Head', 'Finance Head'];
+  const managementRoles = ['Business Head', 'Project Director', 'Sales Head', 'Marketing Head', 'Finance Head', 'Legal Head', 'CRM Head'];
   const salesRoles = ['Sales Manager', 'Sales Executive'];
   const financeRoles = ['Finance Head', 'Finance Manager'];
   const partnerRoles = ['Channel Partner Manager', 'Channel Partner Admin', 'Channel Partner Agent'];
@@ -303,6 +317,8 @@ const InviteUserDialog = ({
       { value: 'Sales Head', label: 'Sales Head', level: 3 },
       { value: 'Marketing Head', label: 'Marketing Head', level: 3 },
       { value: 'Finance Head', label: 'Finance Head', level: 3 },
+      { value: 'Legal Head', label: 'Legal Head', level: 3 },
+      { value: 'CRM Head', label: 'CRM Head', level: 3 },
       { value: 'Sales Manager', label: 'Sales Manager', level: 4 },
       { value: 'Finance Manager', label: 'Finance Manager', level: 4 },
       { value: 'Channel Partner Manager', label: 'Channel Partner Manager', level: 4 },
@@ -317,6 +333,8 @@ const InviteUserDialog = ({
       'Sales Head': 3,
       'Marketing Head': 3,
       'Finance Head': 3,
+      'Legal Head': 3,
+      'CRM Head': 3,
       'Sales Manager': 4,
       'Finance Manager': 4,
       'Channel Partner Manager': 4,

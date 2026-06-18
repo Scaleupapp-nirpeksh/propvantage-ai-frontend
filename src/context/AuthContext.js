@@ -244,6 +244,8 @@ const ROLE_HIERARCHY = {
   'Sales Head': 80,
   'Finance Head': 80,
   'Marketing Head': 80,
+  'Legal Head': 80,
+  'CRM Head': 80,
   'Sales Manager': 70,
   'Finance Manager': 70,
   'Channel Partner Manager': 60,
