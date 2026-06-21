@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s https://api.prop-vantage.com/api/health -o /dev/null -w \"%{http_code}\\\\n\")",
+      "Bash(curl -s https://api.prop-vantage.com/api/projects?limit=50 -H 'Authorization: Bearer __TRACKED_VAR__')",
+      "Bash(awk '{print $1, $2}')"
+    ]
+  }
+}

@@ -1,21 +1,42 @@
 // File: src/components/copilot/cards/ListCardRenderer.js
-// Renders a vertical list with title, subtitle, value and status badge
+// Renders a vertical list of records. Each item: { title, subtitle, value, status }.
+// Layout is defensive: titles never truncate to "TKT-...", subtitles/values wrap,
+// and a long `value` (the model sometimes packs "Key: a, Key: b" in there) drops
+// to its own line instead of crushing the title.
 
 import React from 'react';
-import { Box, Typography, useTheme, alpha } from '@mui/material';
+import { Box, Typography, Chip, useTheme, alpha } from '@mui/material';
 
-const statusColor = (status, theme) => {
-  const map = {
-    overdue: theme.palette.error.main,
-    due: theme.palette.warning.main,
-    completed: theme.palette.success.main,
-    active: theme.palette.info.main,
-  };
-  return map[status] || theme.palette.grey[500];
+const STATUS_COLORS = {
+  overdue: 'error',
+  due: 'warning',
+  completed: 'success',
+  resolved: 'success',
+  closed: 'default',
+  active: 'info',
+  in_progress: 'warning',
+  'in progress': 'warning',
+  waiting_on_client: 'secondary',
+  'waiting on client': 'secondary',
+  assigned: 'info',
+  new: 'info',
+};
+
+const statusChipColor = (status) => {
+  if (!status) return 'default';
+  return STATUS_COLORS[String(status).toLowerCase().trim()] || 'default';
+};
+
+// A "value" is a short badge (a number, amount, short status) vs. a metadata
+// string that should wrap onto its own line.
+const isBadgeValue = (value) => {
+  const s = String(value);
+  return s.length <= 18 && !s.includes(',') && !/:/.test(s);
 };
 
 const ListCardRenderer = ({ card }) => {
   const theme = useTheme();
+  const items = Array.isArray(card.items) ? card.items : [];
 
   return (
     <Box sx={{ mb: 1 }}>
@@ -43,63 +64,72 @@ const ListCardRenderer = ({ card }) => {
           overflow: 'hidden',
         }}
       >
-        {card.items.map((item, i) => {
-          const color = statusColor(item.status, theme);
+        {items.map((item, i) => {
+          const badge = item.value != null && item.value !== '' && isBadgeValue(item.value);
+          const valueLine = item.value != null && item.value !== '' && !badge;
           return (
             <Box
               key={i}
               sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                px: 1.5,
-                py: 1,
-                borderBottom: i < card.items.length - 1 ? '1px solid' : 'none',
+                px: 1.75,
+                py: 1.25,
+                borderBottom: i < items.length - 1 ? '1px solid' : 'none',
                 borderColor: 'divider',
-                '&:hover': { bgcolor: 'grey.50' },
+                '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.02) },
               }}
             >
-              <Box sx={{ flex: 1, minWidth: 0 }}>
+              {/* Header: title + (optional) status chip / short value badge */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Typography
-                  variant="body2"
-                  sx={{ fontWeight: 600, fontSize: '0.75rem', lineHeight: 1.3 }}
-                  noWrap
+                  sx={{
+                    fontWeight: 700,
+                    fontSize: '0.8rem',
+                    lineHeight: 1.35,
+                    color: 'text.primary',
+                    flex: 1,
+                    minWidth: 0,
+                    wordBreak: 'break-word',
+                  }}
                 >
                   {item.title}
                 </Typography>
-                {item.subtitle && (
-                  <Typography
-                    variant="caption"
-                    sx={{ color: 'text.secondary', fontSize: '0.688rem' }}
-                    noWrap
-                  >
-                    {item.subtitle}
-                  </Typography>
+                {item.status && (
+                  <Chip
+                    label={String(item.status).replace(/_/g, ' ')}
+                    size="small"
+                    color={statusChipColor(item.status)}
+                    sx={{ height: 20, fontSize: '0.625rem', fontWeight: 600, textTransform: 'capitalize', flexShrink: 0 }}
+                  />
                 )}
-              </Box>
-              {item.value && (
-                <Box
-                  sx={{
-                    ml: 1,
-                    px: 1,
-                    py: 0.25,
-                    borderRadius: 1,
-                    bgcolor: item.status ? alpha(color, 0.1) : 'grey.100',
-                    flexShrink: 0,
-                  }}
-                >
+                {badge && (
                   <Typography
-                    variant="caption"
                     sx={{
-                      fontWeight: 600,
-                      fontSize: '0.625rem',
-                      color: item.status ? color : 'text.secondary',
+                      fontWeight: 700,
+                      fontSize: '0.7rem',
+                      color: 'primary.main',
                       whiteSpace: 'nowrap',
+                      flexShrink: 0,
                     }}
                   >
                     {item.value}
                   </Typography>
-                </Box>
+                )}
+              </Box>
+
+              {item.subtitle && (
+                <Typography
+                  sx={{ color: 'text.secondary', fontSize: '0.7rem', lineHeight: 1.45, mt: 0.4, wordBreak: 'break-word' }}
+                >
+                  {item.subtitle}
+                </Typography>
+              )}
+
+              {valueLine && (
+                <Typography
+                  sx={{ color: 'text.secondary', fontSize: '0.7rem', lineHeight: 1.45, mt: 0.25, wordBreak: 'break-word' }}
+                >
+                  {item.value}
+                </Typography>
               )}
             </Box>
           );
