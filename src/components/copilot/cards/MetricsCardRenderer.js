@@ -5,15 +5,37 @@ import React from 'react';
 import { Box, Typography, alpha, useTheme } from '@mui/material';
 import { TrendingUp, TrendingDown, TrendingFlat } from '@mui/icons-material';
 
+// The model sometimes emits values as already-formatted strings ("₹210.26 Cr")
+// or with thousands separators ("5,002,600,000"). Number() chokes on both and
+// yields NaN, so parse defensively and trust pre-formatted strings as-is.
+const coerceNumber = (value) => {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') return Number(value.replace(/[,\s₹]/g, ''));
+  return NaN;
+};
+
+const isPreformattedCurrency = (value) =>
+  typeof value === 'string' && /(cr\b|crore|lakh|\bl\b|\bk\b|₹)/i.test(value);
+
 const formatValue = (value, unit) => {
+  if (value == null || value === '') return '—';
   if (unit === 'currency') {
-    const num = Number(value);
+    // Already human-formatted (e.g. "₹210.26 Cr") — show it, just ensure the ₹.
+    if (isPreformattedCurrency(value)) {
+      const t = String(value).trim();
+      return t.startsWith('₹') ? t : `₹${t}`;
+    }
+    const num = coerceNumber(value);
+    if (!Number.isFinite(num)) return String(value);
     if (num >= 10000000) return `₹${(num / 10000000).toFixed(2)} Cr`;
     if (num >= 100000) return `₹${(num / 100000).toFixed(2)} L`;
     if (num >= 1000) return `₹${(num / 1000).toFixed(1)} K`;
     return `₹${num.toLocaleString('en-IN')}`;
   }
-  if (unit === 'percent') return `${value}%`;
+  if (unit === 'percent') {
+    const num = coerceNumber(value);
+    return Number.isFinite(num) ? `${num}%` : String(value);
+  }
   if (unit === 'units') return `${value} units`;
   return String(value);
 };
