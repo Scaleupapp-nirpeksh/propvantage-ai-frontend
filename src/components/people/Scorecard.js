@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, Typography, Chip, Divider, Avatar, useTheme } from '@mui/material';
 import { Warning } from '@mui/icons-material';
 import MetricTile from './MetricTile';
+import attainmentPct from './attainmentPct';
 
 const Scorecard = ({ user, metrics = {}, attainment = {}, trend = {}, vsTeamMedian = {}, flags = {}, onClick }) => {
   const theme = useTheme();
@@ -63,7 +64,7 @@ const Scorecard = ({ user, metrics = {}, attainment = {}, trend = {}, vsTeamMedi
             unit={unit}
             trend={trend[key]}
             vsMedian={vsTeamMedian[key]}
-            pctTarget={attainment[key] != null ? Math.round(attainment[key] * 100) : undefined}
+            pctTarget={(() => { const frac = attainmentPct(attainment[key]); return frac != null ? Math.round(frac * 100) : undefined; })()}
           />
         ))}
       </Box>
