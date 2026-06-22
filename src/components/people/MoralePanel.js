@@ -64,7 +64,9 @@ const MoralePanel = ({ data }) => {
           <Box sx={{ mt: 0.5 }}>
             {peopleToCheckIn.map((p, i) => (
               <Typography key={i} variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
-                • {p.user?.firstName || p.user} — {p.reason}
+                • {typeof p.user === 'object' && p.user !== null
+                    ? `${p.user.firstName || ''} ${p.user.lastName || ''}`.trim()
+                    : (p.user || '—')} — {p.reason}
               </Typography>
             ))}
           </Box>

@@ -1824,6 +1824,7 @@ export const peopleAPI = {
     });
   },
   listReflections: (limit) => api.get('/people/reflections', { params: limit ? { limit } : {} }),
+  memberReflections: (userId) => api.get(`/people/member/${userId}/reflections`),
   moraleTeam: () => api.get('/people/morale/team'),
   moraleOrg:  () => api.get('/people/morale/org'),
 };

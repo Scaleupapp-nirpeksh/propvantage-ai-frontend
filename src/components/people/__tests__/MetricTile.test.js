@@ -24,9 +24,15 @@ describe('MetricTile', () => {
     expect(screen.queryByText(/NaN/)).toBeNull();
   });
 
-  it('renders percent value', () => {
-    render(<Wrapper><MetricTile label="SLA Rate" value={92} unit="percent" /></Wrapper>);
-    expect(screen.getByText('92%')).toBeInTheDocument();
+  it('renders percent value — fraction 0-1 multiplied by 100', () => {
+    // Backend sends fractions (0-1); value=1 → "100%", value=0.92 → "92%"
+    render(<Wrapper><MetricTile label="SLA Rate" value={1} unit="percent" /></Wrapper>);
+    expect(screen.getByText('100%')).toBeInTheDocument();
+  });
+
+  it('renders 0.33 fraction as 33%', () => {
+    render(<Wrapper><MetricTile label="Conversion" value={0.33} unit="percent" /></Wrapper>);
+    expect(screen.getByText('33%')).toBeInTheDocument();
   });
 
   it('renders — for null value', () => {

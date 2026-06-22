@@ -27,7 +27,7 @@ const formatValue = (value, unit) => {
   }
   if (unit === 'percent') {
     const num = coerceNumber(value);
-    return Number.isFinite(num) ? `${num}%` : String(value);
+    return Number.isFinite(num) ? `${Math.round(num * 100)}%` : String(value);
   }
   return String(value);
 };
