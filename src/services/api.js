@@ -1801,6 +1801,34 @@ export const chatAPI = {
 };
 
 // =============================================================================
+// PEOPLE & PERFORMANCE SERVICES (/api/people)
+// =============================================================================
+export const peopleAPI = {
+  me:               (params = {}) => api.get('/people/me', { params }),
+  member:           (userId, params = {}) => api.get(`/people/member/${userId}`, { params }),
+  team:             (params = {}) => api.get('/people/team', { params }),
+  org:              (params = {}) => api.get('/people/org', { params }),
+  flags:            (params = {}) => api.get('/people/flags', { params }),
+  getTargets:       (userId)      => api.get(`/people/targets/${userId}`),
+  setTargets:       (userId, targets) => api.put(`/people/targets/${userId}`, { targets }),
+  reflectionCurrent: ()           => api.get('/people/reflections/current'),
+  getReflection:    (isoWeek)     => api.get(`/people/reflections/${isoWeek}`),
+  saveReflection:   (isoWeek, answers) => api.put(`/people/reflections/${isoWeek}`, { answers }),
+  submitReflection: (isoWeek)     => api.post(`/people/reflections/${isoWeek}/submit`),
+  ackReflection:    (id, note)    => api.post(`/people/reflections/${id}/ack`, { note }),
+  transcribe:       (audioBlob)   => {
+    const fd = new FormData();
+    fd.append('audio', audioBlob);
+    return api.post('/people/reflections/transcribe', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  listReflections: (limit) => api.get('/people/reflections', { params: limit ? { limit } : {} }),
+  moraleTeam: () => api.get('/people/morale/team'),
+  moraleOrg:  () => api.get('/people/morale/org'),
+};
+
+// =============================================================================
 // DEFAULT EXPORT - ENHANCED FOR PHASE 1 + INVITATION SYSTEM (EXISTING + NEW)
 // =============================================================================
 
@@ -1852,6 +1880,9 @@ const apiServices = {
 
   // Real-time
   realTime: realTimeAPI,
+
+  // People & Performance
+  people: peopleAPI,
 
   // Utilities (ENHANCED with new invitation utils)
   utils: {

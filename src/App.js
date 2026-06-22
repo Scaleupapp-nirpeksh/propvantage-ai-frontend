@@ -215,6 +215,11 @@ const ReportInstanceListPage = React.lazy(() => import('./pages/reports/ReportIn
 const ReportInstanceAnalyticsPage = React.lazy(() => import('./pages/reports/ReportInstanceAnalyticsPage'));
 const ReportReviewPage = React.lazy(() => import('./pages/reports/ReportReviewPage'));
 
+// People & Performance Pages
+const MyPerformancePage    = React.lazy(() => import('./pages/people/MyPerformancePage'));
+const TeamPerformancePage  = React.lazy(() => import('./pages/people/TeamPerformancePage'));
+const OrgPerformancePage   = React.lazy(() => import('./pages/people/OrgPerformancePage'));
+
 // Error Pages - UNCHANGED
 const NotFoundPage = React.lazy(() => import('./pages/error/NotFoundPage'));
 const UnauthorizedPage = React.lazy(() => import('./pages/error/UnauthorizedPage'));
@@ -507,6 +512,40 @@ const AppRoutes = () => {
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback message="Loading ticket..." />}>
               <TicketDetailPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* ========================================= */}
+      {/* PEOPLE & PERFORMANCE                      */}
+      {/* ========================================= */}
+
+      <Route path="/people/me" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading performance..." />}>
+              <MyPerformancePage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/people/team" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading team performance..." />}>
+              <TeamPerformancePage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/people/org" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback message="Loading org performance..." />}>
+              <OrgPerformancePage />
             </Suspense>
           </DashboardLayout>
         </ProtectedRoute>
