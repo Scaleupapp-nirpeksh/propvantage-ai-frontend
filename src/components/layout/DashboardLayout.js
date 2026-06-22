@@ -127,36 +127,6 @@ const getNavigationItems = (userRole, canAccess, isOwner) => {
         },
       ],
     },
-    // PEOPLE
-    {
-      section: 'PEOPLE',
-      items: [
-        {
-          id: 'people-me',
-          title: 'My Performance',
-          icon: People,
-          path: '/people/me',
-          requiredAccess: () => true,
-        },
-        {
-          id: 'people-team',
-          title: 'Team Performance',
-          icon: GroupWork,
-          path: '/people/team',
-          requiredAccess: () => [
-            'Sales Head', 'Marketing Head', 'Finance Head', 'Legal Head',
-            'CRM Head', 'Project Director', 'Business Head'
-          ].includes(userRole),
-        },
-        {
-          id: 'people-org',
-          title: 'Organization',
-          icon: AccountTree,
-          path: '/people/org',
-          requiredAccess: () => isOwner || userRole === 'Business Head',
-        },
-      ].filter(Boolean),
-    },
     // OPERATIONS
     {
       section: 'OPERATIONS',
@@ -341,6 +311,36 @@ const getNavigationItems = (userRole, canAccess, isOwner) => {
           ],
         },
       ],
+    },
+    // PEOPLE
+    {
+      section: 'PEOPLE',
+      items: [
+        {
+          id: 'people-me',
+          title: 'My Performance',
+          icon: People,
+          path: '/people/me',
+          requiredAccess: () => true,
+        },
+        {
+          id: 'people-team',
+          title: 'Team Performance',
+          icon: GroupWork,
+          path: '/people/team',
+          requiredAccess: () => [
+            'Sales Head', 'Marketing Head', 'Finance Head', 'Legal Head',
+            'CRM Head', 'Project Director', 'Business Head'
+          ].includes(userRole),
+        },
+        {
+          id: 'people-org',
+          title: 'Organization',
+          icon: AccountTree,
+          path: '/people/org',
+          requiredAccess: () => isOwner || userRole === 'Business Head',
+        },
+      ].filter(Boolean),
     },
     // SYSTEM
     {
