@@ -25,4 +25,11 @@ describe('Scorecard', () => {
     render(<Wrapper><Scorecard user={mockUser} metrics={mockMetrics} flags={flags} /></Wrapper>);
     expect(screen.getByText(/flags/i)).toBeInTheDocument();
   });
+
+  it('shows correct % of target when attainment is an object { actual, target, pct }', () => {
+    const attainment = { salesValue: { actual: 3, target: 5, pct: 0.6 } };
+    render(<Wrapper><Scorecard user={mockUser} metrics={mockMetrics} attainment={attainment} /></Wrapper>);
+    expect(screen.queryByText(/NaN/)).toBeNull();
+    expect(screen.getByText('60% of target')).toBeInTheDocument();
+  });
 });

@@ -6,6 +6,7 @@ import {
 import { useSnackbar } from 'notistack';
 import { peopleAPI } from '../../services/api';
 import MetricTile from '../../components/people/MetricTile';
+import attainmentPct from '../../components/people/attainmentPct';
 import RedFlagInbox from '../../components/people/RedFlagInbox';
 import ReflectionEditor from '../../components/people/ReflectionEditor';
 import ReflectionHistory from '../../components/people/ReflectionHistory';
@@ -91,7 +92,7 @@ const MyPerformancePage = () => {
               unit={unit}
               trend={trend[key]}
               vsMedian={vsMedian[key]}
-              pctTarget={attainment[key] != null ? Math.round(attainment[key] * 100) : undefined}
+              pctTarget={(() => { const frac = attainmentPct(attainment[key]); return frac != null ? Math.round(frac * 100) : undefined; })()}
             />
           </Grid>
         ))}
