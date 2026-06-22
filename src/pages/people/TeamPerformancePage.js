@@ -7,7 +7,7 @@ import { useSnackbar } from 'notistack';
 import { peopleAPI } from '../../services/api';
 import Scorecard from '../../components/people/Scorecard';
 import MoralePanel from '../../components/people/MoralePanel';
-import TargetEditorDialog from '../../components/people/TargetEditorDialog';
+import MemberDetailDrawer from '../../components/people/MemberDetailDrawer';
 
 const RANGES = [
   { value: 'this_week',    label: 'This Week'    },
@@ -23,8 +23,8 @@ const TeamPerformancePage = () => {
   const [morale, setMorale] = useState(null);
   const [loading, setLoading] = useState(true);
   const [access, setAccess] = useState(true);
-  const [targetUserId, setTargetUserId] = useState(null);
-  const [targetDialogOpen, setTargetDialogOpen] = useState(false);
+  const [drawerUserId, setDrawerUserId] = useState(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -77,8 +77,8 @@ const TeamPerformancePage = () => {
               vsTeamMedian={m.vsTeamMedian}
               flags={m.flags}
               onClick={() => {
-                setTargetUserId(m.user?._id || m.user?.id);
-                setTargetDialogOpen(true);
+                setDrawerUserId(m.user?._id || m.user?.id);
+                setDrawerOpen(true);
               }}
             />
           </Grid>
@@ -90,11 +90,12 @@ const TeamPerformancePage = () => {
         )}
       </Grid>
 
-      <TargetEditorDialog
-        open={targetDialogOpen}
-        onClose={() => setTargetDialogOpen(false)}
-        userId={targetUserId}
-        onSaved={loadData}
+      <MemberDetailDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        userId={drawerUserId}
+        range={range}
+        allowSetTargets
       />
     </Box>
   );

@@ -1,13 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Typography, ToggleButtonGroup, ToggleButton, Grid, Paper,
-  CircularProgress, Alert, Divider,
+  CircularProgress, Alert, Divider, Table, TableHead, TableBody,
+  TableRow, TableCell, TableContainer, Chip, Avatar,
 } from '@mui/material';
+import { Warning } from '@mui/icons-material';
 import { useSnackbar } from 'notistack';
 import { peopleAPI } from '../../services/api';
 import Scorecard from '../../components/people/Scorecard';
 import MetricTile from '../../components/people/MetricTile';
 import MoralePanel from '../../components/people/MoralePanel';
+import MemberDetailDrawer from '../../components/people/MemberDetailDrawer';
 
 const RANGES = [
   { value: 'this_week',    label: 'This Week'    },
@@ -41,6 +44,12 @@ const normaliseAttainment = (attainment = {}) =>
     ])
   );
 
+const MEMBER_TILES = [
+  { label: 'Sales Value', key: 'salesValue', unit: 'currency' },
+  { label: 'Conversion', key: 'conversionRate', unit: 'percent' },
+  { label: 'Tasks SLA',  key: 'taskSlaRate',   unit: 'percent' },
+];
+
 const OrgPerformancePage = () => {
   const { enqueueSnackbar } = useSnackbar();
   const [range, setRange] = useState('this_month');
@@ -48,6 +57,8 @@ const OrgPerformancePage = () => {
   const [morale, setMorale] = useState(null);
   const [loading, setLoading] = useState(true);
   const [access, setAccess] = useState(true);
+  const [drawerUserId, setDrawerUserId] = useState(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -68,11 +79,17 @@ const OrgPerformancePage = () => {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  const openDrawer = (userId) => {
+    setDrawerUserId(userId);
+    setDrawerOpen(true);
+  };
+
   if (!access) return <Alert severity="error">You don&apos;t have access to Organization Performance.</Alert>;
   if (loading) return <CircularProgress size={32} sx={{ display: 'block', mx: 'auto', mt: 6 }} />;
 
   const heads = orgData?.heads || [];
   const orgRollup = orgData?.orgRollup || {};
+  const allMembers = orgData?.members || [];
 
   return (
     <Box>
@@ -155,6 +172,93 @@ const OrgPerformancePage = () => {
           </Grid>
         )}
       </Grid>
+
+      {/* All Employees section (Owner-visible — shown when members are returned) */}
+      {allMembers.length > 0 && (
+        <Box sx={{ mt: 4 }}>
+          <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
+            All Employees
+            <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+              ({allMembers.length})
+            </Typography>
+          </Typography>
+          <TableContainer component={Paper}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Role</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Sales Value</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Conversion</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Tasks SLA</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }} align="center">Flags</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {allMembers.map((m) => {
+                  const uid = m.user?._id || m.user?.id;
+                  const firstName = m.user?.firstName || '';
+                  const lastName = m.user?.lastName || '';
+                  const fullName = `${firstName} ${lastName}`.trim() || '—';
+                  const role = m.user?.role || '—';
+                  return (
+                    <TableRow
+                      key={uid}
+                      hover
+                      onClick={() => openDrawer(uid)}
+                      sx={{ cursor: 'pointer' }}
+                    >
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Avatar sx={{ width: 28, height: 28, fontSize: '0.75rem', bgcolor: 'primary.main' }}>
+                            {firstName.charAt(0)}{lastName.charAt(0)}
+                          </Avatar>
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>{fullName}</Typography>
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" color="text.secondary">{role}</Typography>
+                      </TableCell>
+                      {MEMBER_TILES.map(({ key, unit }) => (
+                        <TableCell key={key}>
+                          <MetricTile
+                            label=""
+                            value={m.metrics?.[key]}
+                            unit={unit}
+                          />
+                        </TableCell>
+                      ))}
+                      <TableCell align="center">
+                        {(m.flagCount > 0) ? (
+                          <Chip
+                            size="small"
+                            icon={<Warning sx={{ fontSize: '0.875rem !important' }} />}
+                            label={m.flagCount}
+                            color="error"
+                            variant="outlined"
+                            sx={{ height: 22, fontSize: '0.625rem' }}
+                          />
+                        ) : (
+                          <Typography variant="caption" color="text.disabled">—</Typography>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>
+      )}
+
+      {/* Member detail drawer */}
+      <MemberDetailDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        userId={drawerUserId}
+        range={range}
+        allowSetTargets={false}
+      />
     </Box>
   );
 };

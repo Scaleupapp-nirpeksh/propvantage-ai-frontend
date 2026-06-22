@@ -7,10 +7,15 @@ import OrgPerformancePage from './OrgPerformancePage';
 
 jest.mock('../../services/api', () => ({
   peopleAPI: {
-    org:       jest.fn(),
-    moraleOrg: jest.fn(),
+    org:               jest.fn(),
+    moraleOrg:         jest.fn(),
+    member:            jest.fn(),
+    memberReflections: jest.fn(),
   },
 }));
+
+// Stub MemberDetailDrawer so it doesn't try to fetch in OrgPerformancePage tests
+jest.mock('../../components/people/MemberDetailDrawer', () => () => null);
 
 jest.mock('notistack', () => ({
   useSnackbar: () => ({ enqueueSnackbar: jest.fn() }),
