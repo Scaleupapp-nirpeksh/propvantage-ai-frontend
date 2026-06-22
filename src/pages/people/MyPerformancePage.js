@@ -32,9 +32,18 @@ const MyPerformancePage = () => {
   const [tab, setTab] = useState(0);
   const [data, setData] = useState(null);
   const [flags, setFlags] = useState({});
-  const [reflHistory] = useState([]);
+  const [reflHistory, setReflHistory] = useState([]);
   const [currentWeek, setCurrentWeek] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const loadReflHistory = useCallback(async () => {
+    try {
+      const res = await peopleAPI.listReflections();
+      setReflHistory(res.data?.data || []);
+    } catch {
+      // Fail quietly — history is non-critical
+    }
+  }, []);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -55,6 +64,7 @@ const MyPerformancePage = () => {
   }, [range, enqueueSnackbar]);
 
   useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => { loadReflHistory(); }, [loadReflHistory]);
 
   if (loading) return <CircularProgress size={32} sx={{ display: 'block', mx: 'auto', mt: 6 }} />;
 
@@ -101,7 +111,7 @@ const MyPerformancePage = () => {
       {tab === 1 && (
         <Paper sx={{ p: 2 }}>
           {currentWeek ? (
-            <ReflectionEditor isoWeek={currentWeek} onSubmitted={loadData} />
+            <ReflectionEditor isoWeek={currentWeek} onSubmitted={() => { loadData(); loadReflHistory(); }} />
           ) : (
             <Alert severity="info">No current reflection period found.</Alert>
           )}
@@ -110,9 +120,6 @@ const MyPerformancePage = () => {
       {tab === 2 && (
         <Paper sx={{ p: 2 }}>
           <ReflectionHistory reflections={reflHistory} />
-          {reflHistory.length === 0 && (
-            <Typography variant="body2" color="text.secondary">No past reflections.</Typography>
-          )}
         </Paper>
       )}
     </Box>

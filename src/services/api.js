@@ -1823,6 +1823,7 @@ export const peopleAPI = {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
   },
+  listReflections: (limit) => api.get('/people/reflections', { params: limit ? { limit } : {} }),
   moraleTeam: () => api.get('/people/morale/team'),
   moraleOrg:  () => api.get('/people/morale/org'),
 };

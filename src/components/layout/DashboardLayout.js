@@ -105,7 +105,7 @@ const DRAWER_WIDTH = 260;
 const COLLAPSED_WIDTH = 72;
 
 // --- Navigation Items ---
-const getNavigationItems = (userRole, canAccess) => {
+const getNavigationItems = (userRole, canAccess, isOwner) => {
   const allItems = [
     // MAIN
     {
@@ -153,7 +153,7 @@ const getNavigationItems = (userRole, canAccess) => {
           title: 'Organization',
           icon: AccountTree,
           path: '/people/org',
-          requiredAccess: () => userRole === 'Business Head',
+          requiredAccess: () => isOwner || userRole === 'Business Head',
         },
       ].filter(Boolean),
     },
@@ -518,7 +518,7 @@ const DashboardBreadcrumbs = () => {
     'dynamic': 'Dynamic Pricing', 'cost-sheet': 'Cost Sheet',
     'users': 'User Management', 'profile': 'Profile', 'roles': 'Roles', 'org-hierarchy': 'Org Hierarchy',
     'payment-plans': 'Payment Plans', 'collections': 'Collections',
-    'tasks': 'Tasks', 'kanban': 'Kanban Board', 'team': 'Team View',
+    'tasks': 'Tasks', 'kanban': 'Kanban Board', 'team': 'Team',
     'templates': 'Templates', 'all': 'All Tasks',
     'notifications': 'Notifications',
     'leadership': 'Leadership Dashboard',
@@ -643,7 +643,7 @@ const DashboardLayout = ({ children }) => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, canAccess } = useAuth();
+  const { user, canAccess, isOwner } = useAuth();
   const { totalUnreadCount } = useChat();
   const { startFlow, isFlowComplete } = useCoachMark();
   const { activeProjectId } = useProjectContext();
@@ -656,7 +656,7 @@ const DashboardLayout = ({ children }) => {
   const [paletteOpen, setPaletteOpen] = useState(false);
 
   const sections = useMemo(() => {
-    const items = getNavigationItems(user?.role, canAccess);
+    const items = getNavigationItems(user?.role, canAccess, isOwner);
     // Inject chat unread badge
     items.forEach((section) => {
       section.items.forEach((item) => {
@@ -666,7 +666,7 @@ const DashboardLayout = ({ children }) => {
       });
     });
     return items;
-  }, [user?.role, canAccess, totalUnreadCount]);
+  }, [user?.role, canAccess, isOwner, totalUnreadCount]);
 
   // Open parent menu of active route
   useEffect(() => {
