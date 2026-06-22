@@ -98,6 +98,7 @@ import CopilotFAB from '../copilot/CopilotFAB';
 import { useCoachMark } from '../onboarding';
 import ProjectSwitcher from './ProjectSwitcher';
 import { useProjectContext } from '../../context/ProjectContext';
+import ReflectionPrompt from '../people/ReflectionPrompt';
 
 // --- Constants ---
 const DRAWER_WIDTH = 260;
@@ -125,6 +126,36 @@ const getNavigationItems = (userRole, canAccess) => {
           requiredAccess: () => true,
         },
       ],
+    },
+    // PEOPLE
+    {
+      section: 'PEOPLE',
+      items: [
+        {
+          id: 'people-me',
+          title: 'My Performance',
+          icon: People,
+          path: '/people/me',
+          requiredAccess: () => true,
+        },
+        {
+          id: 'people-team',
+          title: 'Team Performance',
+          icon: GroupWork,
+          path: '/people/team',
+          requiredAccess: () => [
+            'Sales Head', 'Marketing Head', 'Finance Head', 'Legal Head',
+            'CRM Head', 'Project Director', 'Business Head'
+          ].includes(userRole),
+        },
+        {
+          id: 'people-org',
+          title: 'Organization',
+          icon: AccountTree,
+          path: '/people/org',
+          requiredAccess: () => userRole === 'Business Head',
+        },
+      ].filter(Boolean),
     },
     // OPERATIONS
     {
@@ -504,6 +535,7 @@ const DashboardBreadcrumbs = () => {
     'demand': 'Demand & Supply',
     'analysis': 'AI Analysis',
     'providers': 'Data Providers',
+    'people': 'People', 'me': 'My Performance', 'org': 'Organization',
   };
 
   const segments = location.pathname.split('/').filter(Boolean);
@@ -879,11 +911,14 @@ const DashboardLayout = ({ children }) => {
         }}
       >
         <Toolbar sx={{ minHeight: '56px !important' }} />
-        <Fade in timeout={200} key={`${location.pathname}|${activeProjectId || ''}`}>
-          <Box sx={{ p: { xs: 2, sm: 3 }, maxWidth: 1400, mx: 'auto' }}>
-            {children}
-          </Box>
-        </Fade>
+        <Box sx={{ p: { xs: 2, sm: 3 }, maxWidth: 1400, mx: 'auto' }}>
+          <ReflectionPrompt />
+          <Fade in timeout={200} key={`${location.pathname}|${activeProjectId || ''}`}>
+            <Box>
+              {children}
+            </Box>
+          </Fade>
+        </Box>
       </Box>
 
       {/* Command Palette */}
