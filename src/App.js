@@ -34,6 +34,7 @@ const ChannelPartnerRegisterPage = React.lazy(() => import('./pages/auth/Channel
 // Pitch landing page — public, outside auth flow (in-person pitches only).
 // Not linked in navigation. Reachable only by direct URL.
 const PitchLandingPage = React.lazy(() => import('./pages/pitch/PitchLandingPage'));
+const MicroMittiPitchPage = React.lazy(() => import('./pages/pitch/MicroMittiPitchPage'));
 
 // Public report page — email-gated, fully public (no auth wrapper).
 const PublicReportPage = React.lazy(() => import('./pages/public/PublicReportPage'));
@@ -388,6 +389,12 @@ const AppRoutes = () => {
       <Route path="/pitch/hubtown" element={
         <Suspense fallback={<LoadingFallback section="pitch" message="Loading..." />}>
           <PitchLandingPage />
+        </Suspense>
+      } />
+
+      <Route path="/pitch/micromitti" element={
+        <Suspense fallback={<LoadingFallback section="pitch" message="Loading..." />}>
+          <MicroMittiPitchPage />
         </Suspense>
       } />
 
