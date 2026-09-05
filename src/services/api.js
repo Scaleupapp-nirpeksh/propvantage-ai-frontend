@@ -1711,7 +1711,17 @@ export const supportAPI = {
 
 // AI voice agent — outbound calls placed through the voice provider, plus org settings.
 export const voiceAPI = {
-  createCall: (leadId, callReason) => api.post('/voice/calls', { leadId, callReason }),
+  createCall: (leadId, callReason, playbookId) => api.post('/voice/calls', { leadId, callReason, playbookId }),
+  // Playbooks (when / for whom / to achieve what the agent calls)
+  listPlaybooks: () => api.get('/voice/playbooks'),
+  getTemplates: () => api.get('/voice/playbooks/templates'),
+  createPlaybook: (body) => api.post('/voice/playbooks', body),
+  updatePlaybook: (id, body) => api.put(`/voice/playbooks/${id}`, body),
+  deletePlaybook: (id) => api.delete(`/voice/playbooks/${id}`),
+  testPlaybook: (id, phone) => api.post(`/voice/playbooks/${id}/test-call`, { phone }),
+  scanNow: () => api.post('/voice/playbooks/scan'),
+  listJobs: (params) => api.get('/voice/jobs', { params }),
+  cancelJob: (id) => api.post(`/voice/jobs/${id}/cancel`),
   listCalls: (leadId) => api.get('/voice/calls', { params: { leadId } }),
   getCall: (id) => api.get(`/voice/calls/${id}`),
   getSettings: () => api.get('/voice/settings'),

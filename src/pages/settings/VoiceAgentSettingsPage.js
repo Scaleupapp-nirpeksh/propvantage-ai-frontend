@@ -7,7 +7,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Box, Paper, Typography, TextField, Button, Stack, Switch, FormControlLabel, Divider,
   CircularProgress, Alert, Chip, Grid, Stepper, Step, StepLabel,
-  Table, TableHead, TableRow, TableCell, TableBody, IconButton, Tooltip, Link,
+  Table, TableHead, TableRow, TableCell, TableBody, IconButton, Tooltip, Link, Tabs, Tab,
 } from '@mui/material';
 import {
   RecordVoiceOver, PhoneInTalk, Save, Refresh, OpenInNew, CheckCircle, RadioButtonUnchecked,
@@ -18,6 +18,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { voiceAPI } from '../../services/api';
 import { PageHeader } from '../../components/common';
+import PlaybooksTab from './voice/PlaybooksTab';
+import ScheduledCallsTab from './voice/ScheduledCallsTab';
 
 const LIVE = new Set(['queued', 'ringing', 'in-progress', 'forwarding']);
 const STEPS = ['Placing', 'Ringing', 'In progress', 'Ended'];
@@ -61,6 +63,7 @@ const VoiceAgentSettingsPage = () => {
 
   const [recent, setRecent] = useState([]);
   const [recentLoading, setRecentLoading] = useState(false);
+  const [tab, setTab] = useState(0);
 
   const setF = (patch) => { setForm((f) => ({ ...f, ...patch })); setDirty(true); };
 
@@ -162,6 +165,18 @@ const VoiceAgentSettingsPage = () => {
         <Alert severity="warning" sx={{ mb: 2 }}>Voice calling is not configured on the server yet (provider key missing). Settings can be saved, but calls will not go out.</Alert>
       )}
 
+      <Paper sx={{ mb: 3 }}>
+        <Tabs value={tab} onChange={(e, v) => setTab(v)} sx={{ borderBottom: 1, borderColor: 'divider' }}>
+          <Tab label="Overview" />
+          <Tab label="Playbooks" />
+          <Tab label="Scheduled calls" />
+        </Tabs>
+      </Paper>
+
+      {tab === 1 && <PlaybooksTab />}
+      {tab === 2 && <ScheduledCallsTab />}
+
+      {tab === 0 && (<>
       {/* Status strip */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={6} md={3}>
@@ -368,6 +383,7 @@ const VoiceAgentSettingsPage = () => {
           </Paper>
         </Grid>
       </Grid>
+      </>)}
     </Box>
   );
 };

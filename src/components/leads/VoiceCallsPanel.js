@@ -6,9 +6,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Box, Card, CardContent, Typography, Button, Chip, Stack, Collapse, IconButton,
-  CircularProgress, Tooltip, Divider, Alert,
+  CircularProgress, Tooltip, Divider, Alert, ButtonGroup, Menu, MenuItem, ListItemText,
 } from '@mui/material';
-import { PhoneInTalk, ExpandMore, ExpandLess, GraphicEq, Refresh } from '@mui/icons-material';
+import { PhoneInTalk, ExpandMore, ExpandLess, GraphicEq, Refresh, ArrowDropDown } from '@mui/icons-material';
 import { useSnackbar } from 'notistack';
 import { voiceAPI } from '../../services/api';
 
@@ -101,7 +101,13 @@ const VoiceCallsPanel = ({ lead, onLeadChanged }) => {
   const [calls, setCalls] = useState([]);
   const [loading, setLoading] = useState(true);
   const [placing, setPlacing] = useState(false);
+  const [playbooks, setPlaybooks] = useState([]);
+  const [menuAnchor, setMenuAnchor] = useState(null);
   const hadLiveRef = useRef(false);
+
+  useEffect(() => {
+    voiceAPI.listPlaybooks().then((res) => setPlaybooks(res.data?.data || [])).catch(() => {});
+  }, []);
 
   const load = useCallback(async () => {
     if (!lead?._id) return;
@@ -129,11 +135,12 @@ const VoiceCallsPanel = ({ lead, onLeadChanged }) => {
     return () => clearInterval(t);
   }, [anyLive, load]);
 
-  const placeCall = async () => {
+  const placeCall = async (playbook = null) => {
+    setMenuAnchor(null);
     setPlacing(true);
     try {
-      await voiceAPI.createCall(lead._id);
-      enqueueSnackbar(`Calling ${lead.firstName || 'the lead'} now…`, { variant: 'success' });
+      await voiceAPI.createCall(lead._id, undefined, playbook?._id);
+      enqueueSnackbar(`Calling ${lead.firstName || 'the lead'} now${playbook ? ` — ${playbook.name}` : ''}…`, { variant: 'success' });
       await load();
     } catch (err) {
       enqueueSnackbar(err.response?.data?.message || 'Could not place the call.', { variant: 'error' });
@@ -152,17 +159,24 @@ const VoiceCallsPanel = ({ lead, onLeadChanged }) => {
           <Tooltip title="Refresh"><span><IconButton size="small" onClick={load} disabled={loading}><Refresh fontSize="small" /></IconButton></span></Tooltip>
           <Tooltip title={lead.doNotCall ? 'This lead asked not to be called' : 'Have the AI agent call this lead now'}>
             <span>
-              <Button
-                variant="contained"
-                size="small"
-                startIcon={placing ? <CircularProgress size={14} color="inherit" /> : <PhoneInTalk />}
-                onClick={placeCall}
-                disabled={placing || anyLive || Boolean(lead.doNotCall) || !lead.phone}
-              >
-                {anyLive ? 'Call in progress' : 'Call with AI'}
-              </Button>
+              <ButtonGroup variant="contained" size="small" disabled={placing || anyLive || Boolean(lead.doNotCall) || !lead.phone}>
+                <Button startIcon={placing ? <CircularProgress size={14} color="inherit" /> : <PhoneInTalk />} onClick={() => placeCall(null)}>
+                  {anyLive ? 'Call in progress' : 'Call with AI'}
+                </Button>
+                {playbooks.length > 0 && (
+                  <Button size="small" onClick={(e) => setMenuAnchor(e.currentTarget)} aria-label="choose playbook"><ArrowDropDown /></Button>
+                )}
+              </ButtonGroup>
             </span>
           </Tooltip>
+          <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={() => setMenuAnchor(null)}>
+            <MenuItem onClick={() => placeCall(null)}><ListItemText primary="Default — qualify & book a visit" /></MenuItem>
+            {playbooks.map((pb) => (
+              <MenuItem key={pb._id} onClick={() => placeCall(pb)}>
+                <ListItemText primary={pb.name} secondary={pb.triggerLabel} />
+              </MenuItem>
+            ))}
+          </Menu>
         </Stack>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
           The agent calls from your configured number, qualifies the buyer, quotes live inventory, and books the site visit — everything it learns is saved to this lead.
