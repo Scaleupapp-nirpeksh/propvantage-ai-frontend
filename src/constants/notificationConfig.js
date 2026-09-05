@@ -20,6 +20,7 @@ export const NOTIFICATION_TYPES = {
   task_auto_generated: { label: 'Auto-Generated',      icon: SmartToy,      color: '#00acc1' },
   payment_overdue:     { label: 'Payment Overdue',     icon: CurrencyRupee,  color: '#e53935' },
   lead_follow_up_due:  { label: 'Follow-up Due',       icon: Phone,          color: '#fb8c00' },
+  voice_call_completed: { label: 'AI Call',            icon: Phone,          color: '#6d4c41' },
   milestone_delayed:   { label: 'Milestone Delayed',   icon: Engineering,    color: '#fb8c00' },
   sale_booked:         { label: 'Sale Booked',         icon: Handshake,      color: '#43a047' },
 

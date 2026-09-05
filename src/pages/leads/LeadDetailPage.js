@@ -88,6 +88,7 @@ import { useChat } from '../../context/ChatContext';
 import { leadAPI, aiAPI, leadRegistrationsAPI, userAPI } from '../../services/api';
 import { allowedNextStatuses, statusLabel } from '../../utils/leadStatusMachine';
 import LeadEnrichmentCard from '../../components/leads/LeadEnrichmentCard';
+import VoiceCallsPanel from '../../components/leads/VoiceCallsPanel';
 import ChannelPartnerAttributionSummary from '../../components/channel-partners/ChannelPartnerAttributionSummary';
 import DevCommissionInvoiceCard from '../../components/leads/DevCommissionInvoiceCard';
 
@@ -1611,6 +1612,11 @@ const LeadDetailPage = () => {
       {/* AI Profile Summary — directly below the top bar, above the tabs */}
       <Box sx={{ mb: 3 }}>
         <LeadEnrichmentCard lead={lead} onRefresh={() => fetchLead({ silent: true })} />
+      </Box>
+
+      {/* AI voice calls — place a call and review transcripts / outcomes */}
+      <Box sx={{ mb: 3 }}>
+        <VoiceCallsPanel lead={lead} onLeadChanged={() => fetchLead({ silent: true })} />
       </Box>
 
       {/* Tabs for different sections */}

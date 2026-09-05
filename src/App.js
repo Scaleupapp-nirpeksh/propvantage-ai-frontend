@@ -130,6 +130,7 @@ const ProfilePage = React.lazy(() => import('./pages/profile/ProfilePage'));
 const SettingsPage = React.lazy(() => import('./pages/settings/SettingsPage'));
 const UserManagementPage = React.lazy(() => import('./pages/settings/UserManagementPage'));
 const SupportSettingsPage = React.lazy(() => import('./pages/settings/SupportSettingsPage'));
+const VoiceAgentSettingsPage = React.lazy(() => import('./pages/settings/VoiceAgentSettingsPage'));
 const RolesListPage = React.lazy(() => import('./pages/settings/RolesListPage'));
 const CreateEditRolePage = React.lazy(() => import('./pages/settings/CreateEditRolePage'));
 const RoleDetailPage = React.lazy(() => import('./pages/settings/RoleDetailPage'));
@@ -1310,6 +1311,16 @@ const AppRoutes = () => {
           <DashboardLayout>
             <Suspense fallback={<LoadingFallback />}>
               <SupportSettingsPage />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/settings/voice" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <Suspense fallback={<LoadingFallback />}>
+              <VoiceAgentSettingsPage />
             </Suspense>
           </DashboardLayout>
         </ProtectedRoute>

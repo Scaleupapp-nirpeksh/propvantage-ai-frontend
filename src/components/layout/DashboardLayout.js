@@ -89,6 +89,7 @@ import {
   Summarize,
   ViewQuilt,
   Home as HomeIcon,
+  RecordVoiceOver,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import { useChat } from '../../context/ChatContext';
@@ -357,6 +358,7 @@ const getNavigationItems = (userRole, canAccess, isOwner) => {
             { id: 'roles', title: 'Roles', icon: AdminPanelSettings, path: '/roles', requiredAccess: () => canAccess.systemSettings() },
             { id: 'project-access', title: 'Project Access', icon: VpnKey, path: '/settings/project-access', requiredAccess: () => canAccess.projectManagement() },
             { id: 'support-settings', title: 'Helpdesk', icon: ConfirmationNumber, path: '/settings/support', requiredAccess: () => true },
+            { id: 'voice-settings', title: 'Voice Agent', icon: RecordVoiceOver, path: '/settings/voice', requiredAccess: () => true },
             { id: 'notification-settings', title: 'Notifications', icon: Notifications, path: '/settings/notifications' },
           ],
         },

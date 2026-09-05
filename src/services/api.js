@@ -1709,6 +1709,17 @@ export const supportAPI = {
   regenerateInbox: (slug) => api.post('/support/inbox/regenerate', slug ? { slug } : {}),
 };
 
+// AI voice agent — outbound calls placed through the voice provider, plus org settings.
+export const voiceAPI = {
+  createCall: (leadId, callReason) => api.post('/voice/calls', { leadId, callReason }),
+  listCalls: (leadId) => api.get('/voice/calls', { params: { leadId } }),
+  getCall: (id) => api.get(`/voice/calls/${id}`),
+  getSettings: () => api.get('/voice/settings'),
+  updateSettings: (payload) => api.put('/voice/settings', payload),
+  setupPhoneNumber: (payload) => api.post('/voice/setup/phone-number', payload),
+  testCall: (payload) => api.post('/voice/test-call', payload),
+};
+
 // Public ticket status page (no auth) — uses the interceptor-free `publicApi`
 // instance so anonymous viewers never trigger the 401-refresh flow.
 export const publicTicketAPI = {
